@@ -64,3 +64,30 @@ body {
 .login-btn:hover {
   background-color: #5a1a2d;
 }
+
+.register-link-btn {
+  background-color: transparent;
+  color: #410d1d;
+  border: 2px solid #410d1d;
+  padding: 10px 20px;
+  margin-top: 20px;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: "Aileron", sans-serif;
+}
+
+.register-link-btn:hover {
+  background-color: #410d1d;
+  color: white;
+}
+
+.message {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  font-family: "Aileron", sans-serif;
+  max-width: 80%;
+}

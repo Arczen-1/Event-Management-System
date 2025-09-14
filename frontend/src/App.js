@@ -1,10 +1,15 @@
 import React, { useState } from "react";
 import "./App.css";
+import Register from "./components/Register";
+import AdminDashboard from "./components/AdminDashboard";
+import SalesDashboard from "./components/SalesDashboard";
 
 function App() {
+  const [currentView, setCurrentView] = useState("login"); // login, register, admin, sales
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
 
   const handleLogin = async () => {
     try {
@@ -16,11 +21,52 @@ function App() {
 
       const data = await res.json();
       setMessage(data.message);
+      
+      if (res.ok) {
+        setCurrentUser(data.user);
+        if (data.user.role === 'Admin') {
+          setCurrentView("admin");
+        } else if (data.user.role === 'Sales') {
+          setCurrentView("sales");
+        } else {
+          setMessage("Access denied. Admin or Sales privileges required.");
+        }
+      }
     } catch (err) {
       console.error(err);
       setMessage("Server error");
     }
   };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentView("login");
+    setUsername("");
+    setPassword("");
+    setMessage("");
+  };
+
+  const handleBackToLogin = () => {
+    setCurrentView("login");
+    setMessage("");
+  };
+
+  const handleGoToRegister = () => {
+    setCurrentView("register");
+    setMessage("");
+  };
+
+  if (currentView === "register") {
+    return <Register onBackToLogin={handleBackToLogin} />;
+  }
+
+  if (currentView === "admin") {
+    return <AdminDashboard onLogout={handleLogout} />;
+  }
+
+  if (currentView === "sales") {
+    return <SalesDashboard onLogout={handleLogout} />;
+  }
 
   return (
     <div className="App">
@@ -44,7 +90,10 @@ function App() {
         <button className="login-btn" onClick={handleLogin}>
           Login
         </button>
-        {message && <p style={{ marginTop: "20px" }}>{message}</p>}
+        {message && <p className="message">{message}</p>}
+        <button className="register-link-btn" onClick={handleGoToRegister}>
+          Don't have an account? Register here
+        </button>
       </div>
     </div>
   );
