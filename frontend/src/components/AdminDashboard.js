@@ -1,21 +1,33 @@
-"use client"
+"use client" // Next.js directive for client-side component
 
+// Import React hooks and CSS styles
 import { useState, useEffect } from "react"
 import "./AdminDashboard.css"
 
+/**
+ * AdminDashboard Component
+ * Main dashboard for administrators to manage contracts and users
+ * Features: Contract overview, user approval/rejection, role management
+ */
 function AdminDashboard({ onLogout }) {
-  const [pendingUsers, setPendingUsers] = useState([])
-  const [allUsers, setAllUsers] = useState([])
-  const [selectedRole, setSelectedRole] = useState("")
-  const [message, setMessage] = useState("")
-  const [activeView, setActiveView] = useState("dashboard") // dashboard, userManagement
-  const [userManagementTab, setUserManagementTab] = useState("pending")
-  const [editingUser, setEditingUser] = useState(null)
-  const [departmentFilter, setDepartmentFilter] = useState("all")
+  // ==================== STATE MANAGEMENT ====================
+  
+  // User data states
+  const [pendingUsers, setPendingUsers] = useState([]) // Users waiting for approval
+  const [allUsers, setAllUsers] = useState([]) // All users in the system
+  const [selectedRole, setSelectedRole] = useState("") // Currently selected department/role
+  
+  // UI state management
+  const [message, setMessage] = useState("") // Success/error messages
+  const [activeView, setActiveView] = useState("dashboard") // Current view: "dashboard" or "userManagement"
+  const [userManagementTab, setUserManagementTab] = useState("pending") // Tab: "pending" or "all"
+  const [editingUser, setEditingUser] = useState(null) // User being edited/approved
+  const [departmentFilter, setDepartmentFilter] = useState("all") // Filter for user departments
 
+  // Available departments/roles in the system
   const roles = [
     "Sales",
-    "Accounting",
+    "Accounting", 
     "Warehouse",
     "Creative",
     "Linen",
@@ -27,17 +39,26 @@ function AdminDashboard({ onLogout }) {
     "Admin",
   ]
 
+  // ==================== LIFECYCLE HOOKS ====================
+  
+  // Load user data when component mounts
   useEffect(() => {
-    fetchPendingUsers()
-    fetchAllUsers()
+    fetchPendingUsers() // Load users waiting for approval
+    fetchAllUsers() // Load all users in system
   }, [])
 
+  // ==================== API FUNCTIONS ====================
+
+  /**
+   * Fetch users waiting for admin approval
+   * Updates pendingUsers state with users having status: "pending"
+   */
   const fetchPendingUsers = async () => {
     try {
       const res = await fetch("http://localhost:5000/admin/pending-users")
       if (res.ok) {
         const data = await res.json()
-        setPendingUsers(data)
+        setPendingUsers(data) // Update pending users state
       } else {
         console.error("Failed to fetch pending users:", res.status)
         setMessage("Error: Failed to load pending users")
@@ -48,12 +69,16 @@ function AdminDashboard({ onLogout }) {
     }
   }
 
+  /**
+   * Fetch all users in the system
+   * Updates allUsers state with complete user list
+   */
   const fetchAllUsers = async () => {
     try {
       const res = await fetch("http://localhost:5000/admin/users")
       if (res.ok) {
         const data = await res.json()
-        setAllUsers(data)
+        setAllUsers(data) // Update all users state
       } else {
         console.error("Failed to fetch all users:", res.status)
         setMessage("Error: Failed to load users")
@@ -64,8 +89,14 @@ function AdminDashboard({ onLogout }) {
     }
   }
 
+  /**
+   * Approve a pending user and assign them to a department
+   * Changes user status from "pending" to "approved" and assigns role
+   * @param {string} userId - MongoDB ObjectId of the user
+   * @param {string} role - Department/role to assign to the user
+   */
   const approveUser = async (userId, role) => {
-    // Validate inputs
+    // Input validation
     if (!userId) {
       setMessage("Error: User ID is missing")
       return
@@ -77,22 +108,23 @@ function AdminDashboard({ onLogout }) {
     }
 
     try {
+      // Send approval request to backend
       const res = await fetch(`http://localhost:5000/admin/approve-user/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ role }), // Send department/role to assign
       })
 
       const data = await res.json()
 
       if (res.ok) {
         setMessage(`Success: ${data.message}`)
-        fetchPendingUsers()
-        fetchAllUsers()
-        setEditingUser(null)
-        setSelectedRole("")
+        fetchPendingUsers() // Refresh pending users list
+        fetchAllUsers() // Refresh all users list
+        setEditingUser(null) // Close modal
+        setSelectedRole("") // Reset role selection
 
-        // Clear message after 3 seconds
+        // Auto-clear success message after 3 seconds
         setTimeout(() => setMessage(""), 3000)
       } else {
         setMessage(`Error: ${data.message}`)
@@ -103,31 +135,39 @@ function AdminDashboard({ onLogout }) {
     }
   }
 
+  /**
+   * Reject a pending user and permanently delete their account
+   * Removes user from database completely (no soft delete)
+   * @param {string} userId - MongoDB ObjectId of the user to reject
+   */
   const rejectUser = async (userId) => {
+    // Input validation
     if (!userId) {
       setMessage("Error: User ID is missing")
       return
     }
 
+    // Confirmation dialog - this action is irreversible
     if (!window.confirm("Are you sure you want to reject this user? This will permanently delete their account.")) {
       return
     }
 
     try {
+      // Send rejection request to backend
       const res = await fetch(`http://localhost:5000/admin/reject-user/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({}), // Empty body - backend handles deletion
       })
 
       const data = await res.json()
 
       if (res.ok) {
         setMessage(`Success: ${data.message}`)
-        fetchPendingUsers()
-        fetchAllUsers()
+        fetchPendingUsers() // Refresh pending users list
+        fetchAllUsers() // Refresh all users list
 
-        // Clear message after 3 seconds
+        // Auto-clear success message after 3 seconds
         setTimeout(() => setMessage(""), 3000)
       } else {
         setMessage(`Error: ${data.message}`)
@@ -138,7 +178,14 @@ function AdminDashboard({ onLogout }) {
     }
   }
 
+  /**
+   * Change the department/role of an existing approved user
+   * Used for editing user roles in the "All Users" tab
+   * @param {string} userId - MongoDB ObjectId of the user
+   * @param {string} role - New department/role to assign
+   */
   const assignRole = async (userId, role) => {
+    // Input validation
     if (!userId) {
       setMessage("Error: User ID is missing")
       return
@@ -150,21 +197,22 @@ function AdminDashboard({ onLogout }) {
     }
 
     try {
+      // Send role change request to backend
       const res = await fetch(`http://localhost:5000/admin/assign-role/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ role }), // Send new role/department
       })
 
       const data = await res.json()
 
       if (res.ok) {
         setMessage(`Success: ${data.message}`)
-        fetchPendingUsers()
-        fetchAllUsers()
-        setEditingUser(null)
+        fetchPendingUsers() // Refresh data
+        fetchAllUsers() // Refresh data
+        setEditingUser(null) // Close modal
 
-        // Clear message after 3 seconds
+        // Auto-clear success message after 3 seconds
         setTimeout(() => setMessage(""), 3000)
       } else {
         setMessage(`Error: ${data.message}`)
@@ -175,29 +223,37 @@ function AdminDashboard({ onLogout }) {
     }
   }
 
+  /**
+   * Permanently delete any user account (admin only)
+   * Used for removing users from the "All Users" tab
+   * @param {string} userId - MongoDB ObjectId of the user to delete
+   */
   const deleteUser = async (userId) => {
+    // Input validation
     if (!userId) {
       setMessage("Error: User ID is missing")
       return
     }
 
+    // Confirmation dialog - this action is irreversible
     if (!window.confirm("Are you sure you want to delete this user?")) {
       return
     }
 
     try {
+      // Send deletion request to backend
       const res = await fetch(`http://localhost:5000/admin/delete-user/${userId}`, {
-        method: "DELETE",
+        method: "DELETE", // DELETE HTTP method
       })
 
       const data = await res.json()
 
       if (res.ok) {
         setMessage(`Success: ${data.message}`)
-        fetchPendingUsers()
-        fetchAllUsers()
+        fetchPendingUsers() // Refresh data
+        fetchAllUsers() // Refresh data
 
-        // Clear message after 3 seconds
+        // Auto-clear success message after 3 seconds
         setTimeout(() => setMessage(""), 3000)
       } else {
         setMessage(`Error: ${data.message}`)
@@ -208,34 +264,45 @@ function AdminDashboard({ onLogout }) {
     }
   }
 
+  // ==================== RENDER FUNCTIONS ====================
+
+  /**
+   * Render a single user row in the users table
+   * Shows different action buttons based on user status (pending vs approved)
+   * @param {Object} user - User object with all user data
+   * @param {boolean} isPending - Whether this user is pending approval
+   * @returns {JSX.Element} Table row with user data and action buttons
+   */
   const renderUserRow = (user, isPending = false) => (
     <tr key={user._id} className="user-row">
-      <td>{user.fullName}</td>
-      <td>{user.username}</td>
-      <td>{user.email}</td>
+      <td>{user.fullName}</td> {/* Display user's full name */}
+      <td>{user.username}</td> {/* Display username */}
+      <td>{user.email}</td> {/* Display email address */}
       <td>
-        <span className={`status ${user.status}`}>{user.status}</span>
+        <span className={`status ${user.status}`}>{user.status}</span> {/* Status badge with color coding */}
       </td>
-      <td>{user.role || "Not assigned"}</td>
-      <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+      <td>{user.role || "Not assigned"}</td> {/* Department/role or "Not assigned" */}
+      <td>{new Date(user.createdAt).toLocaleDateString()}</td> {/* Registration date */}
       <td>
         <div className="user-actions">
           {isPending ? (
+            // Action buttons for pending users
             <>
               <button className="approve-btn" onClick={() => setEditingUser({ ...user, action: "approve" })}>
-                Approve
+                Approve {/* Opens modal to select department */}
               </button>
               <button className="reject-btn" onClick={() => rejectUser(user._id)}>
-                Reject
+                Reject {/* Immediately deletes user account */}
               </button>
             </>
           ) : (
+            // Action buttons for approved users
             <>
               <button className="edit-btn" onClick={() => setEditingUser({ ...user, action: "edit" })}>
-                Edit
+                Edit {/* Opens modal to change department */}
               </button>
               <button className="delete-btn" onClick={() => deleteUser(user._id)}>
-                Delete
+                Delete {/* Permanently removes user */}
               </button>
             </>
           )}
@@ -438,34 +505,41 @@ function AdminDashboard({ onLogout }) {
     </div>
   )
 
+  // ==================== MAIN COMPONENT RENDER ====================
+
   return (
     <div className="admin-dashboard">
+      {/* Header section with title and logout button */}
       <div className="dashboard-header">
         <h1>Admin Dashboard</h1>
         <button onClick={onLogout} className="logout-btn">
-          Logout
+          Logout {/* Calls parent component's logout function */}
         </button>
       </div>
 
+      {/* Main content area */}
       <div className="dashboard-content">
+        {/* Navigation tabs between Contract Dashboard and User Management */}
         <div className="main-navigation">
           <button
             className={`nav-btn ${activeView === "dashboard" ? "active" : ""}`}
             onClick={() => setActiveView("dashboard")}
           >
-            Contract Dashboard
+            Contract Dashboard {/* Shows contract status table */}
           </button>
           <button
             className={`nav-btn ${activeView === "userManagement" ? "active" : ""}`}
             onClick={() => setActiveView("userManagement")}
           >
-            User Management
+            User Management {/* Shows user approval and management */}
           </button>
         </div>
 
+        {/* Conditional rendering based on active view */}
         {activeView === "dashboard" ? renderMainDashboard() : renderUserManagement()}
       </div>
 
+      {/* Modal overlay for user editing/approval */}
       {editingUser && renderEditModal()}
     </div>
   )
