@@ -3,9 +3,19 @@ import "./App.css";
 import Register from "./components/Register";
 import AdminDashboard from "./components/AdminDashboard";
 import SalesDashboard from "./components/SalesDashboard";
+import AccountingDashboard from "./components/AccountingDashboard";
+import WarehouseDashboard from "./components/WarehouseDashboard";
+import CreativeDashboard from "./components/CreativeDashboard";
+import LinenDashboard from "./components/LinenDashboard";
+import LogisticsDashboard from "./components/LogisticsDashboard";
+import FabricationDashboard from "./components/FabricationDashboard";
+import KitchenDashboard from "./components/KitchenDashboard";
+import StockroomDashboard from "./components/StockroomDashboard";
+import PurchasingDashboard from "./components/PurchasingDashboard";
+import BanquetStaffDashboard from "./components/BanquetStaffDashboard";
 
 function App() {
-  const [currentView, setCurrentView] = useState("login"); // login, register, admin, sales
+  const [currentView, setCurrentView] = useState("login"); // login, register, admin, sales, specific departments
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -29,7 +39,41 @@ function App() {
         } else if (data.user.role === 'Sales') {
           setCurrentView("sales");
         } else {
-          setMessage("Access denied. Admin or Sales privileges required.");
+          // Route by specific department role
+          switch (data.user.role) {
+            case 'Accounting':
+              setCurrentView('accounting');
+              break;
+            case 'Warehouse':
+              setCurrentView('warehouse');
+              break;
+            case 'Creative':
+              setCurrentView('creative');
+              break;
+            case 'Linen':
+              setCurrentView('linen');
+              break;
+            case 'Logistics':
+              setCurrentView('logistics');
+              break;
+            case 'Fabrication':
+              setCurrentView('fabrication');
+              break;
+            case 'Kitchen':
+              setCurrentView('kitchen');
+              break;
+            case 'Stockroom':
+              setCurrentView('stockroom');
+              break;
+            case 'Purchasing':
+              setCurrentView('purchasing');
+              break;
+            case 'Banquet Staff':
+              setCurrentView('banquet');
+              break;
+            default:
+              setMessage("Access denied. Contact admin for role setup.");
+          }
         }
       }
     } catch (err) {
@@ -67,6 +111,17 @@ function App() {
   if (currentView === "sales") {
     return <SalesDashboard onLogout={handleLogout} />;
   }
+
+  if (currentView === "accounting") return <AccountingDashboard onLogout={handleLogout} />;
+  if (currentView === "warehouse") return <WarehouseDashboard onLogout={handleLogout} />;
+  if (currentView === "creative") return <CreativeDashboard onLogout={handleLogout} />;
+  if (currentView === "linen") return <LinenDashboard onLogout={handleLogout} />;
+  if (currentView === "logistics") return <LogisticsDashboard onLogout={handleLogout} />;
+  if (currentView === "fabrication") return <FabricationDashboard onLogout={handleLogout} />;
+  if (currentView === "kitchen") return <KitchenDashboard onLogout={handleLogout} />;
+  if (currentView === "stockroom") return <StockroomDashboard onLogout={handleLogout} />;
+  if (currentView === "purchasing") return <PurchasingDashboard onLogout={handleLogout} />;
+  if (currentView === "banquet") return <BanquetStaffDashboard onLogout={handleLogout} />;
 
   return (
     <div className="App">

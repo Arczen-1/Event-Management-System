@@ -25,9 +25,10 @@ function AdminDashboard({ onLogout }) {
   const [departmentFilter, setDepartmentFilter] = useState("all") // Filter for user departments
 
   // Available departments/roles in the system
+  // NOTE: Ensure "Fabrication" is present here so admins can assign it when approving users
   const roles = [
     "Sales",
-    "Accounting", 
+    "Accounting",
     "Warehouse",
     "Creative",
     "Linen",
@@ -36,6 +37,7 @@ function AdminDashboard({ onLogout }) {
     "Stockroom",
     "Purchasing",
     "Banquet Staff",
+    "Fabrication", // Added/ensured Fabrication role is selectable
     "Admin",
   ]
 
@@ -509,32 +511,37 @@ function AdminDashboard({ onLogout }) {
 
   return (
     <div className="admin-dashboard">
-      {/* Header section with title and logout button */}
+      {/* Header section with centered inner wrapper to align with content width */}
       <div className="dashboard-header">
-        <h1>Admin Dashboard</h1>
-        <button onClick={onLogout} className="logout-btn">
-          Logout {/* Calls parent component's logout function */}
-        </button>
+        <div className="dashboard-header-inner">
+          {/* Left: Title */}
+          <h1>Admin Dashboard</h1>
+          {/* Center: Navigation between Contract Dashboard and User Management */}
+          <div className="header-nav">
+            <button
+              className={`nav-btn ${activeView === "dashboard" ? "active" : ""}`}
+              onClick={() => setActiveView("dashboard")}
+            >
+              {/* Renamed to match requested label */}
+              Contracts
+            </button>
+            <button
+              className={`nav-btn ${activeView === "userManagement" ? "active" : ""}`}
+              onClick={() => setActiveView("userManagement")}
+            >
+              {/* Keep label; style will reflect active route */}
+              User Management
+            </button>
+          </div>
+          {/* Right: Logout */}
+          <button onClick={onLogout} className="logout-btn header-logout">
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Main content area */}
       <div className="dashboard-content">
-        {/* Navigation tabs between Contract Dashboard and User Management */}
-        <div className="main-navigation">
-          <button
-            className={`nav-btn ${activeView === "dashboard" ? "active" : ""}`}
-            onClick={() => setActiveView("dashboard")}
-          >
-            Contract Dashboard {/* Shows contract status table */}
-          </button>
-          <button
-            className={`nav-btn ${activeView === "userManagement" ? "active" : ""}`}
-            onClick={() => setActiveView("userManagement")}
-          >
-            User Management {/* Shows user approval and management */}
-          </button>
-        </div>
-
         {/* Conditional rendering based on active view */}
         {activeView === "dashboard" ? renderMainDashboard() : renderUserManagement()}
       </div>

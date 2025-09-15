@@ -1,9 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./SalesDashboard.css";
+import ContractForm from "./ContractForm";
 
 function SalesDashboard({ onLogout }) {
   const [contracts, setContracts] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [nextNumber, setNextNumber] = useState("");
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [editExisting, setEditExisting] = useState(null);
   const [newContract, setNewContract] = useState({
     name: "",
     client: "",
@@ -13,6 +17,40 @@ function SalesDashboard({ onLogout }) {
     status: "Draft"
   });
 
+  // Load a preview of the next contract number
+  useEffect(() => {
+    if (showCreateForm && !editExisting) {
+      fetch("http://localhost:5000/contracts/next-number")
+        .then((res) => res.json())
+        .then((data) => setNextNumber(data.nextNumber || ""))
+        .catch(() => setNextNumber(""));
+    }
+  }, [showCreateForm, editExisting]);
+
+  // Load contracts from backend on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("http://localhost:5000/contracts");
+        const data = await res.json();
+        if (res.ok) {
+          setContracts(
+            (data.contracts || []).map((c) => ({
+              id: c._id,
+              name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
+              client: (c.page1 && c.page1.celebratorName) || "",
+              value: (c.page3 && c.page3.grandTotal) || "",
+              startDate: (c.page1 && c.page1.eventDate) || "",
+              endDate: (c.page1 && c.page1.eventDate) || "",
+              status: c.status || "Draft",
+              contractNumber: c.contractNumber,
+            }))
+          );
+        }
+      } catch (e) {}
+    })();
+  }, []);
+
   const handleInputChange = (e) => {
     setNewContract({
       ...newContract,
@@ -20,33 +58,69 @@ function SalesDashboard({ onLogout }) {
     });
   };
 
-  const handleCreateContract = (e) => {
+  const handleCreateContract = async (e) => {
     e.preventDefault();
-    // Here you would typically send the data to your backend
-    console.log("Creating contract:", newContract);
-    
-    // For now, just add to local state
-    const contractWithId = {
-      ...newContract,
-      id: Date.now().toString()
-    };
-    setContracts([...contracts, contractWithId]);
-    
-    // Reset form
-    setNewContract({
-      name: "",
-      client: "",
-      value: "",
-      startDate: "",
-      endDate: "",
-      status: "Draft"
-    });
-    setShowCreateForm(false);
+    try {
+      // Build minimal payload mapping to backend sections
+      const payload = {
+        department: "Sales",
+        status: newContract.status,
+        page1: {
+          contractName: newContract.name,
+          client: newContract.client,
+          value: newContract.value,
+          startDate: newContract.startDate,
+          endDate: newContract.endDate,
+        },
+      };
+
+      const res = await fetch("http://localhost:5000/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to create");
+
+      // Append to local list for immediate feedback
+      setContracts([
+        ...contracts,
+        {
+          id: data.contract._id,
+          name: newContract.name,
+          client: newContract.client,
+          value: newContract.value,
+          startDate: newContract.startDate,
+          endDate: newContract.endDate,
+          status: newContract.status,
+          contractNumber: data.contract.contractNumber,
+        },
+      ]);
+
+      // Reset form
+      setNewContract({
+        name: "",
+        client: "",
+        value: "",
+        startDate: "",
+        endDate: "",
+        status: "Draft",
+      });
+      setShowCreateForm(false);
+      setNextNumber("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create contract. Please try again.");
+    }
   };
 
   const renderCreateForm = () => (
     <div className="create-contract-form">
       <h3>Create New Contract</h3>
+      {nextNumber && (
+        <div className="next-number">Next Contract No.: <strong>{nextNumber}</strong></div>
+      )}
       <form onSubmit={handleCreateContract}>
         <div className="form-group">
           <label>Contract Name</label>
@@ -147,6 +221,7 @@ function SalesDashboard({ onLogout }) {
             <tr>
               <th>Contract Name</th>
               <th>Client</th>
+              <th>Contract No.</th>
               <th>Value</th>
               <th>Start Date</th>
               <th>End Date</th>
@@ -160,9 +235,16 @@ function SalesDashboard({ onLogout }) {
               </tr>
             ) : (
               contracts.map(contract => (
-                <tr key={contract.id}>
+                <tr key={contract.id} className="clickable-row" onClick={async () => {
+                  try {
+                    const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                    const data = await res.json();
+                    if (res.ok) setSelectedContract(data.contract);
+                  } catch (e) {}
+                }}>
                   <td>{contract.name}</td>
                   <td>{contract.client}</td>
+                  <td>{contract.contractNumber || "-"}</td>
                   <td>${contract.value}</td>
                   <td>{contract.startDate}</td>
                   <td>{contract.endDate}</td>
@@ -180,15 +262,101 @@ function SalesDashboard({ onLogout }) {
     </div>
   );
 
+  const renderDetailsModal = () => (
+    <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h3>Contract Details</h3>
+        <div className="details-header">
+          <div><span className="muted">No.:</span> <strong>{selectedContract.contractNumber}</strong></div>
+          <div><span className="muted">Status:</span> <span className={`status-pill ${selectedContract.status.toLowerCase()}`}>{selectedContract.status}</span></div>
+        </div>
+
+        {(() => {
+          const toTitle = (k) => k
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/_/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/^./, (c) => c.toUpperCase());
+
+          const Section = ({ title, data }) => {
+            const entries = Object.entries(data || {}).filter(([_, v]) => v !== undefined && v !== null && String(v).trim() !== "");
+            return (
+              <div className="details-section">
+                <h4>{title}</h4>
+                {entries.length === 0 ? (
+                  <div className="empty">No data</div>
+                ) : (
+                  <div className="kv-grid">
+                    {entries.map(([k, v]) => (
+                      <div key={k} className="kv-item">
+                        <div className="kv-label">{toTitle(k)}</div>
+                        <div className="kv-value">{String(v)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          };
+
+          return (
+            <>
+              <Section title="Page 1" data={selectedContract.page1} />
+              <Section title="Page 2" data={selectedContract.page2} />
+              <Section title="Page 3" data={selectedContract.page3} />
+            </>
+          );
+        })()}
+        <div className="modal-actions">
+          {selectedContract.status === "Draft" && (
+            <button className="btn-primary" onClick={() => {
+              setEditExisting(selectedContract);
+              setSelectedContract(null);
+              setShowCreateForm(true);
+            }}>Edit</button>
+          )}
+          <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="sales-dashboard">
       <div className="dashboard-header">
-        <h1>Sales Dashboard</h1>
-        <button onClick={onLogout} className="logout-btn">Logout</button>
+        <div className="dashboard-header-inner">
+          {/* Left: Title matches Admin style */}
+          <h1>Sales Dashboard</h1>
+          {/* Right: Logout aligned to right, same class as Admin */}
+          <button onClick={onLogout} className="logout-btn header-logout">Logout</button>
+        </div>
       </div>
 
       <div className="dashboard-content">
-        {showCreateForm ? renderCreateForm() : renderContractsTable()}
+        {showCreateForm ? (
+          <ContractForm
+            onCancel={() => { setShowCreateForm(false); setEditExisting(null); }}
+            onCreated={(created) => {
+              setShowCreateForm(false);
+              setEditExisting(null);
+              // If editing, replace existing entry; otherwise append
+              setContracts((prev) => {
+                const idx = prev.findIndex((c) => c.id === created.id);
+                if (idx !== -1) {
+                  const copy = [...prev];
+                  copy[idx] = created;
+                  return copy;
+                }
+                return [...prev, created];
+              });
+            }}
+            existing={editExisting}
+          />
+        ) : (
+          renderContractsTable()
+        )}
+        {selectedContract && renderDetailsModal()}
       </div>
     </div>
   );

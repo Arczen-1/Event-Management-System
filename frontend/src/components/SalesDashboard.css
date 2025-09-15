@@ -7,10 +7,16 @@
 .dashboard-header {
   background-color: white;
   padding: 20px 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: block;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header-inner {
+  width: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto; /* Title leftmost, flexible middle, logout right */
+  align-items: center;
 }
 
 .dashboard-header h1 {
@@ -88,6 +94,9 @@
   color: #333;
 }
 
+.clickable-row { cursor: pointer; }
+.clickable-row:hover { background-color: #f2f3f5; }
+
 .contracts-table tr:hover {
   background-color: #f8f9fa;
 }
@@ -152,6 +161,15 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   max-width: 600px;
   margin: 0 auto;
+}
+
+.next-number {
+  background: #f8f9fa;
+  border-left: 4px solid #410d1d;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  color: #410d1d;
 }
 
 .create-contract-form h3 {
@@ -237,3 +255,22 @@
   background-color: #410d1d;
   color: white;
 }
+
+/* Details modal additions */
+.details-pre { background: #f8f9fa; padding: 12px; border-radius: 8px; }
+
+.details-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; color: #410d1d; }
+.muted { color: #6c757d; }
+.status-pill { padding: 4px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+.status-pill.draft { background: #fff3cd; color: #856404; }
+.status-pill.pending { background: #d1ecf1; color: #0c5460; }
+.status-pill.active { background: #d4edda; color: #155724; }
+.status-pill.completed { background: #e2e3e5; color: #383d41; }
+
+.details-section { margin-top: 16px; }
+.details-section h4 { color: #410d1d; margin: 0 0 8px; font-family: "Aileron Black", sans-serif; }
+.kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+.kv-item { background: #f8f9fa; border-radius: 8px; padding: 10px; }
+.kv-label { font-size: 0.85rem; color: #6c757d; margin-bottom: 4px; }
+.kv-value { color: #343a40; white-space: pre-wrap; }
+.empty { color: #6c757d; font-style: italic; }
