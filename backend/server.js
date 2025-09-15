@@ -5,6 +5,8 @@ const bcrypt = require("bcryptjs") // Password hashing library
 const cors = require("cors") // Cross-Origin Resource Sharing middleware
 const Admin = require("./models/Admin") // Admin user model
 const User = require("./models/User") // Regular user model
+const Contract = require("./models/Contract") // Contract model
+const Counter = require("./models/Counter") // Monthly counter for contract numbers
 
 // Initialize Express application
 const app = express()
@@ -247,6 +249,129 @@ app.delete("/admin/delete-user/:userId", async (req, res) => {
   } catch (error) {
     console.error("Delete user error:", error)
     res.status(500).json({ message: "Server error: " + error.message })
+  }
+})
+
+// ==================== CONTRACT ROUTES ====================
+
+// Helper to build the next contract number with monthly reset.
+// Format: YYYY/MM/DD-XXXX where XXXX is 4-digit sequence reset monthly.
+async function generateNextContractNumber(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const key = `${year}/${month}`
+
+  // Atomically increment the counter for this month
+  const counter = await Counter.findOneAndUpdate(
+    { key },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  )
+
+  const seq = String(counter.seq).padStart(4, "0")
+  return `${year}${month}${day}-${seq}`
+}
+
+// GET /contracts/next-number - Preview the next contract number (no write besides counter)
+app.get("/contracts/next-number", async (req, res) => {
+  try {
+    // Use a sessionless peek without increment? Requirement says increases unless deleted,
+    // but we need stability. We'll increment only on creation, so here we simulate next
+    // by reading current seq. If none, next is 0001.
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, "0")
+    const key = `${year}/${month}`
+    const doc = await Counter.findOne({ key })
+    const nextSeq = String(((doc && doc.seq) || 0) + 1).padStart(4, "0")
+    const day = String(now.getDate()).padStart(2, "0")
+    res.json({ nextNumber: `${year}${month}${day}-${nextSeq}` })
+  } catch (error) {
+    console.error("Next number error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// POST /contracts - Create a new contract with auto-generated number
+app.post("/contracts", async (req, res) => {
+  try {
+    const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, page3 = {} } = req.body
+
+    const contractNumber = await generateNextContractNumber(new Date())
+
+    const contract = await Contract.create({
+      contractNumber,
+      department,
+      status,
+      page1,
+      page2,
+      page3,
+    })
+
+    res.json({ message: "Contract created", contract })
+  } catch (error) {
+    console.error("Create contract error:", error)
+    if (error.code === 11000) {
+      // Rare race: regenerate and retry once
+      try {
+        const contractNumber = await generateNextContractNumber(new Date())
+        const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, page3 = {} } = req.body
+        const contract = await Contract.create({ contractNumber, department, status, page1, page2, page3 })
+        return res.json({ message: "Contract created", contract })
+      } catch (err2) {
+        console.error("Retry create contract error:", err2)
+      }
+    }
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// GET /contracts/:id - Fetch full contract details
+app.get("/contracts/:id", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid contract id" })
+    }
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    res.json({ contract })
+  } catch (error) {
+    console.error("Get contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// GET /contracts - List contracts (basic, newest first)
+app.get("/contracts", async (req, res) => {
+  try {
+    const contracts = await Contract.find({}).sort({ createdAt: -1 })
+    res.json({ contracts })
+  } catch (error) {
+    console.error("List contracts error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// PUT /contracts/:id - Update a contract (allowed while Draft)
+app.put("/contracts/:id", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const { page1 = {}, page2 = {}, page3 = {}, status } = req.body
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (contract.status !== "Draft") return res.status(400).json({ message: "Only Draft contracts can be edited" })
+    if (status) contract.status = status
+    contract.page1 = page1
+    contract.page2 = page2
+    contract.page3 = page3
+    await contract.save()
+    res.json({ message: "Contract updated", contract })
+  } catch (error) {
+    console.error("Update contract error:", error)
+    res.status(500).json({ message: "Server error" })
   }
 })
 
