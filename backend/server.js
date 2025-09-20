@@ -375,5 +375,77 @@ app.put("/contracts/:id", async (req, res) => {
   }
 })
 
+// PUT /contracts/:id/approve - Approve a contract (Sales Manager only)
+app.put("/contracts/:id/approve", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (contract.status !== "For Approval") return res.status(400).json({ message: "Only contracts with 'For Approval' status can be approved" })
+    
+    contract.status = "For Accounting Review"
+    await contract.save()
+    res.json({ message: "Contract approved and sent to Accounting", contract })
+  } catch (error) {
+    console.error("Approve contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// PUT /contracts/:id/reject - Reject a contract (Sales Manager only)
+app.put("/contracts/:id/reject", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (contract.status !== "For Approval") return res.status(400).json({ message: "Only contracts with 'For Approval' status can be rejected" })
+    
+    contract.status = "Draft"
+    await contract.save()
+    res.json({ message: "Contract rejected and returned to Draft", contract })
+  } catch (error) {
+    console.error("Reject contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// PUT /contracts/:id/accounting-approve - Approve a contract (Accounting only)
+app.put("/contracts/:id/accounting-approve", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (contract.status !== "For Accounting Review") return res.status(400).json({ message: "Only contracts with 'For Accounting Review' status can be approved by Accounting" })
+    
+    contract.status = "Active"
+    await contract.save()
+    res.json({ message: "Contract approved by Accounting and activated", contract })
+  } catch (error) {
+    console.error("Accounting approve contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// PUT /contracts/:id/accounting-reject - Reject a contract (Accounting only)
+app.put("/contracts/:id/accounting-reject", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (contract.status !== "For Accounting Review") return res.status(400).json({ message: "Only contracts with 'For Accounting Review' status can be rejected by Accounting" })
+    
+    contract.status = "For Approval"
+    await contract.save()
+    res.json({ message: "Contract rejected by Accounting and returned to Sales Manager", contract })
+  } catch (error) {
+    console.error("Accounting reject contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
 // Start the server and listen on specified port
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
