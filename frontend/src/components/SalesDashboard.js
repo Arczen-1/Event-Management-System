@@ -187,7 +187,8 @@ function SalesDashboard({ onLogout }) {
             onChange={handleInputChange}
           >
             <option value="Draft">Draft</option>
-            <option value="Pending">Pending</option>
+            <option value="For Approval">For Approval</option>
+            <option value="For Accounting Review">For Accounting Review</option>
             <option value="Active">Active</option>
             <option value="Completed">Completed</option>
           </select>
@@ -245,11 +246,11 @@ function SalesDashboard({ onLogout }) {
                   <td>{contract.name}</td>
                   <td>{contract.client}</td>
                   <td>{contract.contractNumber || "-"}</td>
-                  <td>${contract.value}</td>
+                  <td>₱{contract.value}</td>
                   <td>{contract.startDate}</td>
                   <td>{contract.endDate}</td>
                   <td>
-                    <span className={`status ${contract.status.toLowerCase()}`}>
+                    <span className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}>
                       {contract.status}
                     </span>
                   </td>

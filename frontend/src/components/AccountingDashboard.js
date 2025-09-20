@@ -1,42 +1,290 @@
-import React, { useState } from "react";
-import "./DepartmentDashboard.css";
+import React, { useState, useEffect } from "react";
+import "./AccountingDashboard.css";
 
 function AccountingDashboard({ onLogout }) {
-  const [page, setPage] = useState(1);
+  const [contracts, setContracts] = useState([]);
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [activeTab, setActiveTab] = useState("for-review"); // "for-review", "approved", "all"
+
+  // Load contracts from backend on mount
+  useEffect(() => {
+    fetchContracts();
+  }, []);
+
+  const fetchContracts = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/contracts");
+      const data = await res.json();
+      if (res.ok) {
+        setContracts(
+          (data.contracts || []).map((c) => ({
+            id: c._id,
+            name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
+            client: (c.page1 && c.page1.celebratorName) || "",
+            value: (c.page3 && c.page3.grandTotal) || "",
+            startDate: (c.page1 && c.page1.eventDate) || "",
+            endDate: (c.page1 && c.page1.eventDate) || "",
+            status: c.status || "Draft",
+            contractNumber: c.contractNumber,
+            page1: c.page1,
+            page2: c.page2,
+            page3: c.page3,
+          }))
+        );
+      }
+    } catch (e) {
+      console.error("Error fetching contracts:", e);
+    }
+  };
+
+  const handleAccountingApprove = async (contractId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/contracts/${contractId}/accounting-approve`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to approve");
+
+      // Update local state
+      setContracts(contracts.map(c => 
+        c.id === contractId 
+          ? { ...c, status: "Active" }
+          : c
+      ));
+      
+      alert("Contract approved and activated");
+      setSelectedContract(null);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to approve contract. Please try again.");
+    }
+  };
+
+  const handleAccountingReject = async (contractId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/contracts/${contractId}/accounting-reject`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to reject");
+
+      // Update local state
+      setContracts(contracts.map(c => 
+        c.id === contractId 
+          ? { ...c, status: "For Approval" }
+          : c
+      ));
+      
+      alert("Contract rejected and returned to Sales Manager");
+      setSelectedContract(null);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to reject contract. Please try again.");
+    }
+  };
+
+  const getFilteredContracts = () => {
+    switch (activeTab) {
+      case "for-review":
+        return contracts.filter(c => c.status === "For Accounting Review");
+      case "approved":
+        return contracts.filter(c => c.status === "Active");
+      default:
+        return contracts;
+    }
+  };
+
+  const renderContractsTable = () => {
+    const filteredContracts = getFilteredContracts();
+    
+    return (
+      <div className="contracts-table-container">
+        <div className="table-header">
+          <h3>Contract Review</h3>
+        </div>
+        
+        <div className="tabs">
+          <button 
+            className={`tab ${activeTab === "for-review" ? "active" : ""}`}
+            onClick={() => setActiveTab("for-review")}
+          >
+            For Review ({contracts.filter(c => c.status === "For Accounting Review").length})
+          </button>
+          <button 
+            className={`tab ${activeTab === "approved" ? "active" : ""}`}
+            onClick={() => setActiveTab("approved")}
+          >
+            Approved ({contracts.filter(c => c.status === "Active").length})
+          </button>
+          <button 
+            className={`tab ${activeTab === "all" ? "active" : ""}`}
+            onClick={() => setActiveTab("all")}
+          >
+            All Contracts ({contracts.length})
+          </button>
+        </div>
+        
+        <div className="contracts-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Contract Name</th>
+                <th>Client</th>
+                <th>Contract No.</th>
+                <th>Total Value</th>
+                <th>Event Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredContracts.length === 0 ? (
+                <tr className="no-contracts">
+                  <td colSpan="7">No contracts found</td>
+                </tr>
+              ) : (
+                filteredContracts.map(contract => (
+                  <tr key={contract.id} className="clickable-row" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>
+                    <td>{contract.name}</td>
+                    <td>{contract.client}</td>
+                    <td>{contract.contractNumber || "-"}</td>
+                    <td>₱{contract.value}</td>
+                    <td>{contract.startDate}</td>
+                    <td>
+                      <span className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}>
+                        {contract.status}
+                      </span>
+                    </td>
+                    <td>
+                      {contract.status === "For Accounting Review" && (
+                        <div className="action-buttons">
+                          <button 
+                            className="btn-approve"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAccountingApprove(contract.id);
+                            }}
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            className="btn-reject"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAccountingReject(contract.id);
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const renderDetailsModal = () => (
+    <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Contract Details - Accounting Review</h3>
+          <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
+        </div>
+        <div className="modal-body">
+          {selectedContract && (
+            <div className="contract-details">
+              <div className="detail-section">
+                <h4>Contract Information</h4>
+                <div className="detail-row">
+                  <strong>Contract Number:</strong> {selectedContract.contractNumber}
+                </div>
+                <div className="detail-row">
+                  <strong>Status:</strong> 
+                  <span className={`status ${selectedContract.status?.toLowerCase().replace(' ', '-')}`}>
+                    {selectedContract.status}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <strong>Client:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Event Date:</strong> {selectedContract.page1?.eventDate || "N/A"}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Financial Details</h4>
+                <div className="detail-row">
+                  <strong>Grand Total:</strong> ₱{selectedContract.page3?.grandTotal || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>VAT Status:</strong> {selectedContract.page3?.vatStatus || "Not specified"}
+                </div>
+                <div className="detail-row">
+                  <strong>Payment Terms:</strong> {selectedContract.page3?.paymentTerms || "Not specified"}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Event Details</h4>
+                <div className="detail-row">
+                  <strong>Occasion:</strong> {selectedContract.page1?.occasion || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Venue:</strong> {selectedContract.page1?.venue || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Total Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="modal-actions">
+          {selectedContract?.status === "For Accounting Review" && (
+            <div className="approval-actions">
+              <button className="btn-approve" onClick={() => {
+                handleAccountingApprove(selectedContract._id);
+              }}>Approve & Activate</button>
+              <button className="btn-reject" onClick={() => {
+                handleAccountingReject(selectedContract._id);
+              }}>Reject & Return</button>
+            </div>
+          )}
+          <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="department-dashboard">
+    <div className="accounting-dashboard">
       <div className="dashboard-header">
         <div className="dashboard-header-inner">
           <h1>Accounting Dashboard</h1>
           <button onClick={onLogout} className="logout-btn header-logout">Logout</button>
         </div>
       </div>
+
       <div className="dashboard-content">
-        <div className="contracts-table-container">
-          <div className="table-header">
-            <h3>Contracts</h3>
-            <div className="pager">
-              <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))}>←</button>
-              <span className="page-indicator">Page {page}</span>
-              <button className="pager-btn" onClick={() => setPage(page + 1)}>→</button>
-            </div>
-          </div>
-          <div className="contracts-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Contract Name</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="no-contracts">
-                  <td colSpan="2">No contracts available</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {renderContractsTable()}
+        {selectedContract && renderDetailsModal()}
       </div>
     </div>
   );

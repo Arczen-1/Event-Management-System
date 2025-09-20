@@ -3,6 +3,7 @@ import "./App.css";
 import Register from "./components/Register";
 import AdminDashboard from "./components/AdminDashboard";
 import SalesDashboard from "./components/SalesDashboard";
+import SalesManagerDashboard from "./components/SalesManagerDashboard";
 import AccountingDashboard from "./components/AccountingDashboard";
 import WarehouseDashboard from "./components/WarehouseDashboard";
 import CreativeDashboard from "./components/CreativeDashboard";
@@ -38,6 +39,8 @@ function App() {
           setCurrentView("admin");
         } else if (data.user.role === 'Sales') {
           setCurrentView("sales");
+        } else if (data.user.role === 'Sales Manager') {
+          setCurrentView("sales-manager");
         } else {
           // Route by specific department role
           switch (data.user.role) {
@@ -110,6 +113,10 @@ function App() {
 
   if (currentView === "sales") {
     return <SalesDashboard onLogout={handleLogout} />;
+  }
+
+  if (currentView === "sales-manager") {
+    return <SalesManagerDashboard onLogout={handleLogout} />;
   }
 
   if (currentView === "accounting") return <AccountingDashboard onLogout={handleLogout} />;
