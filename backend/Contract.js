@@ -1,0 +1,168 @@
+const mongoose = require("mongoose")
+
+// Contract schema to store full contract details with explicitly defined fields
+// matching the frontend contract form structure
+const ContractSchema = new mongoose.Schema(
+  {
+    contractNumber: { type: String, required: true, unique: true }, // e.g., 2025/09/15-0001
+    department: { type: String, default: "Sales" },
+    status: { type: String, default: "Draft" },
+    
+    // Page 1 fields matching frontend p1 state
+    page1: {
+      type: {
+        date: String,
+        celebratorName: String,
+        celebratorAddress: String,
+        celebratorLandline: String,
+        celebratorMobile: String,
+        celebratorEmail: String,
+        representativeName: String,
+        representativeRelationship: String,
+        representativeAddress: String,
+        representativeEmail: String,
+        representativeMobile: String,
+        representativeLandline: String,
+        coordinatorName: String,
+        coordinatorMobile: String,
+        coordinatorLandline: String,
+        companyName: String,
+        companyAddress: String,
+        companyEmail: String,
+        accountHandlerName: String,
+        accountHandlerMobile: String,
+        accountHandlerEmail: String,
+        eventDate: String,
+        occasion: String,
+        venue: String,
+        hall: String,
+        ingressTime: String,
+        cocktailTime: String,
+        address: String,
+        arrivalOfGuests: String,
+        servingTime: String,
+        totalGuests: String,
+        totalVIP: String,
+        totalRegular: String,
+        kiddiePlated: String,
+        kiddiePacked: String,
+        crewPlated: String,
+        crewPacked: String,
+        themeSetup: String,
+        colorMotif: String,
+        vipTableType: String,
+        regularTableType: String,
+        vipUnderliner: String,
+        vipTopper: String,
+        vipNapkin: String,
+        guestUnderliner: String,
+        guestTopper: String,
+        guestNapkin: String,
+        setupRemarks: String,
+        buffetStandard: String,
+        buffetUpgraded: String,
+        buffetPremium: String,
+        buffetBarrel: String,
+        buffetOval: String,
+        buffetUnderliner: String,
+        buffetTopper: String,
+        buffetRemarks: String,
+        chairsMonoblock: String,
+        chairsTiffany: String,
+        chairsCrystal: String,
+        chairsRustic: String,
+        chairsKiddie: String,
+        premiumChairs: String
+      },
+      default: {}
+    },
+
+    // Page 2 fields matching frontend p2 state
+    page2: {
+      type: {
+        chairsMonoblock: String,
+        chairsTiffany: String,
+        chairsCrystal: String,
+        chairsRustic: String,
+        chairsKiddie: String,
+        premiumChairs: String,
+        chairsRemarks: String,
+        flowerBackdrop: String,
+        flowerGuestCenterpiece: String,
+        flowerVipCenterpiece: String,
+        flowerCakeTable: String,
+        flowerRemarks: String,
+        cakeNameCode: String,
+        cakeFlavor: String,
+        cakeSupplier: String,
+        cakeSpecifications: String,
+        celebratorsCar: String,
+        emcee: String,
+        soundSystem: String,
+        tent: String,
+        celebratorsChair: String,
+        remarks: String,
+        others: String,
+        knowUsWebsite: Boolean,
+        knowUsFacebook: Boolean,
+        knowUsInstagram: Boolean,
+        knowUsFlyers: Boolean,
+        knowUsBillboard: Boolean,
+        knowUsWordOfMouth: Boolean,
+        knowUsVenueReferral: Boolean,
+        knowUsRepeatClient: Boolean,
+        knowUsBridalFair: Boolean,
+        knowUsFoodTasting: Boolean,
+        knowUsCelebrityReferral: Boolean,
+        knowUsOthers: Boolean
+      },
+      default: {}
+    },
+
+    // Page 3 fields matching frontend p3 state
+    page3: {
+      type: {
+        pricePerPlate: String,
+        cocktailHour: String,
+        appetizer: String,
+        soup: String,
+        bread: String,
+        salad: String,
+        mainEntree: String,
+        dessert: String,
+        cakeName: String,
+        kidsMeal: String,
+        crewMeal: String,
+        drinksCocktail: String,
+        drinksMeal: String,
+        roastedPig: String,
+        roastedCalf: String,
+        totalMenuCost: String,
+        totalSpecialReqCost: String,
+        outOfServiceAreaCharge: String,
+        mobilizationCharge: String,
+        taxes: String,
+        grandTotal: String,
+        reservationAmount: String,
+        reservationPaymentDetails: String,
+        reservationReceivedBy: String,
+        reservationDateReceived: String,
+        fortyPercentDueOn: String,
+        fortyPercentAmount: String,
+        fortyPercentReceivedBy: String,
+        fortyPercentDateReceived: String,
+        fullPaymentDueOn: String,
+        fullPaymentAmount: String,
+        fullPaymentReceivedBy: String,
+        fullPaymentDateReceived: String,
+        remarks: String
+      },
+      default: {}
+    }
+  },
+  { timestamps: true }
+)
+
+module.exports = mongoose.model("Contract", ContractSchema)
+
+
