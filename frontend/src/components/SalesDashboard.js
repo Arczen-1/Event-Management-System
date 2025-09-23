@@ -227,32 +227,102 @@ function SalesDashboard({ onLogout }) {
               <th>Start Date</th>
               <th>End Date</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {contracts.length === 0 ? (
               <tr className="no-contracts">
-                <td colSpan="6">No contracts created yet</td>
+                <td colSpan="7">No contracts created yet</td>
               </tr>
             ) : (
               contracts.map(contract => (
-                <tr key={contract.id} className="clickable-row" onClick={async () => {
-                  try {
-                    const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
-                    const data = await res.json();
-                    if (res.ok) setSelectedContract(data.contract);
-                  } catch (e) {}
-                }}>
-                  <td>{contract.name}</td>
-                  <td>{contract.client}</td>
-                  <td>{contract.contractNumber || "-"}</td>
-                  <td>₱{contract.value}</td>
-                  <td>{contract.startDate}</td>
-                  <td>{contract.endDate}</td>
-                  <td>
+                <tr key={contract.id}>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.name}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.client}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.contractNumber || "-"}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>₱{contract.value}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.startDate}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.endDate}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>
                     <span className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}>
                       {contract.status}
                     </span>
+                  </td>
+                  <td>
+                    {contract.status === "Draft" && (
+                      <button
+                        className="btn-primary small"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const res = await fetch(`http://localhost:5000/contracts/${contract.id}/send-for-approval`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" }
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                              // Update the contract status in the local state
+                              setContracts(prevContracts =>
+                                prevContracts.map(c =>
+                                  c.id === contract.id
+                                    ? { ...c, status: "For Approval" }
+                                    : c
+                                )
+                              );
+                            } else {
+                              alert(data.message || "Failed to send for approval");
+                            }
+                          } catch (error) {
+                            alert("Failed to send for approval. Please try again.");
+                          }
+                        }}
+                      >
+                        Send for Approval
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
