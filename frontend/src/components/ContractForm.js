@@ -27,9 +27,6 @@ function ContractForm({ onCancel, onCreated, existing }) {
     companyName: "",
     companyAddress: "",
     companyEmail: "",
-    accountHandlerName: "",
-    accountHandlerMobile: "",
-    accountHandlerEmail: "",
     eventDate: "",
     occasion: "",
     venue: "",
@@ -65,12 +62,6 @@ function ContractForm({ onCancel, onCreated, existing }) {
     buffetUnderliner: "",
     buffetTopper: "",
     buffetRemarks: "",
-    chairsMonoblock: "",
-    chairsTiffany: "",
-    chairsCrystal: "",
-    chairsRustic: "",
-    chairsKiddie: "",
-    premiumChairs: "",
   });
 
   // Page 2 fields
@@ -135,10 +126,6 @@ function ContractForm({ onCancel, onCreated, existing }) {
     mobilizationCharge: "",
     taxes: "",
     grandTotal: "",
-    reservationAmount: "",
-    reservationPaymentDetails: "",
-    reservationReceivedBy: "",
-    reservationDateReceived: "",
     fortyPercentDueOn: "",
     fortyPercentAmount: "",
     fortyPercentReceivedBy: "",
@@ -206,7 +193,7 @@ function ContractForm({ onCancel, onCreated, existing }) {
           onCreated({
             id: data.contract._id,
             contractNumber: data.contract.contractNumber,
-            name: p1.contractName || p1.occasion || "Contract",
+            name: p1.occasion || "Contract",
             client: p1.celebratorName || "",
             value: p3.grandTotal || "",
             startDate: p1.eventDate || "",
