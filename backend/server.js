@@ -447,5 +447,29 @@ app.put("/contracts/:id/accounting-reject", async (req, res) => {
   }
 })
 
+// PUT /contracts/:id/send-for-approval - Send a contract for approval (Sales only)
+app.put("/contracts/:id/send-for-approval", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid contract id" })
+    }
+    const contract = await Contract.findById(id)
+    if (!contract) {
+      return res.status(404).json({ message: "Not found" })
+    }
+    if (contract.status !== "Draft") {
+      return res.status(400).json({ message: "Only Draft contracts can be sent for approval" })
+    }
+    
+    contract.status = "For Approval"
+    await contract.save()
+    res.json({ message: "Contract sent for approval", contract })
+  } catch (error) {
+    console.error("Send for approval error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
 // Start the server and listen on specified port
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
