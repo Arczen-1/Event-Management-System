@@ -335,10 +335,13 @@ function SalesManagerDashboard({ onLogout }) {
                         <div className="action-buttons">
                           <button
                             className="btn-review"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              setReviewingContract(contract);
-                              setShowReviewModal(true);
+                              try {
+                                const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                                const data = await res.json();
+                                if (res.ok) setSelectedContract(data.contract);
+                              } catch (e) {}
                             }}
                           >
                             Review
@@ -358,33 +361,231 @@ function SalesManagerDashboard({ onLogout }) {
 
   const renderDetailsModal = () => (
     <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Contract Details</h3>
+          <h3>Contract Details - {selectedContract?.contractNumber}</h3>
           <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
         </div>
         <div className="modal-body">
           {selectedContract && (
-            <div className="contract-details">
-              <div className="detail-row">
-                <strong>Contract Number:</strong> {selectedContract.contractNumber}
+            <div className="contract-details-comprehensive">
+              {/* Contract Status */}
+              <div className="detail-section">
+                <div className="detail-row">
+                  <strong>Status:</strong>
+                  <span className={`status ${selectedContract.status?.toLowerCase().replace(' ', '-')}`}>
+                    {selectedContract.status}
+                  </span>
+                </div>
               </div>
-              <div className="detail-row">
-                <strong>Status:</strong>
-                <span className={`status ${selectedContract.status?.toLowerCase().replace(' ', '-')}`}>
-                  {selectedContract.status}
-                </span>
+
+              {/* Client Information */}
+              <div className="detail-section">
+                <h4>Client Information</h4>
+                <div className="detail-grid">
+                  <div className="detail-row">
+                    <strong>Client Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Coordinator Name:</strong> {selectedContract.page1?.coordinatorName || "N/A"}
+                  </div>
+                </div>
               </div>
-              <div className="detail-row">
-                <strong>Client:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+
+              {/* Event Details */}
+              <div className="detail-section">
+                <h4>Event Details</h4>
+                <div className="detail-grid">
+                  <div className="detail-row">
+                    <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Occasion:</strong> {selectedContract.page1?.occasion || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Venue:</strong> {selectedContract.page1?.venue || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Hall:</strong> {selectedContract.page1?.hall || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
+                    {selectedContract.page1?.totalVIP && ` (VIP: ${selectedContract.page1.totalVIP}`}
+                    {selectedContract.page1?.totalRegular && `, Regular: ${selectedContract.page1.totalRegular})`}
+                  </div>
+                </div>
               </div>
-              <div className="detail-row">
-                <strong>Event Date:</strong> {selectedContract.page1?.eventDate || "N/A"}
+
+              {/* Set-Up */}
+              <div className="detail-section">
+                <h4>Set-Up</h4>
+                <div className="detail-grid">
+                  <div className="detail-row">
+                    <strong>Theme Set-Up:</strong> {selectedContract.page1?.themeSetup || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Color Motif:</strong> {selectedContract.page1?.colorMotif || "N/A"}
+                  </div>
+                </div>
               </div>
-              <div className="detail-row">
-                <strong>Total Value:</strong> ₱{selectedContract.page3?.grandTotal || "N/A"}
+
+              {/* Flower Arrangement */}
+              <div className="detail-section">
+                <h4>Flower Arrangement</h4>
+                <div className="detail-grid">
+                  <div className="detail-row">
+                    <strong>Backdrop:</strong> {selectedContract.page2?.flowerBackdrop || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Guest Centerpiece:</strong> {selectedContract.page2?.flowerGuestCenterpiece || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>VIP Centerpiece:</strong> {selectedContract.page2?.flowerVipCenterpiece || "N/A"}
+                  </div>
+                </div>
               </div>
-              {/* Add more details as needed */}
+
+              {/* Other Special Requirements */}
+              <div className="detail-section">
+                <h4>Other Special Requirements</h4>
+                <div className="detail-subsection">
+                  <h5>Cake Details</h5>
+                  <div className="detail-grid">
+                    <div className="detail-row">
+                      <strong>Cake Name/Code:</strong> {selectedContract.page2?.cakeNameCode || "N/A"}
+                    </div>
+                    <div className="detail-row">
+                      <strong>Flavor:</strong> {selectedContract.page2?.cakeFlavor || "N/A"}
+                    </div>
+                    <div className="detail-row">
+                      <strong>Supplier:</strong> {selectedContract.page2?.cakeSupplier || "N/A"}
+                    </div>
+                    <div className="detail-row">
+                      <strong>Specifications:</strong> {selectedContract.page2?.cakeSpecifications || "N/A"}
+                    </div>
+                  </div>
+                </div>
+                <div className="detail-subsection">
+                  <h5>Additional Requirements</h5>
+                  <div className="detail-grid">
+                    <div className="detail-row">
+                      <strong>Celebrator's Car:</strong> {selectedContract.page2?.celebratorsCar || "N/A"}
+                    </div>
+                    <div className="detail-row">
+                      <strong>Emcee:</strong> {selectedContract.page2?.emcee || "N/A"}
+                    </div>
+                    <div className="detail-row">
+                      <strong>Sound System:</strong> {selectedContract.page2?.soundSystem || "N/A"}
+                    </div>
+                    <div className="detail-row">
+                      <strong>Tent:</strong> {selectedContract.page2?.tent || "N/A"}
+                    </div>
+                    <div className="detail-row">
+                      <strong>Celebrator's Chair:</strong> {selectedContract.page2?.celebratorsChair || "N/A"}
+                    </div>
+                  </div>
+                </div>
+                {(selectedContract.page2?.remarks || selectedContract.page2?.others) && (
+                  <div className="detail-subsection">
+                    <h5>Remarks & Other Requirements</h5>
+                    <div className="detail-row">
+                      <strong>Remarks:</strong> {selectedContract.page2?.remarks || "N/A"}
+                    </div>
+                    <div className="detail-row">
+                      <strong>Other Requirements:</strong> {selectedContract.page2?.others || "N/A"}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Menu Details */}
+              <div className="detail-section">
+                <h4>Menu Details</h4>
+                <div className="menu-details">
+                  {selectedContract.page3?.cocktailHour && (
+                    <div className="detail-row">
+                      <strong>Cocktail Hour:</strong>
+                      <div className="menu-text">{selectedContract.page3.cocktailHour}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.appetizer && (
+                    <div className="detail-row">
+                      <strong>Appetizer:</strong>
+                      <div className="menu-text">{selectedContract.page3.appetizer}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.soup && (
+                    <div className="detail-row">
+                      <strong>Soup:</strong>
+                      <div className="menu-text">{selectedContract.page3.soup}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.bread && (
+                    <div className="detail-row">
+                      <strong>Bread:</strong>
+                      <div className="menu-text">{selectedContract.page3.bread}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.salad && (
+                    <div className="detail-row">
+                      <strong>Salad:</strong>
+                      <div className="menu-text">{selectedContract.page3.salad}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.mainEntree && (
+                    <div className="detail-row">
+                      <strong>Main Entrée:</strong>
+                      <div className="menu-text">{selectedContract.page3.mainEntree}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.dessert && (
+                    <div className="detail-row">
+                      <strong>Dessert:</strong>
+                      <div className="menu-text">{selectedContract.page3.dessert}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.cakeName && (
+                    <div className="detail-row">
+                      <strong>Cake Name:</strong>
+                      <div className="menu-text">{selectedContract.page3.cakeName}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.kidsMeal && (
+                    <div className="detail-row">
+                      <strong>Kids Meal:</strong>
+                      <div className="menu-text">{selectedContract.page3.kidsMeal}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.crewMeal && (
+                    <div className="detail-row">
+                      <strong>Crew Meal:</strong>
+                      <div className="menu-text">{selectedContract.page3.crewMeal}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.drinksCocktail && (
+                    <div className="detail-row">
+                      <strong>Drinks at Cocktail:</strong>
+                      <div className="menu-text">{selectedContract.page3.drinksCocktail}</div>
+                    </div>
+                  )}
+                  {selectedContract.page3?.drinksMeal && (
+                    <div className="detail-row">
+                      <strong>Drinks at Meal:</strong>
+                      <div className="menu-text">{selectedContract.page3.drinksMeal}</div>
+                    </div>
+                  )}
+                  {(selectedContract.page3?.roastedPig || selectedContract.page3?.roastedCalf) && (
+                    <div className="detail-row">
+                      <strong>Special Items:</strong>
+                      <div className="menu-text">
+                        {selectedContract.page3.roastedPig && `Roasted Pig: ${selectedContract.page3.roastedPig}`}
+                        {selectedContract.page3.roastedPig && selectedContract.page3.roastedCalf && <br />}
+                        {selectedContract.page3.roastedCalf && `Roasted Calf: ${selectedContract.page3.roastedCalf}`}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

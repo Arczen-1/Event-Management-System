@@ -372,6 +372,12 @@
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
+.modal-content.large-modal {
+  max-width: 900px;
+  width: 95%;
+  max-height: 90vh;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -448,6 +454,75 @@
   display: flex;
   gap: 10px;
   margin-right: auto;
+}
+
+/* Comprehensive Contract Details Modal Styles */
+.contract-details-comprehensive {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detail-section {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  background-color: #fafafa;
+}
+
+.detail-section h4 {
+  margin: 0 0 15px 0;
+  color: #410d1d;
+  font-family: "Aileron Black", sans-serif;
+  font-size: 16px;
+  border-bottom: 2px solid #410d1d;
+  padding-bottom: 5px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.detail-subsection {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.detail-subsection h5 {
+  margin: 0 0 10px 0;
+  color: #5a1a2d;
+  font-family: "Aileron", sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.menu-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-text {
+  white-space: pre-line;
+  line-height: 1.4;
+  color: #555;
+  font-style: italic;
+  margin-left: 10px;
+}
+
+.total-cost {
+  background-color: #fff3cd;
+  padding: 10px;
+  border-radius: 4px;
+  font-weight: bold;
+  color: #856404;
+}
+
+.total-cost strong {
+  color: #856404;
 }
 
 
