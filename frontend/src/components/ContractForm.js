@@ -24,9 +24,8 @@ function ContractForm({ onCancel, onCreated, existing }) {
     coordinatorName: "",
     coordinatorMobile: "",
     coordinatorLandline: "",
-    companyName: "",
-    companyAddress: "",
-    companyEmail: "",
+    coordinatorAddress: "",
+    coordinatorEmail: "",
     eventDate: "",
     occasion: "",
     venue: "",
@@ -59,8 +58,6 @@ function ContractForm({ onCancel, onCreated, existing }) {
     buffetPremium: "",
     buffetBarrel: "",
     buffetOval: "",
-    buffetUnderliner: "",
-    buffetTopper: "",
     buffetRemarks: "",
   });
 
@@ -87,8 +84,6 @@ function ContractForm({ onCancel, onCreated, existing }) {
     soundSystem: "",
     tent: "",
     celebratorsChair: "",
-    remarks: "",
-    others: "",
     knowUsWebsite: false,
     knowUsFacebook: false,
     knowUsInstagram: false,
@@ -283,8 +278,8 @@ function ContractForm({ onCancel, onCreated, existing }) {
         <div className="form-group"><label>Landline No.</label><input value={p1.coordinatorLandline} onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} /></div>
       </div>
       <div className="form-row two">
-        <div className="form-group"><label>Email Adress</label><input value={p1.companyEmail} onChange={(e)=>setP1({...p1, companyEmail:e.target.value})} /></div>
-        <div className="form-group"><label>Address</label><input value={p1.companyAddress} onChange={(e)=>setP1({...p1, companyAddress:convertToUppercase(e.target.value)})} /></div>
+        <div className="form-group"><label>Email Address</label><input value={p1.coordinatorEmail} onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} /></div>
+        <div className="form-group"><label>Address</label><input value={p1.coordinatorAddress} onChange={(e)=>setP1({...p1, coordinatorAddress:convertToUppercase(e.target.value)})} /></div>
       </div>
       
       <h4>Event Details</h4>
