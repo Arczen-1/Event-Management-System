@@ -44,6 +44,7 @@ function SalesDashboard({ onLogout }) {
               endDate: (c.page1 && c.page1.eventDate) || "",
               status: c.status || "Draft",
               contractNumber: c.contractNumber,
+              rejectionReason: c.rejectionReason || "",
             }))
           );
         }
@@ -380,7 +381,7 @@ function SalesDashboard({ onLogout }) {
           );
         })()}
         <div className="modal-actions">
-          {selectedContract.status === "Draft" && (
+          {(selectedContract.status === "Draft" || selectedContract.status === "Rejected") && (
             <button className="btn-primary" onClick={() => {
               setEditExisting(selectedContract);
               setSelectedContract(null);

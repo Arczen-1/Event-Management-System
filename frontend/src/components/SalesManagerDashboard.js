@@ -111,10 +111,10 @@ function SalesManagerDashboard({ onLogout }) {
     }
   };
 
-  const handleApprove = async () => {
-    if (!reviewingContract) return;
+  const handleApprove = async (contractId) => {
+    if (!contractId) return;
     try {
-      const res = await fetch(`http://localhost:5000/contracts/${reviewingContract.id}/approve`, {
+      const res = await fetch(`http://localhost:5000/contracts/${contractId}/approve`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
       });
@@ -124,7 +124,7 @@ function SalesManagerDashboard({ onLogout }) {
 
       // Update local state
       setContracts(contracts.map(c =>
-        c.id === reviewingContract.id
+        c.id === contractId
           ? { ...c, status: "For Accounting Review" }
           : c
       ));
@@ -141,6 +141,7 @@ function SalesManagerDashboard({ onLogout }) {
   const handleReject = async () => {
     if (!reviewingContract) return;
     try {
+      console.log("Rejecting contract with ID:", reviewingContract.id); // Debug log
       const res = await fetch(`http://localhost:5000/contracts/${reviewingContract.id}/reject`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -153,19 +154,31 @@ function SalesManagerDashboard({ onLogout }) {
       // Update local state
       setContracts(contracts.map(c =>
         c.id === reviewingContract.id
-          ? { ...c, status: "Draft" }
+          ? { ...c, status: "Rejected" }
           : c
       ));
 
       setShowRejectModal(false);
       setReviewingContract(null);
       setRejectReason("");
-      alert("Contract rejected and returned to Draft");
+      alert("Contract rejected and returned to Rejected status");
     } catch (err) {
       console.error(err);
-      alert("Failed to reject contract. Please try again.");
+      alert(err.message || "Failed to reject contract. Please try again.");
     }
   };
+
+  // Helper function to map contract data consistently
+  const mapContractData = (contract) => ({
+    id: contract._id,
+    contractNumber: contract.contractNumber,
+    status: contract.status,
+    page1: contract.page1,
+    page2: contract.page2,
+    page3: contract.page3,
+    createdAt: contract.createdAt,
+    updatedAt: contract.updatedAt
+  });
 
   const getFilteredContracts = () => {
     switch (activeTab) {
@@ -317,8 +330,14 @@ function SalesManagerDashboard({ onLogout }) {
                     try {
                       const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
                       const data = await res.json();
-                      if (res.ok) setSelectedContract(data.contract);
-                    } catch (e) {}
+                      if (res.ok) {
+                        // Map the contract data consistently
+                        const mappedContract = mapContractData(data.contract);
+                        setSelectedContract(mappedContract);
+                      }
+                    } catch (e) {
+                      console.error("Error fetching contract details:", e);
+                    }
                   }}>
                     <td>{contract.name}</td>
                     <td>{contract.client}</td>
@@ -340,8 +359,14 @@ function SalesManagerDashboard({ onLogout }) {
                               try {
                                 const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
                                 const data = await res.json();
-                                if (res.ok) setSelectedContract(data.contract);
-                              } catch (e) {}
+                                if (res.ok) {
+                                  // Map the contract data consistently
+                                  const mappedContract = mapContractData(data.contract);
+                                  setSelectedContract(mappedContract);
+                                }
+                              } catch (e) {
+                                console.error("Error fetching contract details:", e);
+                              }
                             }}
                           >
                             Review
@@ -593,11 +618,20 @@ function SalesManagerDashboard({ onLogout }) {
           {selectedContract?.status === "For Approval" && (
             <div className="approval-actions">
               <button className="btn-approve" onClick={() => {
-                handleApprove(selectedContract._id);
+                handleApprove(selectedContract.id);
                 setSelectedContract(null);
               }}>Approve</button>
               <button className="btn-reject" onClick={() => {
-                handleReject(selectedContract._id);
+                // Create a mapped version for reviewing that has consistent id field
+                const mappedForReview = {
+                  id: selectedContract.id,
+                  contractNumber: selectedContract.contractNumber,
+                  client: selectedContract.page1?.celebratorName || "",
+                  startDate: selectedContract.page1?.eventDate || "",
+                  value: selectedContract.page3?.grandTotal || ""
+                };
+                setReviewingContract(mappedForReview);
+                setShowRejectModal(true);
                 setSelectedContract(null);
               }}>Reject</button>
             </div>
@@ -635,7 +669,7 @@ function SalesManagerDashboard({ onLogout }) {
         </div>
         <div className="modal-actions">
           <div className="review-actions">
-            <button className="btn-approve" onClick={handleApprove}>Accept</button>
+            <button className="btn-approve" onClick={() => handleApprove(reviewingContract?.id)}>Accept</button>
             <button
               className="btn-reject"
               onClick={() => {

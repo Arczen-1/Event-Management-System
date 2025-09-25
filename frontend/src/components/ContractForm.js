@@ -172,15 +172,46 @@ function ContractForm({ onCancel, onCreated, existing }) {
     return time12Regex.test(value) || time24Regex.test(value) || naRegex.test(value);
   };
 
+  const validateForm = () => {
+    const errors = [];
+
+    // Page 1 validations
+    if (!p1.celebratorName?.trim()) errors.push("Celebrator Name is required");
+    if (!p1.eventDate) errors.push("Event Date is required");
+    if (!p1.occasion) errors.push("Occasion is required");
+    if (!p1.venue?.trim()) errors.push("Venue is required");
+    if (!p1.totalGuests) errors.push("Total Number of Guests is required");
+    if (!p1.coordinatorName?.trim()) errors.push("Coordinator Name is required");
+
+    // Page 2 validations - at least some basic requirements
+    if (!p2.cakeNameCode?.trim() && !p2.cakeFlavor?.trim()) {
+      errors.push("Cake details are required");
+    }
+
+    // Page 3 validations
+    if (!p3.mainEntree?.trim()) errors.push("Main Entrée is required");
+    if (!p3.grandTotal) errors.push("Grand Total is required");
+
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate form before submission
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      alert("Please fill in all required fields:\n\n" + validationErrors.join("\n"));
+      return;
+    }
+
     try {
       if (existing) {
         // Update existing draft
         const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ page1: p1, page2: p2, page3: p3, status: existing.status || "Draft" }),
+          body: JSON.stringify({ page1: p1, page2: p2, page3: p3, status: existing.status || "draft" }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to update contract");
@@ -198,7 +229,7 @@ function ContractForm({ onCancel, onCreated, existing }) {
         }
       } else {
         // Create new
-        const payload = { department: "Sales", status: "Draft", page1: p1, page2: p2, page3: p3 };
+        const payload = { department: "Sales", status: "draft", page1: p1, page2: p2, page3: p3 };
         const res = await fetch("http://localhost:5000/contracts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
