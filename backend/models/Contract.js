@@ -24,6 +24,8 @@ const ContractSchema = new mongoose.Schema(
       coordinatorName: { type: String, default: "" },
       coordinatorMobile: { type: String, default: "" },
       coordinatorLandline: { type: String, default: "" },
+      coordinatorAddress: { type: String, default: "" },
+      coordinatorEmail: { type: String, default: "" },
       eventDate: { type: String, default: "" },
       occasion: { type: String, default: "" },
       venue: { type: String, default: "" },
