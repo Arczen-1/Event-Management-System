@@ -7,6 +7,7 @@ const ContractSchema = new mongoose.Schema(
     contractNumber: { type: String, required: true, unique: true },
     department: { type: String, default: "Sales" },
     status: { type: String, default: "Draft" },
+    rejectionReason: { type: String, default: "" },
     
     page1: {
       date: { type: String, default: "" },
