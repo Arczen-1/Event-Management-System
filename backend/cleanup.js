@@ -19,9 +19,8 @@ async function cleanupContracts() {
         'celebratorMobile', 'celebratorEmail', 'representativeName',
         'representativeRelationship', 'representativeAddress', 'representativeEmail',
         'representativeMobile', 'representativeLandline', 'coordinatorName',
-        'coordinatorMobile', 'coordinatorLandline', 'companyName',
-        'companyAddress', 'companyEmail', 'accountHandlerName',
-        'accountHandlerMobile', 'accountHandlerEmail', 'eventDate',
+        'coordinatorMobile', 'coordinatorLandline',
+        'companyAddress', 'companyEmail', 'eventDate',
         'occasion', 'venue', 'hall', 'ingressTime', 'cocktailTime',
         'address', 'arrivalOfGuests', 'servingTime', 'totalGuests',
         'totalVIP', 'totalRegular', 'kiddiePlated', 'kiddiePacked',
@@ -29,9 +28,7 @@ async function cleanupContracts() {
         'vipTableType', 'regularTableType', 'vipUnderliner', 'vipTopper',
         'vipNapkin', 'guestUnderliner', 'guestTopper', 'guestNapkin',
         'setupRemarks', 'buffetStandard', 'buffetUpgraded', 'buffetPremium',
-        'buffetBarrel', 'buffetOval', 'buffetUnderliner', 'buffetTopper',
-        'buffetRemarks', 'chairsMonoblock', 'chairsTiffany', 'chairsCrystal',
-        'chairsRustic', 'chairsKiddie', 'premiumChairs'
+        'buffetBarrel', 'buffetOval', 'buffetRemarks'
       ],
       page2: [
         'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic',
