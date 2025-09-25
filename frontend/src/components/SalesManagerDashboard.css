@@ -179,8 +179,12 @@
 }
 
 .status.for-accounting-review {
-  background-color: #fff3cd;
-  color: #856404;
+  background-color: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .status.active {
@@ -196,6 +200,22 @@
 .action-buttons {
   display: flex;
   gap: 8px;
+}
+
+.btn-review {
+  background-color: #410d1d;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-family: "Aileron", sans-serif;
+  transition: background-color 0.3s;
+}
+
+.btn-review:hover {
+  background-color: #5a1a2d;
 }
 
 .btn-approve {

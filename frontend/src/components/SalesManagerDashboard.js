@@ -9,6 +9,10 @@ function SalesManagerDashboard({ onLogout }) {
   const [selectedContract, setSelectedContract] = useState(null);
   const [editExisting, setEditExisting] = useState(null);
   const [activeTab, setActiveTab] = useState("all"); // "all", "for-approval", "approved"
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [reviewingContract, setReviewingContract] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
   const [newContract, setNewContract] = useState({
     name: "",
     client: "",
@@ -107,9 +111,10 @@ function SalesManagerDashboard({ onLogout }) {
     }
   };
 
-  const handleApprove = async (contractId) => {
+  const handleApprove = async () => {
+    if (!reviewingContract) return;
     try {
-      const res = await fetch(`http://localhost:5000/contracts/${contractId}/approve`, {
+      const res = await fetch(`http://localhost:5000/contracts/${reviewingContract.id}/approve`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
       });
@@ -118,12 +123,14 @@ function SalesManagerDashboard({ onLogout }) {
       if (!res.ok) throw new Error(data.message || "Failed to approve");
 
       // Update local state
-      setContracts(contracts.map(c => 
-        c.id === contractId 
+      setContracts(contracts.map(c =>
+        c.id === reviewingContract.id
           ? { ...c, status: "For Accounting Review" }
           : c
       ));
-      
+
+      setShowReviewModal(false);
+      setReviewingContract(null);
       alert("Contract approved and sent to Accounting Department");
     } catch (err) {
       console.error(err);
@@ -131,23 +138,28 @@ function SalesManagerDashboard({ onLogout }) {
     }
   };
 
-  const handleReject = async (contractId) => {
+  const handleReject = async () => {
+    if (!reviewingContract) return;
     try {
-      const res = await fetch(`http://localhost:5000/contracts/${contractId}/reject`, {
+      const res = await fetch(`http://localhost:5000/contracts/${reviewingContract.id}/reject`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: rejectReason }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to reject");
 
       // Update local state
-      setContracts(contracts.map(c => 
-        c.id === contractId 
+      setContracts(contracts.map(c =>
+        c.id === reviewingContract.id
           ? { ...c, status: "Draft" }
           : c
       ));
-      
+
+      setShowRejectModal(false);
+      setReviewingContract(null);
+      setRejectReason("");
       alert("Contract rejected and returned to Draft");
     } catch (err) {
       console.error(err);
@@ -321,23 +333,15 @@ function SalesManagerDashboard({ onLogout }) {
                     <td>
                       {contract.status === "For Approval" && (
                         <div className="action-buttons">
-                          <button 
-                            className="btn-approve"
+                          <button
+                            className="btn-review"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleApprove(contract.id);
+                              setReviewingContract(contract);
+                              setShowReviewModal(true);
                             }}
                           >
-                            Approve
-                          </button>
-                          <button 
-                            className="btn-reject"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleReject(contract.id);
-                            }}
-                          >
-                            Reject
+                            Review
                           </button>
                         </div>
                       )}
@@ -366,7 +370,7 @@ function SalesManagerDashboard({ onLogout }) {
                 <strong>Contract Number:</strong> {selectedContract.contractNumber}
               </div>
               <div className="detail-row">
-                <strong>Status:</strong> 
+                <strong>Status:</strong>
                 <span className={`status ${selectedContract.status?.toLowerCase().replace(' ', '-')}`}>
                   {selectedContract.status}
                 </span>
@@ -398,6 +402,83 @@ function SalesManagerDashboard({ onLogout }) {
             </div>
           )}
           <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderReviewModal = () => (
+    <div className="modal-overlay" onClick={() => setShowReviewModal(false)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Review Contract</h3>
+          <button className="close-btn" onClick={() => setShowReviewModal(false)}>×</button>
+        </div>
+        <div className="modal-body">
+          {reviewingContract && (
+            <div className="contract-details">
+              <div className="detail-row">
+                <strong>Contract Number:</strong> {reviewingContract.contractNumber}
+              </div>
+              <div className="detail-row">
+                <strong>Client:</strong> {reviewingContract.client}
+              </div>
+              <div className="detail-row">
+                <strong>Event Date:</strong> {reviewingContract.startDate}
+              </div>
+              <div className="detail-row">
+                <strong>Total Value:</strong> ₱{reviewingContract.value}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="modal-actions">
+          <div className="review-actions">
+            <button className="btn-approve" onClick={handleApprove}>Accept</button>
+            <button
+              className="btn-reject"
+              onClick={() => {
+                setShowReviewModal(false);
+                setShowRejectModal(true);
+              }}
+            >
+              Reject
+            </button>
+          </div>
+          <button className="btn-secondary" onClick={() => setShowReviewModal(false)}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRejectModal = () => (
+    <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Reject Contract</h3>
+          <button className="close-btn" onClick={() => setShowRejectModal(false)}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label>Reason for Rejection</label>
+            <textarea
+              placeholder="Please provide a reason for rejecting this contract..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows="5"
+              required
+            />
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button
+            className="btn-reject"
+            onClick={handleReject}
+            disabled={!rejectReason.trim()}
+          >
+            Submit Rejection
+          </button>
+          <button className="btn-secondary" onClick={() => setShowRejectModal(false)}>Cancel</button>
         </div>
       </div>
     </div>
@@ -435,6 +516,8 @@ function SalesManagerDashboard({ onLogout }) {
           renderContractsTable()
         )}
         {selectedContract && renderDetailsModal()}
+        {showReviewModal && renderReviewModal()}
+        {showRejectModal && renderRejectModal()}
       </div>
     </div>
   );
