@@ -20,7 +20,7 @@ async function cleanupContracts() {
         'representativeRelationship', 'representativeAddress', 'representativeEmail',
         'representativeMobile', 'representativeLandline', 'coordinatorName',
         'coordinatorMobile', 'coordinatorLandline',
-        'companyAddress', 'companyEmail', 'eventDate',
+        'coordinatorAddress', 'coordinatorEmail', 'eventDate',
         'occasion', 'venue', 'hall', 'ingressTime', 'cocktailTime',
         'address', 'arrivalOfGuests', 'servingTime', 'totalGuests',
         'totalVIP', 'totalRegular', 'kiddiePlated', 'kiddiePacked',
@@ -48,11 +48,10 @@ async function cleanupContracts() {
         'crewMeal', 'drinksCocktail', 'drinksMeal', 'roastedPig',
         'roastedCalf', 'totalMenuCost', 'totalSpecialReqCost',
         'outOfServiceAreaCharge', 'mobilizationCharge', 'taxes',
-        'grandTotal', 'reservationAmount', 'reservationPaymentDetails',
-        'reservationReceivedBy', 'reservationDateReceived',
-        'fortyPercentDueOn', 'fortyPercentAmount', 'fortyPercentReceivedBy',
-        'fortyPercentDateReceived', 'fullPaymentDueOn', 'fullPaymentAmount',
-        'fullPaymentReceivedBy', 'fullPaymentDateReceived', 'remarks'
+        'grandTotal', 'fortyPercentDueOn', 'fortyPercentAmount', 
+        'fortyPercentReceivedBy', 'fortyPercentDateReceived', 'fullPaymentDueOn', 
+        'fullPaymentAmount','fullPaymentReceivedBy', 'fullPaymentDateReceived', 
+        'remarks'
       ]
     };
 

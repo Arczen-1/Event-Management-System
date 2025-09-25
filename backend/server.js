@@ -354,16 +354,17 @@ app.get("/contracts", async (req, res) => {
   }
 })
 
-// PUT /contracts/:id - Update a contract (allowed while Draft)
+// PUT /contracts/:id - Update a contract (allowed while Draft or Rejected)
 app.put("/contracts/:id", async (req, res) => {
   try {
     const { id } = req.params
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
-    const { page1 = {}, page2 = {}, page3 = {}, status } = req.body
+    const { page1 = {}, page2 = {}, page3 = {}, status, rejectionReason } = req.body
     const contract = await Contract.findById(id)
     if (!contract) return res.status(404).json({ message: "Not found" })
-    if (contract.status !== "Draft") return res.status(400).json({ message: "Only Draft contracts can be edited" })
+    if (!["Draft", "Rejected"].includes(contract.status)) return res.status(400).json({ message: "Only Draft or Rejected contracts can be edited" })
     if (status) contract.status = status
+    if (rejectionReason !== undefined) contract.rejectionReason = rejectionReason
     contract.page1 = page1
     contract.page2 = page2
     contract.page3 = page3
@@ -393,21 +394,27 @@ app.put("/contracts/:id/approve", async (req, res) => {
   }
 })
 
-// PUT /contracts/:id/reject - Reject a contract (Sales Manager only)
 app.put("/contracts/:id/reject", async (req, res) => {
   try {
     const { id } = req.params
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const { reason } = req.body
+    console.log("Received reject request for ID:", id); // Debug log
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.log("Invalid ObjectId format for ID:", id); // Debug log
+      return res.status(400).json({ message: "Invalid contract id" })
+    }
     const contract = await Contract.findById(id)
     if (!contract) return res.status(404).json({ message: "Not found" })
-    if (contract.status !== "For Approval") return res.status(400).json({ message: "Only contracts with 'For Approval' status can be rejected" })
-    
-    contract.status = "Draft"
+    console.log(`Reject request for contract ${id} with current status: '${contract.status}'`)  // Added quotes for debug
+    if (contract.status.trim().toLowerCase() !== "for approval") return res.status(400).json({ message: "Only contracts with 'For Approval' status can be rejected" })
+
+    contract.status = "Rejected"
+    contract.rejectionReason = reason || ""
     await contract.save()
-    res.json({ message: "Contract rejected and returned to Draft", contract })
+    res.json({ message: "Contract rejected and status set to Rejected", contract })
   } catch (error) {
     console.error("Reject contract error:", error)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ message: "Server error: " + error.message })  // More detailed error message
   }
 })
 
@@ -447,7 +454,7 @@ app.put("/contracts/:id/accounting-reject", async (req, res) => {
   }
 })
 
-// PUT /contracts/:id/send-for-approval - Send a contract for approval (Sales only)
+// PUT /contracts/:id/send-for-approval - Send a contract for approval 
 app.put("/contracts/:id/send-for-approval", async (req, res) => {
   try {
     const { id } = req.params
