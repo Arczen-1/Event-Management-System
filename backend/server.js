@@ -470,12 +470,14 @@ app.put("/contracts/:id/accounting-approve", async (req, res) => {
 app.put("/contracts/:id/accounting-reject", async (req, res) => {
   try {
     const { id } = req.params
+    const { reason } = req.body
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
     const contract = await Contract.findById(id)
     if (!contract) return res.status(404).json({ message: "Not found" })
     if (contract.status !== "For Accounting Review") return res.status(400).json({ message: "Only contracts with 'For Accounting Review' status can be rejected by Accounting" })
-    
+
     contract.status = "For Approval"
+    contract.rejectionReason = reason || ""
     await contract.save()
     res.json({ message: "Contract rejected by Accounting and returned to Sales Manager", contract })
   } catch (error) {
