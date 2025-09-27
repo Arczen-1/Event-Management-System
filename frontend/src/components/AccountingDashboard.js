@@ -210,47 +210,64 @@ function AccountingDashboard({ onLogout }) {
           {selectedContract && (
             <div className="contract-details">
               <div className="detail-section">
-                <h4>Contract Information</h4>
+                <h4>Contract Number</h4>
                 <div className="detail-row">
                   <strong>Contract Number:</strong> {selectedContract.contractNumber}
                 </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Client Details (Celebrator)</h4>
                 <div className="detail-row">
-                  <strong>Status:</strong> 
-                  <span className={`status ${selectedContract.status?.toLowerCase().replace(' ', '-')}`}>
-                    {selectedContract.status}
-                  </span>
+                  <strong>Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
                 </div>
                 <div className="detail-row">
-                  <strong>Client:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                  <strong>Address:</strong> {selectedContract.page1?.celebratorAddress || "N/A"}
                 </div>
+                <div className="detail-row">
+                  <strong>Mobile:</strong> {selectedContract.page1?.celebratorMobile || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Landline:</strong> {selectedContract.page1?.celebratorLandline || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Email:</strong> {selectedContract.page1?.celebratorEmail || "N/A"}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Client Details (Representative)</h4>
+                <div className="detail-row">
+                  <strong>Name:</strong> {selectedContract.page1?.representativeName || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Relationship:</strong> {selectedContract.page1?.representativeRelationship || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Address:</strong> {selectedContract.page1?.representativeAddress || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Mobile:</strong> {selectedContract.page1?.representativeMobile || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Landline:</strong> {selectedContract.page1?.representativeLandline || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Email:</strong> {selectedContract.page1?.representativeEmail || "N/A"}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Date of Event</h4>
                 <div className="detail-row">
                   <strong>Event Date:</strong> {selectedContract.page1?.eventDate || "N/A"}
                 </div>
               </div>
 
               <div className="detail-section">
-                <h4>Financial Details</h4>
+                <h4>Total Cash Layout</h4>
                 <div className="detail-row">
                   <strong>Grand Total:</strong> ₱{selectedContract.page3?.grandTotal || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>VAT Status:</strong> {selectedContract.page3?.vatStatus || "Not specified"}
-                </div>
-                <div className="detail-row">
-                  <strong>Payment Terms:</strong> {selectedContract.page3?.paymentTerms || "Not specified"}
-                </div>
-              </div>
-
-              <div className="detail-section">
-                <h4>Event Details</h4>
-                <div className="detail-row">
-                  <strong>Occasion:</strong> {selectedContract.page1?.occasion || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Venue:</strong> {selectedContract.page1?.venue || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Total Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
                 </div>
               </div>
             </div>
