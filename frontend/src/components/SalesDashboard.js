@@ -17,6 +17,34 @@ function SalesDashboard({ onLogout }) {
     status: "Draft"
   });
 
+  // Validation function to check if contract is fully filled
+  const validateContractFullyFilled = (contract) => {
+    const errors = [];
+
+    // Check all string fields in page1 are filled
+    Object.entries(contract.page1 || {}).forEach(([key, value]) => {
+      if (typeof value === 'string' && !value.trim()) {
+        errors.push(`Page 1 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+      }
+    });
+
+    // Check all string fields in page2 are filled, skip booleans
+    Object.entries(contract.page2 || {}).forEach(([key, value]) => {
+      if (typeof value === 'string' && !value.trim()) {
+        errors.push(`Page 2 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+      }
+    });
+
+    // Check all string fields in page3 are filled
+    Object.entries(contract.page3 || {}).forEach(([key, value]) => {
+      if (typeof value === 'string' && !value.trim()) {
+        errors.push(`Page 3 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+      }
+    });
+
+    return errors;
+  };
+
   // Load a preview of the next contract number
   useEffect(() => {
     if (showCreateForm && !editExisting) {
@@ -316,6 +344,18 @@ function SalesDashboard({ onLogout }) {
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
+                              // First, fetch the full contract data
+                              const fetchRes = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                              const fetchData = await fetchRes.json();
+                              if (!fetchRes.ok) throw new Error("Failed to fetch contract");
+                              const contractData = fetchData.contract;
+                              // Validate if fully filled
+                              const validationErrors = validateContractFullyFilled(contractData);
+                              if (validationErrors.length > 0) {
+                                alert("Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n"));
+                                return;
+                              }
+                              // Now send for approval
                               const res = await fetch(`http://localhost:5000/contracts/${contract.id}/send-for-approval`, {
                                 method: "PUT",
                                 headers: { "Content-Type": "application/json" }

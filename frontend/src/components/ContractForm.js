@@ -175,22 +175,26 @@ function ContractForm({ onCancel, onCreated, existing }) {
   const validateForm = () => {
     const errors = [];
 
-    // Page 1 validations
-    if (!p1.celebratorName?.trim()) errors.push("Celebrator Name is required");
-    if (!p1.eventDate) errors.push("Event Date is required");
-    if (!p1.occasion) errors.push("Occasion is required");
-    if (!p1.venue?.trim()) errors.push("Venue is required");
-    if (!p1.totalGuests) errors.push("Total Number of Guests is required");
-    if (!p1.coordinatorName?.trim()) errors.push("Coordinator Name is required");
+    // Check all string fields in page1 are filled
+    Object.entries(p1).forEach(([key, value]) => {
+      if (typeof value === 'string' && !value.trim()) {
+        errors.push(`Page 1 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+      }
+    });
 
-    // Page 2 validations - at least some basic requirements
-    if (!p2.cakeNameCode?.trim() && !p2.cakeFlavor?.trim()) {
-      errors.push("Cake details are required");
-    }
+    // Check all string fields in page2 are filled, skip booleans
+    Object.entries(p2).forEach(([key, value]) => {
+      if (typeof value === 'string' && !value.trim()) {
+        errors.push(`Page 2 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+      }
+    });
 
-    // Page 3 validations
-    if (!p3.mainEntree?.trim()) errors.push("Main Entrée is required");
-    if (!p3.grandTotal) errors.push("Grand Total is required");
+    // Check all string fields in page3 are filled
+    Object.entries(p3).forEach(([key, value]) => {
+      if (typeof value === 'string' && !value.trim()) {
+        errors.push(`Page 3 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+      }
+    });
 
     return errors;
   };
@@ -232,7 +236,7 @@ function ContractForm({ onCancel, onCreated, existing }) {
           onCreated({
             id: data.contract._id,
             contractNumber: data.contract.contractNumber,
-            name: p1.contractName || p1.occasion || "Contract",
+            name: p1.occasion || "Contract",
             client: p1.celebratorName || "",
             value: p3.grandTotal || "",
             startDate: p1.eventDate || "",

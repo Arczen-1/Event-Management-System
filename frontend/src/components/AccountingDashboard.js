@@ -5,6 +5,8 @@ function AccountingDashboard({ onLogout }) {
   const [contracts, setContracts] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
   const [activeTab, setActiveTab] = useState("for-review"); // "for-review", "approved", "all"
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   // Load contracts from backend on mount
   useEffect(() => {
@@ -62,11 +64,13 @@ function AccountingDashboard({ onLogout }) {
     }
   };
 
-  const handleAccountingReject = async (contractId) => {
+  const handleAccountingReject = async () => {
+    if (!selectedContract) return;
     try {
-      const res = await fetch(`http://localhost:5000/contracts/${contractId}/accounting-reject`, {
+      const res = await fetch(`http://localhost:5000/contracts/${selectedContract._id}/accounting-reject`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: rejectReason }),
       });
 
       const data = await res.json();
@@ -74,13 +78,15 @@ function AccountingDashboard({ onLogout }) {
 
       // Update local state
       setContracts(contracts.map(c => 
-        c.id === contractId 
-          ? { ...c, status: "For Approval" }
+        c.id === selectedContract._id 
+          ? { ...c, status: "Rejected" }
           : c
       ));
       
-      alert("Contract rejected and returned to Sales Manager");
+      alert("Contract rejected");
       setSelectedContract(null);
+      setShowRejectModal(false);
+      setRejectReason("");
     } catch (err) {
       console.error(err);
       alert("Failed to reject contract. Please try again.");
@@ -168,23 +174,20 @@ function AccountingDashboard({ onLogout }) {
                     <td>
                       {contract.status === "For Accounting Review" && (
                         <div className="action-buttons">
-                          <button 
-                            className="btn-approve"
-                            onClick={(e) => {
+                          <button
+                            className="btn-review"
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              handleAccountingApprove(contract.id);
+                              try {
+                                const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                                const data = await res.json();
+                                if (res.ok) setSelectedContract(data.contract);
+                              } catch (e) {
+                                console.error("Error fetching contract details:", e);
+                              }
                             }}
                           >
-                            Approve
-                          </button>
-                          <button 
-                            className="btn-reject"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAccountingReject(contract.id);
-                            }}
-                          >
-                            Reject
+                            Review
                           </button>
                         </div>
                       )}
@@ -267,6 +270,21 @@ function AccountingDashboard({ onLogout }) {
               <div className="detail-section">
                 <h4>Total Cash Layout</h4>
                 <div className="detail-row">
+                  <strong>Total Menu Cost:</strong> ₱{selectedContract.page3?.totalMenuCost || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Total Special Requirements:</strong> ₱{selectedContract.page3?.totalSpecialReqCost || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Out of Service Area Charge:</strong> ₱{selectedContract.page3?.outOfServiceAreaCharge || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Mobilization Charge:</strong> ₱{selectedContract.page3?.mobilizationCharge || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Taxes:</strong> ₱{selectedContract.page3?.taxes || "N/A"}
+                </div>
+                <div className="detail-row">
                   <strong>Grand Total:</strong> ₱{selectedContract.page3?.grandTotal || "N/A"}
                 </div>
               </div>
@@ -280,11 +298,44 @@ function AccountingDashboard({ onLogout }) {
                 handleAccountingApprove(selectedContract._id);
               }}>Approve & Activate</button>
               <button className="btn-reject" onClick={() => {
-                handleAccountingReject(selectedContract._id);
-              }}>Reject & Return</button>
+                setShowRejectModal(true);
+              }}>Reject</button>
             </div>
           )}
           <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRejectModal = () => (
+    <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Reject Contract</h3>
+          <button className="close-btn" onClick={() => setShowRejectModal(false)}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label>Reason for Rejection</label>
+            <textarea
+              placeholder="Please provide a reason for rejecting this contract..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows="5"
+              required
+            />
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button
+            className="btn-reject"
+            onClick={handleAccountingReject}
+            disabled={!rejectReason.trim()}
+          >
+            Submit Rejection
+          </button>
+          <button className="btn-secondary" onClick={() => setShowRejectModal(false)}>Cancel</button>
         </div>
       </div>
     </div>
@@ -302,12 +353,10 @@ function AccountingDashboard({ onLogout }) {
       <div className="dashboard-content">
         {renderContractsTable()}
         {selectedContract && renderDetailsModal()}
+        {showRejectModal && renderRejectModal()}
       </div>
     </div>
   );
 }
 
 export default AccountingDashboard;
-
-
-
