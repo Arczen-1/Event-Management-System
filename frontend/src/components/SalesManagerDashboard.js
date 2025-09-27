@@ -13,6 +13,8 @@ function SalesManagerDashboard({ onLogout }) {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [reviewingContract, setReviewingContract] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [showRejectionReasonModal, setShowRejectionReasonModal] = useState(false);
+  const [currentRejectionReason, setCurrentRejectionReason] = useState("");
   const [newContract, setNewContract] = useState({
     name: "",
     client: "",
@@ -33,16 +35,23 @@ function SalesManagerDashboard({ onLogout }) {
       const data = await res.json();
       if (res.ok) {
         setContracts(
-          (data.contracts || []).map((c) => ({
-            id: c._id,
-            name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
-            client: (c.page1 && c.page1.celebratorName) || "",
-            value: (c.page3 && c.page3.grandTotal) || "",
-            startDate: (c.page1 && c.page1.eventDate) || "",
-            endDate: (c.page1 && c.page1.eventDate) || "",
-            status: c.status || "Draft",
-            contractNumber: c.contractNumber,
-          }))
+          (data.contracts || []).map((c) => {
+            let status = c.status || "Draft";
+            if (c.rejectionReason && status === "For Approval") {
+              status = "Returned by Accounting";
+            }
+            return {
+              id: c._id,
+              name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
+              client: (c.page1 && c.page1.celebratorName) || "",
+              value: (c.page3 && c.page3.grandTotal) || "",
+              startDate: (c.page1 && c.page1.eventDate) || "",
+              endDate: (c.page1 && c.page1.eventDate) || "",
+              status,
+              contractNumber: c.contractNumber,
+              rejectionReason: c.rejectionReason || "",
+            };
+          })
         );
       }
     } catch (e) {
@@ -177,13 +186,14 @@ function SalesManagerDashboard({ onLogout }) {
     page2: contract.page2,
     page3: contract.page3,
     createdAt: contract.createdAt,
-    updatedAt: contract.updatedAt
+    updatedAt: contract.updatedAt,
+    rejectionReason: contract.rejectionReason || ""
   });
 
   const getFilteredContracts = () => {
     switch (activeTab) {
       case "for-approval":
-        return contracts.filter(c => c.status === "For Approval");
+        return contracts.filter(c => c.status === "For Approval" || c.status === "Returned by Accounting");
       case "approved":
         return contracts.filter(c => c.status === "For Accounting Review");
       default:
@@ -345,12 +355,23 @@ function SalesManagerDashboard({ onLogout }) {
                     <td>₱{contract.value}</td>
                     <td>{contract.startDate}</td>
                     <td>
-                      <span className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}>
+                      <span
+                        className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}
+                        style={{ cursor: contract.rejectionReason ? 'pointer' : 'default' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (contract.rejectionReason) {
+                            setCurrentRejectionReason(contract.rejectionReason);
+                            setShowRejectionReasonModal(true);
+                          }
+                        }}
+                        title={contract.rejectionReason || ""}
+                      >
                         {contract.status}
                       </span>
                     </td>
                     <td>
-                      {contract.status === "For Approval" && (
+                      {(contract.status === "For Approval" || contract.status === "Returned by Accounting") && (
                         <div className="action-buttons">
                           <button
                             className="btn-review"
@@ -402,6 +423,11 @@ function SalesManagerDashboard({ onLogout }) {
                     {selectedContract.status}
                   </span>
                 </div>
+                {selectedContract.rejectionReason && (
+                  <div className="detail-row">
+                    <strong>Rejection Reason:</strong> {selectedContract.rejectionReason}
+                  </div>
+                )}
               </div>
 
               {/* Client Information */}
@@ -719,6 +745,25 @@ function SalesManagerDashboard({ onLogout }) {
     </div>
   );
 
+  const renderRejectionReasonModal = () => (
+    <div className="modal-overlay" onClick={() => setShowRejectionReasonModal(false)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Rejection Reason</h3>
+          <button className="close-btn" onClick={() => setShowRejectionReasonModal(false)}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <p>{currentRejectionReason}</p>
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button className="btn-secondary" onClick={() => setShowRejectionReasonModal(false)}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="sales-manager-dashboard">
       <div className="dashboard-header">
@@ -753,6 +798,7 @@ function SalesManagerDashboard({ onLogout }) {
         {selectedContract && renderDetailsModal()}
         {showReviewModal && renderReviewModal()}
         {showRejectModal && renderRejectModal()}
+        {showRejectionReasonModal && renderRejectionReasonModal()}
       </div>
     </div>
   );

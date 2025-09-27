@@ -8,6 +8,8 @@ function SalesDashboard({ onLogout }) {
   const [nextNumber, setNextNumber] = useState("");
   const [selectedContract, setSelectedContract] = useState(null);
   const [editExisting, setEditExisting] = useState(null);
+  const [showRejectionReasonModal, setShowRejectionReasonModal] = useState(false);
+  const [currentRejectionReason, setCurrentRejectionReason] = useState("");
   const [newContract, setNewContract] = useState({
     name: "",
     client: "",
@@ -316,7 +318,18 @@ function SalesDashboard({ onLogout }) {
                       if (res.ok) setSelectedContract(data.contract);
                     } catch (e) {}
                   }}>
-                    <span className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}>
+                    <span
+                      className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}
+                      style={{ cursor: contract.rejectionReason ? 'pointer' : 'default' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (contract.rejectionReason) {
+                          setCurrentRejectionReason(contract.rejectionReason);
+                          setShowRejectionReasonModal(true);
+                        }
+                      }}
+                      title={contract.rejectionReason || ""}
+                    >
                       {contract.status}
                     </span>
                   </td>
@@ -470,6 +483,25 @@ function SalesDashboard({ onLogout }) {
     </div>
   );
 
+  const renderRejectionReasonModal = () => (
+    <div className="modal-overlay" onClick={() => setShowRejectionReasonModal(false)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Rejection Reason</h3>
+          <button className="close-btn" onClick={() => setShowRejectionReasonModal(false)}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <p>{currentRejectionReason}</p>
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button className="btn-secondary" onClick={() => setShowRejectionReasonModal(false)}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="sales-dashboard">
       <div className="dashboard-header">
@@ -505,6 +537,7 @@ function SalesDashboard({ onLogout }) {
           renderContractsTable()
         )}
         {selectedContract && renderDetailsModal()}
+        {showRejectionReasonModal && renderRejectionReasonModal()}
       </div>
     </div>
   );
