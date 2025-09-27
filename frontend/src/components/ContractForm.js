@@ -195,42 +195,32 @@ function ContractForm({ onCancel, onCreated, existing }) {
     return errors;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
 
-    // Validate form before submission
-    const validationErrors = validateForm();
-    if (validationErrors.length > 0) {
-      alert("Please fill in all required fields:\n\n" + validationErrors.join("\n"));
-      return;
-    }
-
     try {
-    if (existing) {
-      // Update existing draft
-      const updateStatus = existing.status === "Rejected" ? "For Approval" : existing.status || "draft";
-      const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page1: p1, page2: p2, page3: p3, status: updateStatus }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to update contract");
-      if (onCreated) {
-        onCreated({
-          id: data.contract._id,
-          contractNumber: data.contract.contractNumber,
-          name: p1.occasion || "Contract",
-          client: p1.celebratorName || "",
-          value: p3.grandTotal || "",
-          startDate: p1.eventDate || "",
-          endDate: p1.eventDate || "",
-          status: data.contract.status || "Draft",
+      if (existing) {
+        const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ page1: p1, page2: p2, page3: p3, status: "Draft" }),
         });
-      }
-    } else {
-        // Create new
-        const payload = { department: "Sales", status: "draft", page1: p1, page2: p2, page3: p3 };
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to save contract");
+        if (onCreated) {
+          onCreated({
+            id: data.contract._id,
+            contractNumber: data.contract.contractNumber,
+            name: p1.occasion || "Contract",
+            client: p1.celebratorName || "",
+            value: p3.grandTotal || "",
+            startDate: p1.eventDate || "",
+            endDate: p1.eventDate || "",
+            status: "Draft",
+          });
+        }
+      } else {
+        const payload = { department: "Sales", status: "Draft", page1: p1, page2: p2, page3: p3 };
         const res = await fetch("http://localhost:5000/contracts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -253,7 +243,64 @@ function ContractForm({ onCancel, onCreated, existing }) {
       }
     } catch (err) {
       alert("Failed to save contract. Please try again.");
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate form before submission
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      alert("Please fill in all required fields:\n\n" + validationErrors.join("\n"));
       return;
+    }
+
+    try {
+      if (existing) {
+        const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ page1: p1, page2: p2, page3: p3, status: "For Approval" }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to update contract");
+        if (onCreated) {
+          onCreated({
+            id: data.contract._id,
+            contractNumber: data.contract.contractNumber,
+            name: p1.occasion || "Contract",
+            client: p1.celebratorName || "",
+            value: p3.grandTotal || "",
+            startDate: p1.eventDate || "",
+            endDate: p1.eventDate || "",
+            status: data.contract.status || "For Approval",
+          });
+        }
+      } else {
+        const payload = { department: "Sales", status: "For Approval", page1: p1, page2: p2, page3: p3 };
+        const res = await fetch("http://localhost:5000/contracts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to save contract");
+        if (onCreated) {
+          onCreated({
+            id: data.contract._id,
+            contractNumber: data.contract.contractNumber,
+            name: p1.contractName || p1.occasion || "Contract",
+            client: p1.celebratorName || "",
+            value: p3.grandTotal || "",
+            startDate: p1.eventDate || "",
+            endDate: p1.eventDate || "",
+            status: "For Approval",
+          });
+        }
+      }
+    } catch (err) {
+      alert("Failed to submit contract. Please try again.");
     }
   };
 
@@ -703,13 +750,14 @@ function ContractForm({ onCancel, onCreated, existing }) {
 
         <div className="form-actions">
           <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
+          <button type="button" className="btn-primary" onClick={handleSave}>Save Contract</button>
           <div className="pager">
             <button type="button" className="pager-btn" onClick={back} disabled={activePage === 1}>← Back</button>
             <span>Page {activePage} of 3</span>
             {activePage < 3 ? (
               <button type="button" className="pager-btn" onClick={next}>Next →</button>
             ) : (
-              <button type="button" className="btn-primary" onClick={handleSubmit}>Save Contract</button>
+              <button type="button" className="btn-primary" onClick={handleSubmit}>Submit Contract</button>
             )}
           </div>
         </div>

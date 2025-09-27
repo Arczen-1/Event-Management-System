@@ -294,35 +294,53 @@ function SalesDashboard({ onLogout }) {
                   </td>
                   <td>
                     {contract.status === "Draft" && (
-                      <button
-                        className="btn-primary small"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            const res = await fetch(`http://localhost:5000/contracts/${contract.id}/send-for-approval`, {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json" }
-                            });
-                            const data = await res.json();
-                            if (res.ok) {
-                              // Update the contract status in the local state
-                              setContracts(prevContracts =>
-                                prevContracts.map(c =>
-                                  c.id === contract.id
-                                    ? { ...c, status: "For Approval" }
-                                    : c
-                                )
-                              );
-                            } else {
-                              alert(data.message || "Failed to send for approval");
+                      <div className="action-buttons">
+                        <button
+                          className="btn-primary small"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                              const data = await res.json();
+                              if (res.ok) {
+                                setEditExisting(data.contract);
+                                setShowCreateForm(true);
+                              }
+                            } catch (e) {}
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn-primary small"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const res = await fetch(`http://localhost:5000/contracts/${contract.id}/send-for-approval`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" }
+                              });
+                              const data = await res.json();
+                              if (res.ok) {
+                                // Update the contract status in the local state
+                                setContracts(prevContracts =>
+                                  prevContracts.map(c =>
+                                    c.id === contract.id
+                                      ? { ...c, status: "For Approval" }
+                                      : c
+                                  )
+                                );
+                              } else {
+                                alert(data.message || "Failed to send for approval");
+                              }
+                            } catch (error) {
+                              alert("Failed to send for approval. Please try again.");
                             }
-                          } catch (error) {
-                            alert("Failed to send for approval. Please try again.");
-                          }
-                        }}
-                      >
-                        Send for Approval
-                      </button>
+                          }}
+                        >
+                          Send for Approval
+                        </button>
+                      </div>
                     )}
                     {contract.status === "Rejected" && (
                       <button
@@ -339,7 +357,7 @@ function SalesDashboard({ onLogout }) {
                           } catch (e) {}
                         }}
                       >
-                        Edit and Resubmit
+                        Edit
                       </button>
                     )}
                   </td>
