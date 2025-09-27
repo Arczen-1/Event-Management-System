@@ -298,6 +298,15 @@ app.post("/contracts", async (req, res) => {
   try {
     const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, page3 = {} } = req.body
 
+    // If status is "For Approval", validate that all fields are filled
+    if (status === "For Approval") {
+      const tempContract = { page1, page2, page3 };
+      const validationErrors = validateContractFullyFilled(tempContract);
+      if (validationErrors.length > 0) {
+        return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
+      }
+    }
+
     const contractNumber = await generateNextContractNumber(new Date())
 
     const contract = await Contract.create({
@@ -317,6 +326,14 @@ app.post("/contracts", async (req, res) => {
       try {
         const contractNumber = await generateNextContractNumber(new Date())
         const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, page3 = {} } = req.body
+        // Re-validate if needed
+        if (status === "For Approval") {
+          const tempContract = { page1, page2, page3 };
+          const validationErrors = validateContractFullyFilled(tempContract);
+          if (validationErrors.length > 0) {
+            return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
+          }
+        }
         const contract = await Contract.create({ contractNumber, department, status, page1, page2, page3 })
         return res.json({ message: "Contract created", contract })
       } catch (err2) {
@@ -363,11 +380,24 @@ app.put("/contracts/:id", async (req, res) => {
     const contract = await Contract.findById(id)
     if (!contract) return res.status(404).json({ message: "Not found" })
     if (!["Draft", "Rejected"].includes(contract.status)) return res.status(400).json({ message: "Only Draft or Rejected contracts can be edited" })
-    if (status) contract.status = status
-    if (rejectionReason !== undefined) contract.rejectionReason = rejectionReason
+
+    // Update the fields
     contract.page1 = page1
     contract.page2 = page2
     contract.page3 = page3
+    if (rejectionReason !== undefined) contract.rejectionReason = rejectionReason
+
+    // If status is being set to "For Approval", validate that all fields are filled
+    if (status === "For Approval") {
+      const validationErrors = validateContractFullyFilled(contract);
+      if (validationErrors.length > 0) {
+        return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
+      }
+      contract.status = status
+    } else if (status) {
+      contract.status = status
+    }
+
     await contract.save()
     res.json({ message: "Contract updated", contract })
   } catch (error) {
@@ -454,6 +484,34 @@ app.put("/contracts/:id/accounting-reject", async (req, res) => {
   }
 })
 
+// Helper function to validate if contract is fully filled
+const validateContractFullyFilled = (contract) => {
+  const errors = [];
+
+  // Check all string fields in page1 are filled
+  Object.entries(contract.page1 || {}).forEach(([key, value]) => {
+    if (typeof value === 'string' && !value.trim()) {
+      errors.push(`Page 1 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    }
+  });
+
+  // Check all string fields in page2 are filled, skip booleans
+  Object.entries(contract.page2 || {}).forEach(([key, value]) => {
+    if (typeof value === 'string' && !value.trim()) {
+      errors.push(`Page 2 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    }
+  });
+
+  // Check all string fields in page3 are filled
+  Object.entries(contract.page3 || {}).forEach(([key, value]) => {
+    if (typeof value === 'string' && !value.trim()) {
+      errors.push(`Page 3 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    }
+  });
+
+  return errors;
+};
+
 // PUT /contracts/:id/send-for-approval - Send a contract for approval 
 app.put("/contracts/:id/send-for-approval", async (req, res) => {
   try {
@@ -467,6 +525,12 @@ app.put("/contracts/:id/send-for-approval", async (req, res) => {
     }
     if (contract.status !== "Draft") {
       return res.status(400).json({ message: "Only Draft contracts can be sent for approval" })
+    }
+
+    // Validate that the contract is fully filled
+    const validationErrors = validateContractFullyFilled(contract);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
     }
     
     contract.status = "For Approval"
