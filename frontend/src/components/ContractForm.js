@@ -206,28 +206,29 @@ function ContractForm({ onCancel, onCreated, existing }) {
     }
 
     try {
-      if (existing) {
-        // Update existing draft
-        const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ page1: p1, page2: p2, page3: p3, status: existing.status || "draft" }),
+    if (existing) {
+      // Update existing draft
+      const updateStatus = existing.status === "Rejected" ? "For Approval" : existing.status || "draft";
+      const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page1: p1, page2: p2, page3: p3, status: updateStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update contract");
+      if (onCreated) {
+        onCreated({
+          id: data.contract._id,
+          contractNumber: data.contract.contractNumber,
+          name: p1.occasion || "Contract",
+          client: p1.celebratorName || "",
+          value: p3.grandTotal || "",
+          startDate: p1.eventDate || "",
+          endDate: p1.eventDate || "",
+          status: data.contract.status || "Draft",
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to update contract");
-        if (onCreated) {
-          onCreated({
-            id: data.contract._id,
-            contractNumber: data.contract.contractNumber,
-            name: p1.occasion || "Contract",
-            client: p1.celebratorName || "",
-            value: p3.grandTotal || "",
-            startDate: p1.eventDate || "",
-            endDate: p1.eventDate || "",
-            status: data.contract.status || "Draft",
-          });
-        }
-      } else {
+      }
+    } else {
         // Create new
         const payload = { department: "Sales", status: "draft", page1: p1, page2: p2, page3: p3 };
         const res = await fetch("http://localhost:5000/contracts", {

@@ -324,6 +324,24 @@ function SalesDashboard({ onLogout }) {
                         Send for Approval
                       </button>
                     )}
+                    {contract.status === "Rejected" && (
+                      <button
+                        className="btn-primary small"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                            const data = await res.json();
+                            if (res.ok) {
+                              setEditExisting(data.contract);
+                              setShowCreateForm(true);
+                            }
+                          } catch (e) {}
+                        }}
+                      >
+                        Edit and Resubmit
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
