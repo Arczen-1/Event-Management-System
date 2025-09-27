@@ -320,15 +320,17 @@ function SalesDashboard({ onLogout }) {
                   }}>
                     <span
                       className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}
-                      style={{ cursor: contract.rejectionReason ? 'pointer' : 'default' }}
+                      style={{
+                        cursor: (contract.status === "Rejected" && contract.rejectionReason) ? 'pointer' : 'default'
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (contract.rejectionReason) {
+                        if (contract.status === "Rejected" && contract.rejectionReason) {
                           setCurrentRejectionReason(contract.rejectionReason);
                           setShowRejectionReasonModal(true);
                         }
                       }}
-                      title={contract.rejectionReason || ""}
+                      title={(contract.status === "Rejected" && contract.rejectionReason) ? contract.rejectionReason : ""}
                     >
                       {contract.status}
                     </span>

@@ -357,15 +357,17 @@ function SalesManagerDashboard({ onLogout }) {
                     <td>
                       <span
                         className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}
-                        style={{ cursor: contract.rejectionReason ? 'pointer' : 'default' }}
+                        style={{
+                          cursor: ((contract.status === "Rejected" || contract.status === "Returned by Accounting") && contract.rejectionReason) ? 'pointer' : 'default'
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (contract.rejectionReason) {
+                          if ((contract.status === "Rejected" || contract.status === "Returned by Accounting") && contract.rejectionReason) {
                             setCurrentRejectionReason(contract.rejectionReason);
                             setShowRejectionReasonModal(true);
                           }
                         }}
-                        title={contract.rejectionReason || ""}
+                        title={((contract.status === "Rejected" || contract.status === "Returned by Accounting") && contract.rejectionReason) ? contract.rejectionReason : ""}
                       >
                         {contract.status}
                       </span>
