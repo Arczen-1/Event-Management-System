@@ -222,7 +222,7 @@ function AccountingDashboard({ onLogout }) {
               <div className="detail-section">
                 <h4>Client Details (Celebrator)</h4>
                 <div className="detail-row">
-                  <strong>Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                  <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Address:</strong> {selectedContract.page1?.celebratorAddress || "N/A"}

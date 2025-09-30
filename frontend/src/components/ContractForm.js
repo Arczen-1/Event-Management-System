@@ -331,7 +331,7 @@ function ContractForm({ onCancel, onCreated, existing }) {
 
       <h4>Celebrator</h4>
       <div className="form-row two">
-        <div className="form-group"><label>Name</label><input value={p1.celebratorName} onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} /></div>
+        <div className="form-group"><label>Celebrator/Corporate Name</label><input value={p1.celebratorName} onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} /></div>
         <div className="form-group"><label>Email Address</label><input value={p1.celebratorEmail} onChange={(e)=>setP1({...p1, celebratorEmail:e.target.value})} /></div>
       </div>
       <div className="form-row three">

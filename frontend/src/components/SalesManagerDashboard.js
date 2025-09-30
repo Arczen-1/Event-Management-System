@@ -437,7 +437,7 @@ function SalesManagerDashboard({ onLogout }) {
                 <h4>Client Information</h4>
                 <div className="detail-grid">
                   <div className="detail-row">
-                    <strong>Client Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                    <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
                   </div>
                   <div className="detail-row">
                     <strong>Coordinator Name:</strong> {selectedContract.page1?.coordinatorName || "N/A"}
