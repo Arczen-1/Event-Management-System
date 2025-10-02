@@ -59,8 +59,6 @@ const ContractSchema = new mongoose.Schema(
       buffetPremium: { type: String, default: "" },
       buffetBarrel: { type: String, default: "" },
       buffetOval: { type: String, default: "" },
-      buffetUnderliner: { type: String, default: "" },
-      buffetTopper: { type: String, default: "" },
       buffetRemarks: { type: String, default: "" }
     },
 
@@ -86,8 +84,6 @@ const ContractSchema = new mongoose.Schema(
       soundSystem: { type: String, default: "" },
       tent: { type: String, default: "" },
       celebratorsChair: { type: String, default: "" },
-      remarks: { type: String, default: "" },
-      others: { type: String, default: "" },
       knowUsWebsite: { type: Boolean, default: false },
       knowUsFacebook: { type: Boolean, default: false },
       knowUsInstagram: { type: Boolean, default: false },
