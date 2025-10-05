@@ -94,11 +94,16 @@
   color: #333;
 }
 
-.clickable-row { cursor: pointer; }
-.clickable-row:hover { background-color: #f2f3f5; }
+.clickable-cell { cursor: pointer; }
+.clickable-cell:hover { background-color: #f2f3f5; }
 
 .contracts-table tr:hover {
   background-color: #f8f9fa;
+}
+
+.btn-primary.small {
+  padding: 6px 12px;
+  font-size: 0.875rem;
 }
 
 .contracts-table tr.no-contracts td {
@@ -139,9 +144,14 @@
   color: #856404;
 }
 
-.status.pending {
+.status.for-approval {
   background-color: #d1ecf1;
   color: #0c5460;
+}
+
+.status.for-accounting-review {
+  background-color: #fff3cd;
+  color: #856404;
 }
 
 .status.active {

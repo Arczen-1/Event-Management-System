@@ -32,6 +32,18 @@
   font-family: "Aileron Black", sans-serif;
 }
 
+.page h5 {
+  margin: 15px 0 8px;
+  color: #410d1d;
+  font-family: "Aileron", sans-serif;
+  font-weight: bold;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 4px;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -48,6 +60,19 @@
   font-family: "Aileron", sans-serif;
 }
 .form-group textarea { min-height: 64px; }
+
+/* Validation styles */
+.invalid-input {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25) !important;
+}
+
+.validation-error {
+  color: #dc3545;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 4px;
+}
 
 .form-row { display: grid; gap: 16px; margin-bottom: 12px; }
 .form-row.two { grid-template-columns: 1fr 1fr; }

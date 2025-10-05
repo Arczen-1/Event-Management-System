@@ -8,6 +8,8 @@ function SalesDashboard({ onLogout }) {
   const [nextNumber, setNextNumber] = useState("");
   const [selectedContract, setSelectedContract] = useState(null);
   const [editExisting, setEditExisting] = useState(null);
+  const [showRejectionReasonModal, setShowRejectionReasonModal] = useState(false);
+  const [currentRejectionReason, setCurrentRejectionReason] = useState("");
   const [newContract, setNewContract] = useState({
     name: "",
     client: "",
@@ -16,6 +18,34 @@ function SalesDashboard({ onLogout }) {
     endDate: "",
     status: "Draft"
   });
+
+  // Validation function to check if contract is fully filled
+  const validateContractFullyFilled = (contract) => {
+    const errors = [];
+
+    // Check all string fields in page1 are filled
+    Object.entries(contract.page1 || {}).forEach(([key, value]) => {
+      if (typeof value === 'string' && !value.trim()) {
+        errors.push(`Page 1 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+      }
+    });
+
+    // Check all string fields in page2 are filled, skip booleans
+    Object.entries(contract.page2 || {}).forEach(([key, value]) => {
+      if (typeof value === 'string' && !value.trim()) {
+        errors.push(`Page 2 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+      }
+    });
+
+    // Check all string fields in page3 are filled
+    Object.entries(contract.page3 || {}).forEach(([key, value]) => {
+      if (typeof value === 'string' && !value.trim()) {
+        errors.push(`Page 3 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+      }
+    });
+
+    return errors;
+  };
 
   // Load a preview of the next contract number
   useEffect(() => {
@@ -44,6 +74,7 @@ function SalesDashboard({ onLogout }) {
               endDate: (c.page1 && c.page1.eventDate) || "",
               status: c.status || "Draft",
               contractNumber: c.contractNumber,
+              rejectionReason: c.rejectionReason || "",
             }))
           );
         }
@@ -187,7 +218,8 @@ function SalesDashboard({ onLogout }) {
             onChange={handleInputChange}
           >
             <option value="Draft">Draft</option>
-            <option value="Pending">Pending</option>
+            <option value="For Approval">For Approval</option>
+            <option value="For Accounting Review">For Accounting Review</option>
             <option value="Active">Active</option>
             <option value="Completed">Completed</option>
           </select>
@@ -226,32 +258,163 @@ function SalesDashboard({ onLogout }) {
               <th>Start Date</th>
               <th>End Date</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {contracts.length === 0 ? (
               <tr className="no-contracts">
-                <td colSpan="6">No contracts created yet</td>
+                <td colSpan="7">No contracts created yet</td>
               </tr>
             ) : (
               contracts.map(contract => (
-                <tr key={contract.id} className="clickable-row" onClick={async () => {
-                  try {
-                    const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
-                    const data = await res.json();
-                    if (res.ok) setSelectedContract(data.contract);
-                  } catch (e) {}
-                }}>
-                  <td>{contract.name}</td>
-                  <td>{contract.client}</td>
-                  <td>{contract.contractNumber || "-"}</td>
-                  <td>${contract.value}</td>
-                  <td>{contract.startDate}</td>
-                  <td>{contract.endDate}</td>
-                  <td>
-                    <span className={`status ${contract.status.toLowerCase()}`}>
+                <tr key={contract.id}>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.name}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.client}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.contractNumber || "-"}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>₱{contract.value}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.startDate}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>{contract.endDate}</td>
+                  <td className="clickable-cell" onClick={async () => {
+                    try {
+                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                      const data = await res.json();
+                      if (res.ok) setSelectedContract(data.contract);
+                    } catch (e) {}
+                  }}>
+                    <span
+                      className={`status ${contract.status.toLowerCase().replace(' ', '-')}`}
+                      style={{
+                        cursor: (contract.status === "Rejected" && contract.rejectionReason) ? 'pointer' : 'default'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (contract.status === "Rejected" && contract.rejectionReason) {
+                          setCurrentRejectionReason(contract.rejectionReason);
+                          setShowRejectionReasonModal(true);
+                        }
+                      }}
+                      title={(contract.status === "Rejected" && contract.rejectionReason) ? contract.rejectionReason : ""}
+                    >
                       {contract.status}
                     </span>
+                  </td>
+                  <td>
+                    {contract.status === "Draft" && (
+                      <div className="action-buttons">
+                        <button
+                          className="btn-primary small"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                              const data = await res.json();
+                              if (res.ok) {
+                                setEditExisting(data.contract);
+                                setShowCreateForm(true);
+                              }
+                            } catch (e) {}
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn-primary small"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              // First, fetch the full contract data
+                              const fetchRes = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                              const fetchData = await fetchRes.json();
+                              if (!fetchRes.ok) throw new Error("Failed to fetch contract");
+                              const contractData = fetchData.contract;
+                              // Validate if fully filled
+                              const validationErrors = validateContractFullyFilled(contractData);
+                              if (validationErrors.length > 0) {
+                                alert("Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n"));
+                                return;
+                              }
+                              // Now send for approval
+                              const res = await fetch(`http://localhost:5000/contracts/${contract.id}/send-for-approval`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" }
+                              });
+                              const data = await res.json();
+                              if (res.ok) {
+                                // Update the contract status in the local state
+                                setContracts(prevContracts =>
+                                  prevContracts.map(c =>
+                                    c.id === contract.id
+                                      ? { ...c, status: "For Approval" }
+                                      : c
+                                  )
+                                );
+                              } else {
+                                alert(data.message || "Failed to send for approval");
+                              }
+                            } catch (error) {
+                              alert("Failed to send for approval. Please try again.");
+                            }
+                          }}
+                        >
+                          Send for Approval
+                        </button>
+                      </div>
+                    )}
+                    {contract.status === "Rejected" && (
+                      <button
+                        className="btn-primary small"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                            const data = await res.json();
+                            if (res.ok) {
+                              setEditExisting(data.contract);
+                              setShowCreateForm(true);
+                            }
+                          } catch (e) {}
+                        }}
+                      >
+                        Edit
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
@@ -309,7 +472,7 @@ function SalesDashboard({ onLogout }) {
           );
         })()}
         <div className="modal-actions">
-          {selectedContract.status === "Draft" && (
+          {(selectedContract.status === "Draft" || selectedContract.status === "Rejected") && (
             <button className="btn-primary" onClick={() => {
               setEditExisting(selectedContract);
               setSelectedContract(null);
@@ -317,6 +480,25 @@ function SalesDashboard({ onLogout }) {
             }}>Edit</button>
           )}
           <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRejectionReasonModal = () => (
+    <div className="modal-overlay" onClick={() => setShowRejectionReasonModal(false)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Rejection Reason</h3>
+          <button className="close-btn" onClick={() => setShowRejectionReasonModal(false)}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <p>{currentRejectionReason}</p>
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button className="btn-secondary" onClick={() => setShowRejectionReasonModal(false)}>Close</button>
         </div>
       </div>
     </div>
@@ -357,6 +539,7 @@ function SalesDashboard({ onLogout }) {
           renderContractsTable()
         )}
         {selectedContract && renderDetailsModal()}
+        {showRejectionReasonModal && renderRejectionReasonModal()}
       </div>
     </div>
   );

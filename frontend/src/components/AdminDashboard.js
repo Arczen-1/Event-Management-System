@@ -28,6 +28,7 @@ function AdminDashboard({ onLogout }) {
   // NOTE: Ensure "Fabrication" is present here so admins can assign it when approving users
   const roles = [
     "Sales",
+    "Sales Manager",
     "Accounting",
     "Warehouse",
     "Creative",
