@@ -5,15 +5,18 @@ const userSchema = new mongoose.Schema({
   fullName: { type: String, required: true },
   password: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  role: { 
-    type: String, 
+  mobile: { type: String, default: "" },
+  landline: { type: String, default: "" },
+  address: { type: String, default: "" },
+  role: {
+    type: String,
     enum: ['Sales', 'Sales Manager', 'Accounting', 'Warehouse', 'Creative', 'Linen', 'Logistics', 'Kitchen', 'Stockroom', 'Purchasing', 'Banquet Staff', 'Admin'],
-    default: null 
+    default: null
   },
-  status: { 
-    type: String, 
-    enum: ['pending', 'approved', 'rejected'], 
-    default: 'pending' 
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   },
   createdAt: { type: Date, default: Date.now }
 });

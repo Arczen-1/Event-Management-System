@@ -514,7 +514,7 @@ const validateContractFullyFilled = (contract) => {
   return errors;
 };
 
-// PUT /contracts/:id/send-for-approval - Send a contract for approval 
+// PUT /contracts/:id/send-for-approval - Send a contract for approval
 app.put("/contracts/:id/send-for-approval", async (req, res) => {
   try {
     const { id } = req.params
@@ -534,12 +534,45 @@ app.put("/contracts/:id/send-for-approval", async (req, res) => {
     if (validationErrors.length > 0) {
       return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
     }
-    
+
     contract.status = "For Approval"
     await contract.save()
     res.json({ message: "Contract sent for approval", contract })
   } catch (error) {
     console.error("Send for approval error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// ==================== PROFILE ROUTES ====================
+
+// GET /profile/:username - Get user profile details
+app.get("/profile/:username", async (req, res) => {
+  try {
+    const { username } = req.params
+    const user = await User.findOne({ username }).select("-password")
+    if (!user) return res.status(404).json({ message: "User not found" })
+    res.json({ user })
+  } catch (error) {
+    console.error("Get profile error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// PUT /profile/:username - Update user profile details
+app.put("/profile/:username", async (req, res) => {
+  try {
+    const { username } = req.params
+    const { mobile, landline, address } = req.body
+    const user = await User.findOne({ username })
+    if (!user) return res.status(404).json({ message: "User not found" })
+    user.mobile = mobile || ""
+    user.landline = landline || ""
+    user.address = address || ""
+    await user.save()
+    res.json({ message: "Profile updated successfully", user: { username: user.username, fullName: user.fullName, email: user.email, mobile: user.mobile, landline: user.landline, address: user.address } })
+  } catch (error) {
+    console.error("Update profile error:", error)
     res.status(500).json({ message: "Server error" })
   }
 })
