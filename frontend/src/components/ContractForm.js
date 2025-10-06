@@ -366,15 +366,78 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     return phoneRegex.test(phone);
   };
 
+  const isFormValid = () => {
+    // Check all string fields in page1 are filled (excluding computed fields)
+    const requiredP1Fields = [
+      'date', 'celebratorName', 'celebratorAddress', 'celebratorLandline', 'celebratorMobile', 'celebratorEmail',
+      'representativeName', 'representativeRelationship', 'representativeAddress', 'representativeEmail', 'representativeMobile', 'representativeLandline',
+      'coordinatorName', 'coordinatorMobile', 'coordinatorLandline', 'coordinatorAddress', 'coordinatorEmail',
+      'eventDate', 'occasion', 'venue', 'hall', 'ingressTime', 'cocktailTime', 'address', 'arrivalOfGuests', 'servingTime',
+      'totalVIP', 'totalRegular', 'kiddiePlated', 'kiddiePacked', 'crewPlated', 'crewPacked',
+      'themeSetup', 'colorMotif', 'vipTableType', 'regularTableType', 'vipTableSeats', 'regularTableSeats', 'vipTableQuantity', 'regularTableQuantity',
+      'vipUnderliner', 'vipTopper', 'vipNapkin', 'guestUnderliner', 'guestTopper', 'guestNapkin', 'setupRemarks',
+      'buffetStandard', 'buffetUpgraded', 'buffetPremium', 'buffetBarrel', 'buffetOval', 'buffetRemarks'
+    ];
+    for (const field of requiredP1Fields) {
+      if (!p1[field] || !p1[field].trim()) return false;
+    }
+
+    // Email validations
+    if (!validateEmail(p1.celebratorEmail)) return false;
+    if (!validateEmail(p1.representativeEmail)) return false;
+    if (!validateEmail(p1.coordinatorEmail)) return false;
+
+    // Phone validations
+    if (p1.celebratorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.celebratorMobile)) return false;
+    if (p1.celebratorLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.celebratorLandline)) return false;
+    if (p1.representativeMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.representativeMobile)) return false;
+    if (p1.representativeLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.representativeLandline)) return false;
+    if (p1.coordinatorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.coordinatorMobile)) return false;
+    if (p1.coordinatorLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.coordinatorLandline)) return false;
+
+    // Check all string fields in page2 are filled, skip booleans
+    const requiredP2Fields = [
+      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'chairsRemarks',
+      'flowerBackdrop', 'flowerGuestCenterpiece', 'flowerVipCenterpiece', 'flowerCakeTable', 'flowerRemarks',
+      'cakeNameCode', 'cakeFlavor', 'cakeSupplier', 'cakeSpecifications', 'celebratorsCar', 'emcee', 'soundSystem', 'tent', 'celebratorsChair'
+    ];
+    for (const field of requiredP2Fields) {
+      if (!p2[field] || !p2[field].trim()) return false;
+    }
+
+    // Check all string fields in page3 are filled
+    const requiredP3Fields = [
+      'pricePerPlate', 'cocktailHour', 'appetizer', 'soup', 'bread', 'salad', 'mainEntree', 'dessert', 'cakeName', 'kidsMeal', 'crewMeal',
+      'drinksCocktail', 'drinksMeal', 'roastedPig', 'roastedCalf', 'totalMenuCost', 'totalSpecialReqCost', 'outOfServiceAreaCharge',
+      'mobilizationCharge', 'taxes', 'grandTotal', 'fortyPercentDueOn', 'fortyPercentAmount', 'fortyPercentReceivedBy', 'fortyPercentDateReceived',
+      'fullPaymentDueOn', 'fullPaymentAmount', 'fullPaymentReceivedBy', 'fullPaymentDateReceived', 'remarks'
+    ];
+    for (const field of requiredP3Fields) {
+      if (!p3[field] || !p3[field].trim()) return false;
+    }
+
+    return true;
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
-    // Check all string fields in page1 are filled
-    Object.entries(p1).forEach(([key, value]) => {
-      if (typeof value === 'string' && !value.trim()) {
-        newErrors[key] = `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
+    // Check all string fields in page1 are filled (excluding computed fields)
+    const requiredP1Fields = [
+      'date', 'celebratorName', 'celebratorAddress', 'celebratorLandline', 'celebratorMobile', 'celebratorEmail',
+      'representativeName', 'representativeRelationship', 'representativeAddress', 'representativeEmail', 'representativeMobile', 'representativeLandline',
+      'coordinatorName', 'coordinatorMobile', 'coordinatorLandline', 'coordinatorAddress', 'coordinatorEmail',
+      'eventDate', 'occasion', 'venue', 'hall', 'ingressTime', 'cocktailTime', 'address', 'arrivalOfGuests', 'servingTime',
+      'totalVIP', 'totalRegular', 'kiddiePlated', 'kiddiePacked', 'crewPlated', 'crewPacked',
+      'themeSetup', 'colorMotif', 'vipTableType', 'regularTableType', 'vipTableSeats', 'regularTableSeats', 'vipTableQuantity', 'regularTableQuantity',
+      'vipUnderliner', 'vipTopper', 'vipNapkin', 'guestUnderliner', 'guestTopper', 'guestNapkin', 'setupRemarks',
+      'buffetStandard', 'buffetUpgraded', 'buffetPremium', 'buffetBarrel', 'buffetOval', 'buffetRemarks'
+    ];
+    for (const field of requiredP1Fields) {
+      if (!p1[field] || !p1[field].trim()) {
+        newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
       }
-    });
+    }
 
     // Email validations
     if (p1.celebratorEmail && !validateEmail(p1.celebratorEmail)) {
@@ -408,18 +471,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     }
 
     // Check all string fields in page2 are filled, skip booleans
-    Object.entries(p2).forEach(([key, value]) => {
-      if (typeof value === 'string' && !value.trim()) {
-        newErrors[key] = `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
+    const requiredP2Fields = [
+      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'chairsRemarks',
+      'flowerBackdrop', 'flowerGuestCenterpiece', 'flowerVipCenterpiece', 'flowerCakeTable', 'flowerRemarks',
+      'cakeNameCode', 'cakeFlavor', 'cakeSupplier', 'cakeSpecifications', 'celebratorsCar', 'emcee', 'soundSystem', 'tent', 'celebratorsChair'
+    ];
+    for (const field of requiredP2Fields) {
+      if (!p2[field] || !p2[field].trim()) {
+        newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
       }
-    });
+    }
 
     // Check all string fields in page3 are filled
-    Object.entries(p3).forEach(([key, value]) => {
-      if (typeof value === 'string' && !value.trim()) {
-        newErrors[key] = `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
+    const requiredP3Fields = [
+      'pricePerPlate', 'cocktailHour', 'appetizer', 'soup', 'bread', 'salad', 'mainEntree', 'dessert', 'cakeName', 'kidsMeal', 'crewMeal',
+      'drinksCocktail', 'drinksMeal', 'roastedPig', 'roastedCalf', 'totalMenuCost', 'totalSpecialReqCost', 'outOfServiceAreaCharge',
+      'mobilizationCharge', 'taxes', 'grandTotal', 'fortyPercentDueOn', 'fortyPercentAmount', 'fortyPercentReceivedBy', 'fortyPercentDateReceived',
+      'fullPaymentDueOn', 'fullPaymentAmount', 'fullPaymentReceivedBy', 'fullPaymentDateReceived', 'remarks'
+    ];
+    for (const field of requiredP3Fields) {
+      if (!p3[field] || !p3[field].trim()) {
+        newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
       }
-    });
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -1154,7 +1228,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           {activePage < 3 ? (
             <button type="button" className="pager-btn" onClick={next}>Next →</button>
           ) : (
-            <button type="button" className="btn-primary" onClick={handleSubmit}>Submit Contract</button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleSubmit}
+              disabled={!isFormValid()}
+              style={{ display: isFormValid() ? "inline-block" : "none" }}
+            >
+              Submit Contract
+            </button>
           )}
         </div>
       </div>

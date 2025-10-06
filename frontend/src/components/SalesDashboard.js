@@ -5,6 +5,7 @@ import Profile from "./Profile";
 
 function SalesDashboard({ onLogout, user }) {
   const [contracts, setContracts] = useState([]);
+  const [fullContracts, setFullContracts] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [nextNumber, setNextNumber] = useState("");
   const [selectedContract, setSelectedContract] = useState(null);
@@ -68,8 +69,10 @@ function SalesDashboard({ onLogout, user }) {
         const res = await fetch("http://localhost:5000/contracts");
         const data = await res.json();
         if (res.ok) {
+          const fullData = data.contracts || [];
+          setFullContracts(fullData);
           setContracts(
-            (data.contracts || []).map((c) => ({
+            fullData.map((c) => ({
               id: c._id,
               name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
               client: (c.page1 && c.page1.celebratorName) || "",
@@ -373,6 +376,12 @@ function SalesDashboard({ onLogout, user }) {
                         </button>
                         <button
                           className="btn-primary small"
+                          disabled={(() => {
+                            const fullContract = fullContracts.find(c => c._id === contract.id);
+                            if (!fullContract) return true;
+                            const errors = validateContractFullyFilled(fullContract);
+                            return errors.length > 0;
+                          })()}
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
