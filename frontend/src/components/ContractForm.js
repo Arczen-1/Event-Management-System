@@ -1,11 +1,54 @@
 import React, { useEffect, useState } from "react";
 import "./ContractForm.css";
 
+// Venue data
+const VENUES = {
+  "OLD GROVE": {
+    address: "Puro 5, U. Mojares Street Barangay Lodlod, Lipa City, 4217 Batangas",
+    halls: { "The Barn": 300 }
+  },
+  "FERNWOOD GARDENS": {
+    address: "Neogan, Tagaytay City",
+    halls: { "Indoor Function Hall": 200, "Mozart Hall": 150, "Schubert Hall": 150, "Vivaldi Hall": 150 }
+  },
+  "WORLD TRADE CENTER": {
+    address: "Mezzanine Level WTCMM Building, Sen. Gil J. Puyat Ave. cor. Diosdado Macapagal Blvd., Pasay City 1300",
+    halls: { "Hall A": 1000, "Hall B": 1000, "Hall C": 700 }
+  },
+  "SMX Manila Convention Center": {
+    address: "Seashell Lane, Mall of Asia Complex, Pasay City 1300, Philippines",
+    halls: { "Hall 1": 1500, "Hall 2": 1000, "Hall 3": 1000, "Hall 4": 1500, "Function Room 1": 500, "Function Room 2": 500, "Function Room 3": 500, "Function Room 4": 1000, "Function Room 5": 1000 }
+  },
+  "THE BLUE LEAF EVENTS PAVILION": {
+    address: "100 Park Avenue, McKinley Hill Village, Fort Bonifacio, Taguig, Metro Manila",
+    halls: { "Banyan": 400, "Silk": 300, "Jade": 200 }
+  },
+  "THE BLUE LEAF COSMOPOLITAN (QUEZON CITY)": {
+    address: "Robinsons Bridgetown, 80 Eulogio Rodriguez Jr. Ave, Libis, Quezon City, Metro Manila",
+    halls: { "Monet": 300, "Picasso": 250, "Matisse": 250 }
+  },
+  "GALLERY MIRANILA (QUEZON CITY)": {
+    address: "26 Mariposa, Quezon City, NCR",
+    halls: { "Gallery MiraNila Hall": 150 }
+  },
+  "CLEO BY THE BLUE LEAF (CARMONA, CAVITE)": {
+    address: "Gate 5, Congressional Road, Carmona, Cavite",
+    halls: { "Hall A": 400, "Hall B": 300 }
+  },
+  "OTHERS": {
+    address: "",
+    halls: {}
+  }
+};
+
 // Multi-page contract form replicating the client's three contract pages.
 // Saves to backend with monthly-reset contract numbering.
-function ContractForm({ onCancel, onCreated, existing }) {
+function ContractForm({ onCancel, onCreated, existing, user }) {
   const [activePage, setActivePage] = useState(1); // 1, 2, 3
   const [nextNumber, setNextNumber] = useState("");
+  const [availableHalls, setAvailableHalls] = useState([]);
+  const [maxPax, setMaxPax] = useState(0);
+  const [errors, setErrors] = useState({});
 
   // Page 1 fields
   const [p1, setP1] = useState({
@@ -46,6 +89,12 @@ function ContractForm({ onCancel, onCreated, existing }) {
     colorMotif: "",
     vipTableType: "",
     regularTableType: "",
+    vipTableSeats: "",
+    regularTableSeats: "",
+    vipTableQuantity: "",
+    regularTableQuantity: "",
+    totalTables: "",
+    totalChairs: "",
     vipUnderliner: "",
     vipTopper: "",
     vipNapkin: "",
@@ -147,9 +196,140 @@ function ContractForm({ onCancel, onCreated, existing }) {
     }
   }, [existing]);
 
+  // Pre-fill coordinator fields with user profile for new contracts
+  useEffect(() => {
+    if (!existing && user) {
+      fetch(`http://localhost:5000/profile/${user.username}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.user) {
+            setP1((prev) => ({
+              ...prev,
+              coordinatorName: d.user.fullName || "",
+              coordinatorMobile: d.user.mobile || "",
+              coordinatorLandline: d.user.landline || "",
+              coordinatorAddress: d.user.address || "",
+              coordinatorEmail: d.user.email || "",
+            }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [existing, user]);
+
+  // Auto-compute ingress time (10 hours before serving time)
+  useEffect(() => {
+    if (p1.servingTime && isTimeFieldValid(p1.servingTime)) {
+      // Parse time string HH:MM AM/PM
+      const timeParts = p1.servingTime.match(/(\d{1,2}):(\d{2})\s?(AM|PM)/i);
+      if (timeParts) {
+        let hours = parseInt(timeParts[1], 10);
+        const minutes = parseInt(timeParts[2], 10);
+        const ampm = timeParts[3].toUpperCase();
+        if (ampm === "PM" && hours !== 12) hours += 12;
+        if (ampm === "AM" && hours === 12) hours = 0;
+        // Subtract 10 hours
+        hours -= 10;
+        if (hours < 0) hours += 24;
+        // Format back to HH:MM AM/PM
+        const newAmpm = hours >= 12 ? "PM" : "AM";
+        let displayHours = hours % 12;
+        if (displayHours === 0) displayHours = 12;
+        const ingressTime = `${displayHours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")} ${newAmpm}`;
+        setP1(prev => ({ ...prev, ingressTime }));
+      }
+    }
+  }, [p1.servingTime]);
+
+  // Auto-compute total tables
+  useEffect(() => {
+    const vipTables = parseInt(p1.vipTableQuantity) || 0;
+    const regularTables = parseInt(p1.regularTableQuantity) || 0;
+    const total = vipTables + regularTables + 1; // +1 for 10 guests
+    setP1(prev => ({ ...prev, totalTables: total.toString() }));
+  }, [p1.vipTableQuantity, p1.regularTableQuantity]);
+
+  // Auto-compute total chairs
+  useEffect(() => {
+    const totalGuests = parseInt(p1.totalGuests) || 0;
+    const total = totalGuests + 10;
+    setP1(prev => ({ ...prev, totalChairs: total.toString() }));
+  }, [p1.totalGuests]);
+
+  // Initialize availableHalls and maxPax based on venue and hall
+  useEffect(() => {
+    if (p1.venue) {
+      const venueData = VENUES[p1.venue];
+      if (venueData) {
+        setAvailableHalls(Object.keys(venueData.halls));
+        if (p1.hall && venueData.halls[p1.hall]) {
+          setMaxPax(venueData.halls[p1.hall]);
+        } else {
+          setMaxPax(0);
+        }
+      }
+    } else {
+      setAvailableHalls([]);
+      setMaxPax(0);
+    }
+  }, [p1.venue, p1.hall]);
+
+  // Check hall capacity when total guests or hall changes
+  useEffect(() => {
+    if (p1.venue && p1.hall && VENUES[p1.venue]) {
+      const pax = VENUES[p1.venue].halls[p1.hall] || 0;
+      const totalGuestsNum = parseInt(p1.totalGuests) || 0;
+      if (totalGuestsNum > pax) {
+        alert(`Warning: The total number of guests (${totalGuestsNum}) exceeds the capacity of the selected hall (${pax}).`);
+      }
+    }
+  }, [p1.totalGuests, p1.hall]);
+
   // Validation functions
   const convertToUppercase = (value) => {
     return value.toUpperCase();
+  };
+
+  const validateEmail = (email) => {
+    if (email.toUpperCase() === "N/A") return true;
+    return email.includes("@gmail.com") || email.includes("@yahoo.com");
+  };
+
+  const validateFields = () => {
+    const newErrors = {};
+
+    if (p1.celebratorEmail && !validateEmail(p1.celebratorEmail)) {
+      newErrors.celebratorEmail = "Email must end with @gmail.com or @yahoo.com";
+    }
+    if (p1.representativeEmail && !validateEmail(p1.representativeEmail)) {
+      newErrors.representativeEmail = "Email must end with @gmail.com or @yahoo.com";
+    }
+    if (p1.coordinatorEmail && !validateEmail(p1.coordinatorEmail)) {
+      newErrors.coordinatorEmail = "Email must end with @gmail.com or @yahoo.com";
+    }
+
+    if (p1.celebratorMobile && !/^\d{11}$/.test(p1.celebratorMobile)) {
+      newErrors.celebratorMobile = "Mobile number must be 11 digits";
+    }
+    if (p1.representativeMobile && !/^\d{11}$/.test(p1.representativeMobile)) {
+      newErrors.representativeMobile = "Mobile number must be 11 digits";
+    }
+    if (p1.coordinatorMobile && !/^\d{11}$/.test(p1.coordinatorMobile)) {
+      newErrors.coordinatorMobile = "Mobile number must be 11 digits";
+    }
+
+    if (p1.celebratorLandline && !/^\d{7}$/.test(p1.celebratorLandline)) {
+      newErrors.celebratorLandline = "Landline number must be 7 digits";
+    }
+    if (p1.representativeLandline && !/^\d{7}$/.test(p1.representativeLandline)) {
+      newErrors.representativeLandline = "Landline number must be 7 digits";
+    }
+    if (p1.coordinatorLandline && !/^\d{7}$/.test(p1.coordinatorLandline)) {
+      newErrors.coordinatorLandline = "Landline number must be 7 digits";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const validateTimeField = (value) => {
@@ -172,31 +352,85 @@ function ContractForm({ onCancel, onCreated, existing }) {
     return time12Regex.test(value) || time24Regex.test(value) || naRegex.test(value);
   };
 
+  const validatePhone = (phone) => {
+    const phoneRegex = /^[\+]?[0-9\-\(\)\s]+$/;
+    return phoneRegex.test(phone);
+  };
+
   const validateForm = () => {
-    const errors = [];
+    const newErrors = {};
 
     // Check all string fields in page1 are filled
     Object.entries(p1).forEach(([key, value]) => {
       if (typeof value === 'string' && !value.trim()) {
-        errors.push(`Page 1 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+        newErrors[key] = `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
       }
     });
+
+    // Email validations
+    if (p1.celebratorEmail && !validateEmail(p1.celebratorEmail)) {
+      newErrors.celebratorEmail = "Email must end with @gmail.com or @yahoo.com";
+    }
+    if (p1.representativeEmail && !validateEmail(p1.representativeEmail)) {
+      newErrors.representativeEmail = "Email must end with @gmail.com or @yahoo.com";
+    }
+    if (p1.coordinatorEmail && !validateEmail(p1.coordinatorEmail)) {
+      newErrors.coordinatorEmail = "Email must end with @gmail.com or @yahoo.com";
+    }
+
+    // Phone validations
+    if (p1.celebratorMobile && p1.celebratorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.celebratorMobile)) {
+      newErrors.celebratorMobile = "Mobile number must be 11 digits or N/A";
+    }
+    if (p1.celebratorLandline && p1.celebratorLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.celebratorLandline)) {
+      newErrors.celebratorLandline = "Landline number must be 7 digits or N/A";
+    }
+    if (p1.representativeMobile && p1.representativeMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.representativeMobile)) {
+      newErrors.representativeMobile = "Mobile number must be 11 digits or N/A";
+    }
+    if (p1.representativeLandline && p1.representativeLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.representativeLandline)) {
+      newErrors.representativeLandline = "Landline number must be 7 digits or N/A";
+    }
+    if (p1.coordinatorMobile && p1.coordinatorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.coordinatorMobile)) {
+      newErrors.coordinatorMobile = "Mobile number must be 11 digits or N/A";
+    }
+    if (p1.coordinatorLandline && p1.coordinatorLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.coordinatorLandline)) {
+      newErrors.coordinatorLandline = "Landline number must be 7 digits or N/A";
+    }
 
     // Check all string fields in page2 are filled, skip booleans
     Object.entries(p2).forEach(([key, value]) => {
       if (typeof value === 'string' && !value.trim()) {
-        errors.push(`Page 2 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+        newErrors[key] = `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
       }
     });
 
     // Check all string fields in page3 are filled
     Object.entries(p3).forEach(([key, value]) => {
       if (typeof value === 'string' && !value.trim()) {
-        errors.push(`Page 3 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+        newErrors[key] = `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
       }
     });
 
-    return errors;
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleAutoSave = async () => {
+    if (!existing) return; // Only auto-save for existing contracts
+
+    try {
+      const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page1: p1, page2: p2, page3: p3 }),
+      });
+      if (!res.ok) {
+        console.error("Auto-save failed");
+      }
+    } catch (error) {
+      console.error("Auto-save error:", error);
+    }
   };
 
   const handleSave = async (e) => {
@@ -254,9 +488,8 @@ function ContractForm({ onCancel, onCreated, existing }) {
     e.preventDefault();
 
     // Validate form before submission
-    const validationErrors = validateForm();
-    if (validationErrors.length > 0) {
-      alert("Please fill in all required fields:\n\n" + validationErrors.join("\n"));
+    if (!validateForm()) {
+      alert("Please fix validation errors");
       return;
     }
 
@@ -308,8 +541,14 @@ function ContractForm({ onCancel, onCreated, existing }) {
     }
   };
 
-  const next = () => setActivePage((p) => Math.min(3, p + 1));
-  const back = () => setActivePage((p) => Math.max(1, p - 1));
+  const next = () => {
+    if (existing) handleAutoSave();
+    setActivePage((p) => Math.min(3, p + 1));
+  };
+  const back = () => {
+    if (existing) handleAutoSave();
+    setActivePage((p) => Math.max(1, p - 1));
+  };
 
   // When page changes (Next/Back), scroll to top for better UX
   useEffect(() => {
@@ -331,13 +570,13 @@ function ContractForm({ onCancel, onCreated, existing }) {
 
       <h4>Celebrator</h4>
       <div className="form-row two">
-        <div className="form-group"><label>Celebrator/Corporate Name</label><input value={p1.celebratorName} onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Email Address</label><input value={p1.celebratorEmail} onChange={(e)=>setP1({...p1, celebratorEmail:e.target.value})} /></div>
+        <div className="form-group"><label>Celebrator/Corporate Name</label><input value={p1.celebratorName} onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} onBlur={handleAutoSave} /></div>
+        <div className="form-group"><label>Email Address</label><input value={p1.celebratorEmail} onChange={(e)=>setP1({...p1, celebratorEmail:e.target.value})} className={errors.celebratorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorEmail}</div></div>
       </div>
       <div className="form-row three">
         <div className="form-group"><label>Address</label><input value={p1.celebratorAddress} onChange={(e)=>setP1({...p1, celebratorAddress:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.celebratorLandline} onChange={(e)=>setP1({...p1, celebratorLandline:e.target.value})} /></div>
-        <div className="form-group"><label>Mobile No.</label><input value={p1.celebratorMobile} onChange={(e)=>setP1({...p1, celebratorMobile:e.target.value})} /></div>
+        <div className="form-group"><label>Landline No.</label><input value={p1.celebratorLandline} onChange={(e)=>setP1({...p1, celebratorLandline:e.target.value})} className={errors.celebratorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorLandline}</div></div>
+        <div className="form-group"><label>Mobile No.</label><input value={p1.celebratorMobile} onChange={(e)=>setP1({...p1, celebratorMobile:e.target.value})} className={errors.celebratorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorMobile}</div></div>
       </div>
 
       <h4>Representative</h4>
@@ -346,28 +585,28 @@ function ContractForm({ onCancel, onCreated, existing }) {
         <div className="form-group"><label>Relationship</label><input value={p1.representativeRelationship} onChange={(e)=>setP1({...p1, representativeRelationship:convertToUppercase(e.target.value)})} /></div>
       </div>
       <div className="form-row three">
-        <div className="form-group"><label>Email Address</label><input value={p1.representativeEmail} onChange={(e)=>setP1({...p1, representativeEmail:e.target.value})} /></div>
+        <div className="form-group"><label>Email Address</label><input value={p1.representativeEmail} onChange={(e)=>setP1({...p1, representativeEmail:e.target.value})} className={errors.representativeEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeEmail}</div></div>
         <div className="form-group"><label>Address</label><input value={p1.representativeAddress} onChange={(e)=>setP1({...p1, representativeAddress:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.representativeLandline} onChange={(e)=>setP1({...p1, representativeLandline:e.target.value})} /></div>
+        <div className="form-group"><label>Landline No.</label><input value={p1.representativeLandline} onChange={(e)=>setP1({...p1, representativeLandline:e.target.value})} className={errors.representativeLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeLandline}</div></div>
         </div>
       <div className="form-row two">
-        <div className="form-group"><label>Mobile No.</label><input value={p1.representativeMobile} onChange={(e)=>setP1({...p1, representativeMobile:e.target.value})} /></div>
+        <div className="form-group"><label>Mobile No.</label><input value={p1.representativeMobile} onChange={(e)=>setP1({...p1, representativeMobile:e.target.value})} className={errors.representativeMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeMobile}</div></div>
       </div>
 
       <h4>Coordinator </h4>
       <div className="form-row three">
         <div className="form-group"><label>Coordinator Name</label><input value={p1.coordinatorName} onChange={(e)=>setP1({...p1, coordinatorName:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Mobile No.</label><input value={p1.coordinatorMobile} onChange={(e)=>setP1({...p1, coordinatorMobile:e.target.value})} /></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.coordinatorLandline} onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} /></div>
+        <div className="form-group"><label>Mobile No.</label><input value={p1.coordinatorMobile} onChange={(e)=>setP1({...p1, coordinatorMobile:e.target.value})} className={errors.coordinatorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorMobile}</div></div>
+        <div className="form-group"><label>Landline No.</label><input value={p1.coordinatorLandline} onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} className={errors.coordinatorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorLandline}</div></div>
       </div>
       <div className="form-row two">
-        <div className="form-group"><label>Email Address</label><input value={p1.coordinatorEmail} onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} /></div>
+        <div className="form-group"><label>Email Address</label><input value={p1.coordinatorEmail} onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} className={errors.coordinatorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorEmail}</div></div>
         <div className="form-group"><label>Address</label><input value={p1.coordinatorAddress} onChange={(e)=>setP1({...p1, coordinatorAddress:convertToUppercase(e.target.value)})} /></div>
       </div>
       
       <h4>Event Details</h4>
       <div className="form-row three">
-        <div className="form-group"><label>Date of Event</label><input type="date" value={p1.eventDate} onChange={(e)=>setP1({...p1, eventDate:e.target.value})} /></div>
+        <div className="form-group"><label>Date of Event</label><input type="date" value={p1.eventDate} onChange={(e)=>setP1({...p1, eventDate:e.target.value})} onBlur={handleAutoSave} /></div>
         <div className="form-group">
           <label>Occasion</label>
           <select value={p1.occasion} onChange={(e)=>setP1({...p1, occasion:e.target.value})}>
@@ -379,35 +618,90 @@ function ContractForm({ onCancel, onCreated, existing }) {
             <option value="WEDDINGS">Weddings</option>
           </select>
         </div>
-        <div className="form-group"><label>Venue</label><input value={p1.venue} onChange={(e)=>setP1({...p1, venue:convertToUppercase(e.target.value)})} /></div>
+      <div className="form-group">
+        <label>Venue</label>
+        <select
+          value={p1.venue}
+          onChange={(e) => {
+            const venue = e.target.value;
+            const venueData = VENUES[venue] || { address: "", halls: {} };
+            setP1((prev) => ({
+              ...prev,
+              venue,
+              address: venueData.address,
+              hall: "",
+            }));
+            setAvailableHalls(Object.keys(venueData.halls));
+            setMaxPax(0);
+          }}
+        >
+          <option value="">Select Venue</option>
+          {Object.keys(VENUES).map((venue) => (
+            <option key={venue} value={venue}>
+              {venue}
+            </option>
+          ))}
+        </select>
       </div>
-      <div className="form-row three">
-        <div className="form-group"><label>Hall</label><input value={p1.hall} onChange={(e)=>setP1({...p1, hall:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group">
-          <label>Ingress Time</label>
-          <input 
-            value={p1.ingressTime} 
-            onChange={(e) => setP1({...p1, ingressTime: validateTimeField(e.target.value)})}
-            placeholder="HH:MM AM/PM or N/A"
-            className={!isTimeFieldValid(p1.ingressTime) ? "invalid-input" : ""}
+    </div>
+    <div className="form-row three">
+      <div className="form-group">
+        <label>Hall</label>
+        {p1.venue === "OTHERS" ? (
+          <input
+            value={p1.hall}
+            onChange={(e) => setP1({ ...p1, hall: e.target.value.toUpperCase() })}
           />
-          {!isTimeFieldValid(p1.ingressTime) && (
-            <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
-          )}
-        </div>
-        <div className="form-group">
-          <label>Cocktail Time</label>
-          <input 
-            value={p1.cocktailTime} 
-            onChange={(e) => setP1({...p1, cocktailTime: validateTimeField(e.target.value)})}
-            placeholder="HH:MM AM/PM or N/A"
-            className={!isTimeFieldValid(p1.cocktailTime) ? "invalid-input" : ""}
-          />
-          {!isTimeFieldValid(p1.cocktailTime) && (
-            <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
-          )}
-        </div>
+        ) : (
+          <select
+            value={p1.hall}
+            onChange={(e) => {
+              const hall = e.target.value;
+              setP1((prev) => ({ ...prev, hall }));
+              if (p1.venue && VENUES[p1.venue]) {
+                const pax = VENUES[p1.venue].halls[hall] || 0;
+                setMaxPax(pax);
+                const totalGuestsNum = parseInt(p1.totalGuests) || 0;
+                if (totalGuestsNum > pax) {
+                  alert(`Warning: The selected hall cannot accommodate the total number of guests (${totalGuestsNum}). Maximum pax is ${pax}.`);
+                }
+              }
+            }}
+          >
+            <option value="">Select Hall</option>
+            {availableHalls.map((hall) => (
+              <option key={hall} value={hall}>
+                {hall} ({VENUES[p1.venue].halls[hall]} pax)
+              </option>
+            ))}
+          </select>
+        )}
       </div>
+      <div className="form-group">
+        <label>Ingress Time</label>
+        <input
+          value={p1.ingressTime}
+          onChange={(e) => setP1({ ...p1, ingressTime: validateTimeField(e.target.value) })}
+          placeholder="HH:MM AM/PM or N/A"
+          className={!isTimeFieldValid(p1.ingressTime) ? "invalid-input" : ""}
+        />
+        {!isTimeFieldValid(p1.ingressTime) && (
+          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
+        )}
+      </div>
+      <div className="form-group">
+        <label>Cocktail Time</label>
+        <input
+          value={p1.cocktailTime}
+          onChange={(e) => setP1({ ...p1, cocktailTime: validateTimeField(e.target.value) })}
+          placeholder="HH:MM AM/PM or N/A"
+          className={!isTimeFieldValid(p1.cocktailTime) ? "invalid-input" : ""}
+        />
+        {!isTimeFieldValid(p1.cocktailTime) && (
+          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
+        )}
+      </div>
+    </div>
       <div className="form-row three">
         <div className="form-group"><label>Address</label><input value={p1.address} onChange={(e)=>setP1({...p1, address:convertToUppercase(e.target.value)})} /></div>
         <div className="form-group">
@@ -436,9 +730,35 @@ function ContractForm({ onCancel, onCreated, existing }) {
         </div>
       </div>
       <div className="form-row three">
-        <div className="form-group"><label>Total No. of Guests</label><input value={p1.totalGuests} onChange={(e)=>setP1({...p1, totalGuests:e.target.value})} /></div>
-        <div className="form-group"><label>VIP</label><input value={p1.totalVIP} onChange={(e)=>setP1({...p1, totalVIP:e.target.value})} /></div>
-        <div className="form-group"><label>Regular</label><input value={p1.totalRegular} onChange={(e)=>setP1({...p1, totalRegular:e.target.value})} /></div>
+        <div className="form-group"><label>VIP</label><input value={p1.totalVIP} onChange={(e) => {
+          const vipValue = e.target.value;
+          setP1((prev) => {
+            const newTotalVIP = vipValue;
+            const newTotalRegular = prev.totalRegular;
+            let newTotalGuests = prev.totalGuests;
+            if (newTotalVIP && newTotalRegular) {
+              const vipNum = parseInt(newTotalVIP) || 0;
+              const regularNum = parseInt(newTotalRegular) || 0;
+              newTotalGuests = (vipNum + regularNum).toString();
+            }
+            return { ...prev, totalVIP: newTotalVIP, totalGuests: newTotalGuests };
+          });
+        }} /></div>
+        <div className="form-group"><label>Regular</label><input value={p1.totalRegular} onChange={(e) => {
+          const regularValue = e.target.value;
+          setP1((prev) => {
+            const newTotalRegular = regularValue;
+            const newTotalVIP = prev.totalVIP;
+            let newTotalGuests = prev.totalGuests;
+            if (newTotalVIP && newTotalRegular) {
+              const vipNum = parseInt(newTotalVIP) || 0;
+              const regularNum = parseInt(newTotalRegular) || 0;
+              newTotalGuests = (vipNum + regularNum).toString();
+            }
+            return { ...prev, totalRegular: newTotalRegular, totalGuests: newTotalGuests };
+          });
+        }} /></div>
+        <div className="form-group"><label>Total No. of Guests</label><input value={p1.totalGuests} readOnly /></div>
       </div>
       <div className="form-row four">
         <div className="form-group"><label>Kiddie Meal Plated</label><input value={p1.kiddiePlated} onChange={(e)=>setP1({...p1, kiddiePlated:e.target.value})} /></div>
@@ -452,9 +772,63 @@ function ContractForm({ onCancel, onCreated, existing }) {
         <div className="form-group"><label>Theme Set-up</label><input value={p1.themeSetup} onChange={(e)=>setP1({...p1, themeSetup:convertToUppercase(e.target.value)})} /></div>
         <div className="form-group"><label>Color Motif</label><input value={p1.colorMotif} onChange={(e)=>setP1({...p1, colorMotif:convertToUppercase(e.target.value)})} /></div>
       </div>
+      <div className="form-row four">
+        <div className="form-group">
+          <label>VIP Table Type</label>
+          <select value={p1.vipTableType} onChange={(e)=>setP1({...p1, vipTableType:e.target.value})}>
+            <option value="">Select Type</option>
+            <option value="Round Table">Round Table</option>
+            <option value="Long Table">Long Table</option>
+            <option value="Big Round Table">Big Round Table</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label>VIP Seats per Table</label>
+          <select value={p1.vipTableSeats} onChange={(e)=>setP1({...p1, vipTableSeats:e.target.value})}>
+            <option value="">Select Seats</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="12">12</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label>VIP Table Quantity</label>
+          <input type="number" value={p1.vipTableQuantity} onChange={(e)=>setP1({...p1, vipTableQuantity:e.target.value})} />
+        </div>
+        <div className="form-group">
+          <label>Regular Table Type</label>
+          <select value={p1.regularTableType} onChange={(e)=>setP1({...p1, regularTableType:e.target.value})}>
+            <option value="">Select Type</option>
+            <option value="Round Table">Round Table</option>
+            <option value="Long Table">Long Table</option>
+            <option value="Big Round Table">Big Round Table</option>
+          </select>
+        </div>
+      </div>
+      <div className="form-row three">
+        <div className="form-group">
+          <label>Regular Seats per Table</label>
+          <select value={p1.regularTableSeats} onChange={(e)=>setP1({...p1, regularTableSeats:e.target.value})}>
+            <option value="">Select Seats</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="12">12</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Regular Table Quantity</label>
+          <input type="number" value={p1.regularTableQuantity} onChange={(e)=>setP1({...p1, regularTableQuantity:e.target.value})} />
+        </div>
+        <div className="form-group">
+          <label>Total Tables</label>
+          <input value={p1.totalTables} readOnly />
+        </div>
+      </div>
       <div className="form-row two">
-        <div className="form-group"><label>VIP Table Type</label><input value={p1.vipTableType} onChange={(e)=>setP1({...p1, vipTableType:e.target.value})} /></div>
-        <div className="form-group"><label>Regular Table Type</label><input value={p1.regularTableType} onChange={(e)=>setP1({...p1, regularTableType:e.target.value})} /></div>
+        <div className="form-group">
+          <label>Total Chairs</label>
+          <input value={p1.totalChairs} readOnly />
+        </div>
       </div>
       <div className="form-row three">
         <div className="form-group"><label>VIP Underliner</label><input value={p1.vipUnderliner} onChange={(e)=>setP1({...p1, vipUnderliner:e.target.value})} /></div>
@@ -752,19 +1126,24 @@ function ContractForm({ onCancel, onCreated, existing }) {
         {activePage === 2 && renderPage2()}
         {activePage === 3 && renderPage3()}
 
-        <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
-          <button type="button" className="btn-primary" onClick={handleSave}>Save Contract</button>
-          <div className="pager">
-            <button type="button" className="pager-btn" onClick={back} disabled={activePage === 1}>← Back</button>
-            <span>Page {activePage} of 3</span>
-            {activePage < 3 ? (
-              <button type="button" className="pager-btn" onClick={next}>Next →</button>
-            ) : (
-              <button type="button" className="btn-primary" onClick={handleSubmit}>Submit Contract</button>
-            )}
-          </div>
+      <div className="form-actions">
+        <button type="button" className="btn-danger" onClick={onCancel}>Cancel</button>
+        <button type="button" className="btn-secondary" onClick={async () => {
+          // Save form as draft before going back
+          await handleSave(new Event('submit', { cancelable: true }));
+          onCancel();
+        }}>Back to Dashboard</button>
+
+        <div className="pager">
+          <button type="button" className="pager-btn" onClick={back} disabled={activePage === 1}>← Back</button>
+          <span>Page {activePage} of 3</span>
+          {activePage < 3 ? (
+            <button type="button" className="pager-btn" onClick={next}>Next →</button>
+          ) : (
+            <button type="button" className="btn-primary" onClick={handleSubmit}>Submit Contract</button>
+          )}
         </div>
+      </div>
       </form>
     </div>
   );

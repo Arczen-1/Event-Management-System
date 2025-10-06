@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import "./SalesDashboard.css";
 import ContractForm from "./ContractForm";
+import Profile from "./Profile";
 
-function SalesDashboard({ onLogout }) {
+function SalesDashboard({ onLogout, user }) {
   const [contracts, setContracts] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [nextNumber, setNextNumber] = useState("");
@@ -10,6 +11,9 @@ function SalesDashboard({ onLogout }) {
   const [editExisting, setEditExisting] = useState(null);
   const [showRejectionReasonModal, setShowRejectionReasonModal] = useState(false);
   const [currentRejectionReason, setCurrentRejectionReason] = useState("");
+  const [showProfile, setShowProfile] = useState(false);
+  const [profileData, setProfileData] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("All");
   const [newContract, setNewContract] = useState({
     name: "",
     client: "",
@@ -239,12 +243,23 @@ function SalesDashboard({ onLogout }) {
     <div className="contracts-table-container">
       <div className="table-header">
         <h3>My Contracts</h3>
-        <button 
+        <button
           className="action-btn primary"
           onClick={() => setShowCreateForm(true)}
         >
           Create New Contract
         </button>
+      </div>
+      <div className="status-tabs">
+        {["All", "Draft", "For Approval", "For Accounting Review", "Active", "Completed", "Rejected"].map(status => (
+          <button
+            key={status}
+            className={`status-tab ${statusFilter === status ? 'active' : ''}`}
+            onClick={() => setStatusFilter(status)}
+          >
+            {status}
+          </button>
+        ))}
       </div>
       
       <div className="contracts-table">
@@ -262,12 +277,14 @@ function SalesDashboard({ onLogout }) {
             </tr>
           </thead>
           <tbody>
-            {contracts.length === 0 ? (
-              <tr className="no-contracts">
-                <td colSpan="7">No contracts created yet</td>
-              </tr>
-            ) : (
-              contracts.map(contract => (
+          {contracts.length === 0 ? (
+            <tr className="no-contracts">
+              <td colSpan="8">No contracts created yet</td>
+            </tr>
+          ) : (
+            contracts
+              .filter(contract => statusFilter === "All" || contract.status === statusFilter)
+              .map(contract => (
                 <tr key={contract.id}>
                   <td className="clickable-cell" onClick={async () => {
                     try {
@@ -418,7 +435,7 @@ function SalesDashboard({ onLogout }) {
                   </td>
                 </tr>
               ))
-            )}
+          )}
           </tbody>
         </table>
       </div>
@@ -508,15 +525,27 @@ function SalesDashboard({ onLogout }) {
     <div className="sales-dashboard">
       <div className="dashboard-header">
         <div className="dashboard-header-inner">
-          {/* Left: Title matches Admin style */}
-          <h1>Sales Dashboard</h1>
-          {/* Right: Logout aligned to right, same class as Admin */}
-          <button onClick={onLogout} className="logout-btn header-logout">Logout</button>
+          <div className="header-left">
+            <h1>Sales Dashboard</h1>
+            <nav className="nav-bar">
+              <button className="nav-btn" onClick={() => { setShowCreateForm(false); setEditExisting(null); setShowProfile(false); setSelectedContract(null); }}>
+                Contracts
+              </button>
+              <button className="nav-btn" onClick={() => { setShowProfile(true); setShowCreateForm(false); setEditExisting(null); setSelectedContract(null); }}>
+                Profile
+              </button>
+              <button className="nav-btn logout-btn" onClick={onLogout}>
+                Log Out
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
 
       <div className="dashboard-content">
-        {showCreateForm ? (
+        {showProfile ? (
+          <Profile user={user} onLogout={onLogout} />
+        ) : showCreateForm ? (
           <ContractForm
             onCancel={() => { setShowCreateForm(false); setEditExisting(null); }}
             onCreated={(created) => {
@@ -534,6 +563,7 @@ function SalesDashboard({ onLogout }) {
               });
             }}
             existing={editExisting}
+            user={user}
           />
         ) : (
           renderContractsTable()

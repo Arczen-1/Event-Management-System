@@ -112,7 +112,7 @@ function App() {
   }
 
   if (currentView === "sales") {
-    return <SalesDashboard onLogout={handleLogout} />;
+    return <SalesDashboard onLogout={handleLogout} user={currentUser} />;
   }
 
   if (currentView === "sales-manager") {

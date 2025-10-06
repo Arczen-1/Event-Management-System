@@ -14,8 +14,8 @@
 .dashboard-header-inner {
   width: 100%;
   margin: 0;
-  display: grid;
-  grid-template-columns: auto 1fr auto; /* Title leftmost, flexible middle, logout right */
+  display: flex;
+  justify-content: space-between;
   align-items: center;
 }
 
@@ -284,3 +284,75 @@
 .kv-label { font-size: 0.85rem; color: #6c757d; margin-bottom: 4px; }
 .kv-value { color: #343a40; white-space: pre-wrap; }
 .empty { color: #6c757d; font-style: italic; }
+
+/* Header left styles */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Navigation bar styles */
+.nav-bar {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.nav-btn {
+  background-color: transparent;
+  border: none;
+  color: #410d1d;
+  font-family: "Aileron Black", sans-serif;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.nav-btn:hover {
+  background-color: #410d1d;
+  color: white;
+}
+
+.nav-btn.logout-btn {
+  margin-left: auto;
+  background-color: #410d1d;
+  color: white;
+  padding: 8px 20px;
+}
+
+.nav-btn.logout-btn:hover {
+  background-color: #5a1a2d;
+}
+
+/* Status tabs styles */
+.status-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.status-tab {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s, color 0.3s;
+  font-family: "Aileron", sans-serif;
+}
+
+.status-tab:hover {
+  background-color: #e9ecef;
+}
+
+.status-tab.active {
+  background-color: #410d1d;
+  color: white;
+  border-color: #410d1d;
+}
