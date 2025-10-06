@@ -280,7 +280,16 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       const pax = VENUES[p1.venue].halls[p1.hall] || 0;
       const totalGuestsNum = parseInt(p1.totalGuests) || 0;
       if (totalGuestsNum > pax) {
-        alert(`Warning: The total number of guests (${totalGuestsNum}) exceeds the capacity of the selected hall (${pax}).`);
+        setErrors((prev) => ({
+          ...prev,
+          totalGuests: `The selected hall cannot accommodate the total number of guests (${totalGuestsNum}). Maximum pax is ${pax}.`,
+        }));
+      } else {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.totalGuests;
+          return newErrors;
+        });
       }
     }
   }, [p1.totalGuests, p1.hall]);
@@ -661,10 +670,11 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               if (p1.venue && VENUES[p1.venue]) {
                 const pax = VENUES[p1.venue].halls[hall] || 0;
                 setMaxPax(pax);
-                const totalGuestsNum = parseInt(p1.totalGuests) || 0;
-                if (totalGuestsNum > pax) {
-                  alert(`Warning: The selected hall cannot accommodate the total number of guests (${totalGuestsNum}). Maximum pax is ${pax}.`);
-                }
+                // Remove alert and rely on error message display instead
+                // const totalGuestsNum = parseInt(p1.totalGuests) || 0;
+                // if (totalGuestsNum > pax) {
+                //   alert(`Warning: The selected hall cannot accommodate the total number of guests (${totalGuestsNum}). Maximum pax is ${pax}.`);
+                // }
               }
             }}
           >
@@ -758,7 +768,11 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             return { ...prev, totalRegular: newTotalRegular, totalGuests: newTotalGuests };
           });
         }} /></div>
-        <div className="form-group"><label>Total No. of Guests</label><input value={p1.totalGuests} readOnly /></div>
+        <div className="form-group">
+          <label>Total No. of Guests</label>
+          <input value={p1.totalGuests} readOnly className={errors.totalGuests ? 'invalid-input' : ''} />
+          {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
+        </div>
       </div>
       <div className="form-row four">
         <div className="form-group"><label>Kiddie Meal Plated</label><input value={p1.kiddiePlated} onChange={(e)=>setP1({...p1, kiddiePlated:e.target.value})} /></div>
