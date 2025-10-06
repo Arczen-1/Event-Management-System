@@ -1,194 +1,352 @@
 import React, { useState, useEffect } from "react";
-import "./DepartmentDashboard.css";
+import "./SalesManagerDashboard.css";
 
 function CreativeDashboard({ onLogout }) {
-  const [contracts, setContracts] = useState([]);
-  const [selectedContract, setSelectedContract] = useState(null);
-  const [page, setPage] = useState(1);
+  const [contracts, setContracts] = useState([]); // mapped list (same shape as SalesDashboard)
+  const [creativeRequests, setCreativeRequests] = useState([]); // creative requests from backend
+  const [showForm, setShowForm] = useState(false);
+  const [activeContract, setActiveContract] = useState(null);
+  const [newRequest, setNewRequest] = useState({
+    requestTitle: "",
+    materialsNeeded: "",
+    designer: "",
+    dueDate: "",
+    status: "Draft",
+  });
 
-  // Load contracts from backend on mount
   useEffect(() => {
     fetchContracts();
+    fetchCreativeRequests();
   }, []);
 
+  // --- Fetch contracts (map to same shape as SalesDashboard) ---
   const fetchContracts = async () => {
     try {
       const res = await fetch("http://localhost:5000/contracts");
       const data = await res.json();
-      if (res.ok) {
-        setContracts(
-          (data.contracts || []).filter(c => c.status === "Active").map((c) => ({
-            id: c._id,
-            name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
-            celebratorName: (c.page1 && c.page1.celebratorName) || "",
-            contractNumber: c.contractNumber,
-            page1: c.page1,
-            page2: c.page2,
-            page3: c.page3,
-          }))
-        );
-      }
-    } catch (e) {
-      console.error("Error fetching contracts:", e);
+      // data might be { contracts: [...] } or an array; normalize
+      const raw = Array.isArray(data) ? data : data.contracts || [];
+      const mapped = raw.map((c) => ({
+        id: c._id,
+        // same naming logic as SalesDashboard so contract name & client show correctly
+        name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
+        client: (c.page1 && (c.page1.celebratorName || c.page1.client || c.page1.clientName)) || "",
+        value: (c.page3 && c.page3.grandTotal) || (c.page1 && c.page1.value) || "",
+        startDate: (c.page1 && (c.page1.eventDate || c.page1.startDate)) || "",
+        endDate: (c.page1 && (c.page1.eventDate || c.page1.endDate)) || "",
+        status: c.status || "Draft",
+        contractNumber: c.contractNumber,
+        raw // keep raw contract if you need full details
+      }));
+      setContracts(mapped);
+    } catch (err) {
+      console.error("Error fetching contracts:", err);
+      setContracts([]);
     }
   };
 
-  const renderContractsTable = () => {
-    const itemsPerPage = 10;
-    const startIndex = (page - 1) * itemsPerPage;
-    const paginatedContracts = contracts.slice(startIndex, startIndex + itemsPerPage);
-
-    return (
-      <div className="contracts-table-container">
-        <div className="table-header">
-          <h3>Active Contracts</h3>
-          <div className="pager">
-            <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
-            <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
-            <button className="pager-btn" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(contracts.length / itemsPerPage)}>→</button>
-          </div>
-        </div>
-        <div className="contracts-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Contract Name</th>
-                <th>Celebrator/Corporate Name</th>
-                <th>Contract No.</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedContracts.length === 0 ? (
-                <tr className="no-contracts">
-                  <td colSpan="4">No active contracts available</td>
-                </tr>
-              ) : (
-                paginatedContracts.map(contract => (
-                  <tr key={contract.id} className="clickable-row" onClick={async () => {
-                    try {
-                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
-                      const data = await res.json();
-                      if (res.ok) setSelectedContract(data.contract);
-                    } catch (e) {}
-                  }}>
-                    <td>{contract.name}</td>
-                    <td>{contract.celebratorName}</td>
-                    <td>{contract.contractNumber || "-"}</td>
-                    <td>
-                      <button
-                        className="btn-review"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
-                            const data = await res.json();
-                            if (res.ok) setSelectedContract(data.contract);
-                          } catch (e) {
-                            console.error("Error fetching contract details:", e);
-                          }
-                        }}
-                      >
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
+  // --- Fetch creative requests (handle both shapes) ---
+  const fetchCreativeRequests = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/creativeRequests");
+      const data = await res.json();
+      // backend might return array or { requests: [...] } or { request: ... } — normalize
+      let arr = [];
+      if (Array.isArray(data)) arr = data;
+      else if (Array.isArray(data.requests)) arr = data.requests;
+      else if (Array.isArray(data.creativeRequests)) arr = data.creativeRequests;
+      else if (data.request) arr = [data.request];
+      else arr = [];
+      setCreativeRequests(arr);
+    } catch (err) {
+      console.error("Error fetching creative requests:", err);
+      setCreativeRequests([]);
+    }
   };
 
-  const renderDetailsModal = () => (
-    <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Creative Contract Details</h3>
-          <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
-        </div>
-        <div className="modal-body">
-          {selectedContract && (
-            <div className="contract-details">
-              <div className="detail-section">
-                <h4>Contract Information</h4>
-                <div className="detail-row">
-                  <strong>Contract Number:</strong> {selectedContract.contractNumber}
-                </div>
-                <div className="detail-row">
-                  <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
-                </div>
-              </div>
+  const handleInputChange = (e) => {
+    setNewRequest({
+      ...newRequest,
+      [e.target.name]: e.target.value,
+    });
+  };
 
-              <div className="detail-section">
-                <h4>Theme and Setup</h4>
-                <div className="detail-row">
-                  <strong>Theme Set-Up:</strong> {selectedContract.page1?.themeSetup || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Color Motif:</strong> {selectedContract.page1?.colorMotif || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Remarks:</strong> {selectedContract.page1?.setupRemarks || "N/A"}
-                </div>
-              </div>
+  // --- Create creative request (send contract details + request fields) ---
+  const handleCreateRequest = async (e) => {
+    e.preventDefault();
+    if (!activeContract) {
+      alert("Please select a contract first (Add Creative Request button).");
+      return;
+    }
 
-              <div className="detail-section">
-                <h4>Flower Arrangements</h4>
-                <div className="detail-row">
-                  <strong>Backdrop:</strong> {selectedContract.page2?.flowerBackdrop || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Guest Centerpiece:</strong> {selectedContract.page2?.flowerGuestCenterpiece || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>VIP Centerpiece:</strong> {selectedContract.page2?.flowerVipCenterpiece || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Cake Table:</strong> {selectedContract.page2?.flowerCakeTable || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Couple Chair:</strong> {selectedContract.page2?.celebratorsChair || "N/A"}
-                </div>
-              </div>
-            </div>
-          )}
+    try {
+      const payload = {
+        // match backend schema: requestTitle, materialsNeeded, designer, dueDate, status
+        requestTitle: newRequest.requestTitle,
+        materialsNeeded: newRequest.materialsNeeded,
+        designer: newRequest.designer,
+        dueDate: newRequest.dueDate,
+        status: newRequest.status || "Draft",
+
+        // forward contract fields (store them on creative request)
+        contractId: activeContract.raw?._id || activeContract.id,
+        contractName: activeContract.name,
+        client: activeContract.client,
+        contractNo: activeContract.contractNumber,
+        startDate: activeContract.startDate,
+        endDate: activeContract.endDate,
+      };
+
+      const res = await fetch("http://localhost:5000/creativeRequests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to create request");
+
+      // backend might return { request } or the request object itself
+      const created = data.request || data.createdRequest || data;
+      // append to the list and reset
+      setCreativeRequests((prev) => [...prev, created]);
+      setShowForm(false);
+      setActiveContract(null);
+      setNewRequest({
+        requestTitle: "",
+        materialsNeeded: "",
+        designer: "",
+        dueDate: "",
+        status: "Draft",
+      });
+    } catch (err) {
+      console.error("Create request error:", err);
+      alert("Failed to create request: " + (err.message || ""));
+    }
+  };
+
+  // --- Helpers for rendering / filtering ---
+  const statusClass = (s = "") => s.toLowerCase().replace(/\s+/g, "-");
+
+  // Spacing container style: keep everything aligned with Sales dashboard container
+  // (You can also add a CSS class to SalesManagerDashboard.css if you prefer)
+  const sectionStyle = { marginTop: "28px" };
+
+  const renderContractsTable = () => (
+    <div className="contracts-table-container">
+      <div className="table-header">
+        <h3>Contracts from Sales</h3>
+      </div>
+
+      <div className="contracts-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Contract Name</th>
+              <th>Client</th>
+              <th>Contract No.</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contracts.length === 0 ? (
+              <tr className="no-contracts">
+                <td colSpan="7">No contracts found</td>
+              </tr>
+            ) : (
+              contracts.map((c) => (
+                <tr key={c.id}>
+                  {/* Use clickable-cell style from SalesDashboard so details open consistently */}
+                  <td className="clickable-cell">{c.name}</td>
+                  <td className="clickable-cell">{c.client}</td>
+                  <td className="clickable-cell">{c.contractNumber || "-"}</td>
+                  <td className="clickable-cell">{c.startDate ? String(c.startDate).slice(0, 10) : ""}</td>
+                  <td className="clickable-cell">{c.endDate ? String(c.endDate).slice(0, 10) : ""}</td>
+                  <td>
+                    <span className={`status ${statusClass(c.status)}`}>
+                      {c.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className="action-btn primary"
+                      onClick={() => {
+                        setActiveContract(c);
+                        setShowForm(true);
+                        // populate request title default from contract name
+                        setNewRequest((prev) => ({ ...prev, requestTitle: c.name }));
+                      }}
+                    >
+                      Add Creative Request
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderCreateForm = () => (
+    <div className="create-contract-form">
+      <h3>
+        {activeContract ? `Create Creative Request for: ${activeContract.name}` : "Create Creative Request"}
+      </h3>
+
+      <form onSubmit={handleCreateRequest}>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Request Title</label>
+            <input
+              type="text"
+              name="requestTitle"
+              value={newRequest.requestTitle}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Designer Assigned</label>
+            <input
+              type="text"
+              name="designer"
+              value={newRequest.designer}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
         </div>
-        <div className="modal-actions">
-          <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
+
+        <div className="form-group">
+          <label>Materials Needed (detail each item)</label>
+          <textarea
+            name="materialsNeeded"
+            value={newRequest.materialsNeeded}
+            onChange={handleInputChange}
+            rows={4}
+            required
+          />
         </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label>Due Date</label>
+            <input
+              type="date"
+              name="dueDate"
+              value={newRequest.dueDate}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Status</label>
+            <select name="status" value={newRequest.status} onChange={handleInputChange}>
+              <option value="Draft">Draft</option>
+              <option value="For Approval">For Approval</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="form-actions">
+          <button type="submit" className="btn-primary">Submit Request</button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              setShowForm(false);
+              setActiveContract(null);
+              setNewRequest({
+                requestTitle: "",
+                materialsNeeded: "",
+                designer: "",
+                dueDate: "",
+                status: "Draft",
+              });
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+
+  const renderRequestsTable = () => (
+    <div className="contracts-table-container" style={sectionStyle}>
+      <div className="table-header">
+        <h3>Creative Requests</h3>
+      </div>
+
+      <div className="contracts-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Request Title</th>
+              <th>Contract</th>
+              <th>Client</th>
+              <th>Materials Needed</th>
+              <th>Designer</th>
+              <th>Due Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {creativeRequests.length === 0 ? (
+              <tr className="no-contracts">
+                <td colSpan="7">No creative requests yet</td>
+              </tr>
+            ) : (
+              creativeRequests.map((r, idx) => (
+                <tr key={r._id || idx}>
+                  <td>{r.requestTitle || r.requestName || r.title || ""}</td>
+                  <td>{r.contractName || r.contractNo || ""}</td>
+                  <td>{r.client || ""}</td>
+                  <td style={{ maxWidth: 240, whiteSpace: "pre-wrap" }}>{r.materialsNeeded}</td>
+                  <td>{r.designer}</td>
+                  <td>{r.dueDate ? String(r.dueDate).slice(0, 10) : ""}</td>
+                  <td>
+                    <span className={`status ${statusClass(r.status)}`}>
+                      {r.status}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 
   return (
-    <div className="department-dashboard">
+    <div className="sales-manager-dashboard">
       <div className="dashboard-header">
         <div className="dashboard-header-inner">
-          <h1>Creative Dashboard</h1>
+          <h1>Creatives Department Dashboard</h1>
           <button onClick={onLogout} className="logout-btn header-logout">Logout</button>
         </div>
       </div>
+
       <div className="dashboard-content">
-        {renderContractsTable()}
-        {selectedContract && renderDetailsModal()}
+        {showForm ? renderCreateForm() : (
+          <>
+            {renderContractsTable()}
+            {renderRequestsTable()}
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 export default CreativeDashboard;
-
-
-
