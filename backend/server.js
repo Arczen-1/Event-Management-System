@@ -252,6 +252,65 @@ app.delete("/admin/delete-user/:userId", async (req, res) => {
   }
 })
 
+// ==================== GOOGLE SHEETS HELPER ====================
+
+const { fetchMonitoringData, getSheetsClient, SPREADSHEET_ID } = require("./googleSheetsHelper");
+
+app.get("/monitoring", async (req, res) => {
+  try {
+    const data = await fetchMonitoringData();
+    console.log("Fetched monitoring data:", data);
+    res.json(data);
+  } catch (err) {
+    console.error("Error fetching monitoring data:", err);
+    res.status(500).json({ error: "Failed to fetch monitoring data" });
+  }
+});
+
+app.get("/inventory-movement", async (req, res) => {
+  try {
+    const sheets = await getSheetsClient();
+    const resp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: "'invty movement monitoring'!B:I", // fetch block
+    });
+
+    let rows = resp.data.values || [];
+
+    // 🔹 Remove completely empty rows
+    rows = rows.filter(row => row.some(cell => cell && cell.trim() !== ""));
+
+    // 🔹 If first row is headers, skip it
+    if (rows.length < 2) return res.json([]);
+
+    const headers = [
+      "Item Code",        // B
+      "Item Description", // C
+      "UOM",              // D
+      "On-hand (Start)",  // F
+      "Quantity",         // G
+      "Damages",          // H
+      "On-hand (End)",    // I
+    ];
+
+    const data = rows.slice(1).map((row) => ({
+      "Item Code": row[0] || "",
+      "Item Description": row[1] || "",
+      "UOM": row[2] || "",
+      "On-hand (Start)": row[4] || "",
+      "Quantity": row[5] || "",
+      "Damages": row[6] || "",
+      "On-hand (End)": row[7] || "",
+    }));
+
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching inventory movement data:", error);
+    res.status(500).json({ error: "Failed to fetch inventory movement data" });
+  }
+});
+
+
 // ==================== CONTRACT ROUTES ====================
 
 // Helper to build the next contract number with monthly reset.

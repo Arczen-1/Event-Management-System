@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import "./SalesManagerDashboard.css";
 import ContractForm from "./ContractForm";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import interactionPlugin from "@fullcalendar/interaction";
+
 
 function SalesManagerDashboard({ onLogout }) {
   const [contracts, setContracts] = useState([]);
@@ -15,6 +19,9 @@ function SalesManagerDashboard({ onLogout }) {
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectionReasonModal, setShowRejectionReasonModal] = useState(false);
   const [currentRejectionReason, setCurrentRejectionReason] = useState("");
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [selectedCalendarEvent, setSelectedCalendarEvent] = useState(null);
+
   const [newContract, setNewContract] = useState({
     name: "",
     client: "",
@@ -314,6 +321,7 @@ function SalesManagerDashboard({ onLogout }) {
           >
             Sent to Accounting ({contracts.filter(c => c.status === "For Accounting Review").length})
           </button>
+
         </div>
         
         <div className="contracts-table">
@@ -406,6 +414,64 @@ function SalesManagerDashboard({ onLogout }) {
       </div>
     );
   };
+
+  const renderCalendarView = () => {
+  const events = contracts.map(c => ({
+    id: c.id,
+    title: `${c.name} (${c.client})`,
+    start: c.startDate,
+    end: c.endDate || c.startDate,
+    extendedProps: { status: c.status, value: c.value }
+  }));
+
+  return (
+    <div className="calendar-container">
+      <h3>Contract Calendar</h3>
+      <FullCalendar
+        plugins={[dayGridPlugin, interactionPlugin]}
+        initialView="dayGridMonth"
+        events={events}
+        eventClick={(info) => {
+          setSelectedCalendarEvent({
+            title: info.event.title,
+            start: info.event.startStr,
+            end: info.event.endStr,
+            status: info.event.extendedProps.status,
+            value: info.event.extendedProps.value
+          });
+          setShowCalendarModal(true);
+        }}
+        height="80vh"
+      />
+    </div>
+  );
+};
+
+const renderCalendarEventModal = () => (
+  <div className="modal-overlay" onClick={() => setShowCalendarModal(false)}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <h3>Event Details</h3>
+        <button className="close-btn" onClick={() => setShowCalendarModal(false)}>×</button>
+      </div>
+      <div className="modal-body">
+        {selectedCalendarEvent && (
+          <>
+            <p><strong>Title:</strong> {selectedCalendarEvent.title}</p>
+            <p><strong>Start:</strong> {selectedCalendarEvent.start}</p>
+            <p><strong>End:</strong> {selectedCalendarEvent.end}</p>
+            <p><strong>Status:</strong> {selectedCalendarEvent.status}</p>
+            <p><strong>Value:</strong> ₱{selectedCalendarEvent.value}</p>
+          </>
+        )}
+      </div>
+      <div className="modal-actions">
+        <button className="btn-secondary" onClick={() => setShowCalendarModal(false)}>Close</button>
+      </div>
+    </div>
+  </div>
+);
+
 
   const renderDetailsModal = () => (
     <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
@@ -775,33 +841,27 @@ function SalesManagerDashboard({ onLogout }) {
         </div>
       </div>
 
-      <div className="dashboard-content">
-        {showCreateForm ? (
-          <ContractForm
-            onCancel={() => { setShowCreateForm(false); setEditExisting(null); }}
-            onCreated={(created) => {
-              setShowCreateForm(false);
-              setEditExisting(null);
-              setContracts((prev) => {
-                const idx = prev.findIndex((c) => c.id === created.id);
-                if (idx !== -1) {
-                  const copy = [...prev];
-                  copy[idx] = created;
-                  return copy;
-                }
-                return [...prev, created];
-              });
-            }}
-            existing={editExisting}
-          />
-        ) : (
-          renderContractsTable()
-        )}
-        {selectedContract && renderDetailsModal()}
-        {showReviewModal && renderReviewModal()}
-        {showRejectModal && renderRejectModal()}
-        {showRejectionReasonModal && renderRejectionReasonModal()}
+      <div className="dashboard-main">
+        <div className="calendar-side">
+          {renderCalendarView()}
+        </div>
+
+        <div className="contracts-side">
+          {showCreateForm ? (
+            <ContractForm onCancel={() => setShowCreateForm(false)} />
+          ) : (
+            renderContractsTable()
+          )}
+        </div>
       </div>
+
+      {/* Modals */}
+      {selectedContract && renderDetailsModal()}
+      {showReviewModal && renderReviewModal()}
+      {showRejectModal && renderRejectModal()}
+      {showRejectionReasonModal && renderRejectionReasonModal()}
+      {showCalendarModal && renderCalendarEventModal()}
+
     </div>
   );
 }
