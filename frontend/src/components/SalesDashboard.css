@@ -249,6 +249,11 @@
   background-color: #5a1a2d;
 }
 
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-secondary {
   background-color: transparent;
   color: #410d1d;

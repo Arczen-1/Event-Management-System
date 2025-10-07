@@ -195,7 +195,7 @@ function SalesDashboard({ onLogout, user }) {
         
         <div className="form-row">
           <div className="form-group">
-            <label>Start Date</label>
+            <label>Event Date</label>
             <input
               type="date"
               name="startDate"
@@ -273,8 +273,7 @@ function SalesDashboard({ onLogout, user }) {
               <th>Client</th>
               <th>Contract No.</th>
               <th>Value</th>
-              <th>Start Date</th>
-              <th>End Date</th>
+              <th>Event Date</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
@@ -282,7 +281,7 @@ function SalesDashboard({ onLogout, user }) {
           <tbody>
           {contracts.length === 0 ? (
             <tr className="no-contracts">
-              <td colSpan="8">No contracts created yet</td>
+              <td colSpan="7">No contracts created yet</td>
             </tr>
           ) : (
             contracts
@@ -324,13 +323,6 @@ function SalesDashboard({ onLogout, user }) {
                       if (res.ok) setSelectedContract(data.contract);
                     } catch (e) {}
                   }}>{contract.startDate}</td>
-                  <td className="clickable-cell" onClick={async () => {
-                    try {
-                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
-                      const data = await res.json();
-                      if (res.ok) setSelectedContract(data.contract);
-                    } catch (e) {}
-                  }}>{contract.endDate}</td>
                   <td className="clickable-cell" onClick={async () => {
                     try {
                       const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
