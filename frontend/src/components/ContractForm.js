@@ -103,12 +103,12 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   // Page 2 fields
   const [p2, setP2] = useState({
-    chairsMonoblock: "",
-    chairsTiffany: "",
-    chairsCrystal: "",
-    chairsRustic: "",
-    chairsKiddie: "",
-    premiumChairs: "",
+    chairsMonoblock: "0",
+    chairsTiffany: "0",
+    chairsCrystal: "0",
+    chairsRustic: "0",
+    chairsKiddie: "0",
+    premiumChairs: "0",
     totalChairs: "",
     chairsRemarks: "",
     flowerBackdrop: "",
@@ -241,6 +241,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     const total = totalGuests + 10;
     setP2(prev => ({ ...prev, totalChairs: total.toString() }));
   }, [p1.totalGuests]);
+
+  // Validate chair sum equals total chairs
+  useEffect(() => {
+    const sum = (parseInt(p2.chairsMonoblock) || 0) +
+                (parseInt(p2.chairsTiffany) || 0) +
+                (parseInt(p2.chairsCrystal) || 0) +
+                (parseInt(p2.chairsRustic) || 0) +
+                (parseInt(p2.chairsKiddie) || 0) +
+                (parseInt(p2.premiumChairs) || 0);
+    const total = parseInt(p2.totalChairs) || 0;
+    if (sum !== total) {
+      setErrors((prev) => ({
+        ...prev,
+        chairsSum: `The total number of chairs entered (${sum}) must equal the Total Chairs (${total}).`,
+      }));
+    } else {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.chairsSum;
+        return newErrors;
+      });
+    }
+  }, [p2.chairsMonoblock, p2.chairsTiffany, p2.chairsCrystal, p2.chairsRustic, p2.chairsKiddie, p2.premiumChairs, p2.totalChairs]);
 
   // Auto-set VIP seats based on table type
   useEffect(() => {
@@ -514,6 +537,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     for (const field of requiredP3Fields) {
       if (!p3[field] || !p3[field].trim()) return false;
     }
+
+    // Check for validation errors
+    if (errors.chairsSum) return false;
 
     return true;
   };
@@ -1114,15 +1140,16 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h4>Chairs</h4>
       <div className="form-row five">
         <div className="form-group"><label>Monoblock</label><input value={p2.chairsMonoblock} onChange={(e)=>setP2({...p2, chairsMonoblock:e.target.value})} /></div>
-        <div className="form-group"><label>Tiffany</label><input value={p2.chairsTiffany} onChange={(e)=>setP2({...p2, chairsTiffany:e.target.value})} /></div>
-        <div className="form-group"><label>Crystal</label><input value={p2.chairsCrystal} onChange={(e)=>setP2({...p2, chairsCrystal:e.target.value})} /></div>
         <div className="form-group"><label>Rustic</label><input value={p2.chairsRustic} onChange={(e)=>setP2({...p2, chairsRustic:e.target.value})} /></div>
-        <div className="form-group"><label>Kiddie</label><input value={p2.chairsKiddie} onChange={(e)=>setP2({...p2, chairsKiddie:e.target.value})} /></div>
+        <div className="form-group"><label>Tiffany</label><input value={p2.chairsTiffany} onChange={(e)=>setP2({...p2, chairsTiffany:e.target.value})} /></div>
+        <div className="form-group"><label>Premium</label><input value={p2.premiumChairs} onChange={(e)=>setP2({...p2, premiumChairs:e.target.value})} /></div>
+        <div className="form-group"><label>Crystal</label><input value={p2.chairsCrystal} onChange={(e)=>setP2({...p2, chairsCrystal:e.target.value})} /></div>
       </div>
       <div className="form-row two">
-        <div className="form-group"><label>Premium Chairs</label><input value={p2.premiumChairs} onChange={(e)=>setP2({...p2, premiumChairs:e.target.value})} /></div>
+        <div className="form-group"><label>Kiddie</label><input value={p2.chairsKiddie} onChange={(e)=>setP2({...p2, chairsKiddie:e.target.value})} /></div>
         <div className="form-group"><label>Total Chairs</label><input value={p2.totalChairs} readOnly /></div>
       </div>
+      {errors.chairsSum && <div className="validation-error">{errors.chairsSum}</div>}
       <div className="form-group"><label>Remarks</label><textarea value={p2.chairsRemarks} onChange={(e)=>setP2({...p2, chairsRemarks:convertToUppercase(e.target.value)})} /></div>
 
       <h4>Flower Arrangement</h4>
