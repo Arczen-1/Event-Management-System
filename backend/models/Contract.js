@@ -10,7 +10,6 @@ const ContractSchema = new mongoose.Schema(
     rejectionReason: { type: String, default: "" },
     
     page1: {
-      date: { type: String, default: "" },
       celebratorName: { type: String, default: "" },
       celebratorAddress: { type: String, default: "" },
       celebratorLandline: { type: String, default: "" },
@@ -45,25 +44,19 @@ const ContractSchema = new mongoose.Schema(
       crewPacked: { type: String, default: "" },
       themeSetup: { type: String, default: "" },
       colorMotif: { type: String, default: "" },
+      vipTableType: { type: String, default: "" },
+      regularTableType: { type: String, default: "" },
       vipTableSeats: { type: String, default: "" },
       regularTableSeats: { type: String, default: "" },
       vipTableQuantity: { type: String, default: "" },
       regularTableQuantity: { type: String, default: "" },
-      totalTables: { type: String, default: "" },
-      totalChairs: { type: String, default: "" },
       vipUnderliner: { type: String, default: "" },
       vipTopper: { type: String, default: "" },
       vipNapkin: { type: String, default: "" },
       guestUnderliner: { type: String, default: "" },
       guestTopper: { type: String, default: "" },
       guestNapkin: { type: String, default: "" },
-      setupRemarks: { type: String, default: "" },
-      buffetStandard: { type: String, default: "" },
-      buffetUpgraded: { type: String, default: "" },
-      buffetPremium: { type: String, default: "" },
-      buffetBarrel: { type: String, default: "" },
-      buffetOval: { type: String, default: "" },
-      buffetRemarks: { type: String, default: "" }
+      setupRemarks: { type: String, default: "" }
     },
 
     page2: {
@@ -73,6 +66,7 @@ const ContractSchema = new mongoose.Schema(
       chairsRustic: { type: String, default: "" },
       chairsKiddie: { type: String, default: "" },
       premiumChairs: { type: String, default: "" },
+      totalChairs: { type: String, default: "" },
       chairsRemarks: { type: String, default: "" },
       flowerBackdrop: { type: String, default: "" },
       flowerGuestCenterpiece: { type: String, default: "" },
