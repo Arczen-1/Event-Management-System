@@ -294,6 +294,26 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     }
   }, [p1.totalGuests, p1.hall]);
 
+  // Auto-set VIP Seats per Table based on VIP Table Type
+  useEffect(() => {
+    let seats = "";
+    if (p1.vipTableType === "Round Table") seats = "8";
+    else if (p1.vipTableType === "Big Round Table") seats = "10";
+    else if (p1.vipTableType === "Rectangle Table") seats = "6";
+    else if (p1.vipTableType === "Long Rectangle Table") seats = "8";
+    setP1(prev => ({ ...prev, vipTableSeats: seats }));
+  }, [p1.vipTableType]);
+
+  // Auto-compute VIP Table Quantity based on totalVIP and VIP Seats per Table
+  useEffect(() => {
+    const totalVIPNum = parseInt(p1.totalVIP) || 0;
+    const seatsNum = parseInt(p1.vipTableSeats) || 0;
+    if (seatsNum > 0) {
+      const quantity = Math.ceil(totalVIPNum / seatsNum);
+      setP1(prev => ({ ...prev, vipTableQuantity: quantity.toString() }));
+    }
+  }, [p1.totalVIP, p1.vipTableSeats]);
+
   // Validation functions
   const convertToUppercase = (value) => {
     return value.toUpperCase();
@@ -367,10 +387,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   };
 
   const isFormValid = () => {
+    // Check conditional requirements for representative
+    const isNA = (value) => value && value.trim().toUpperCase() === 'N/A';
+    const celebratorContactsNA = isNA(p1.celebratorEmail) || isNA(p1.celebratorAddress) || isNA(p1.celebratorMobile);
+    if (celebratorContactsNA) {
+      if (!p1.representativeName || !p1.representativeName.trim()) return false;
+      if (!p1.representativeRelationship || !p1.representativeRelationship.trim()) return false;
+      if (!p1.representativeEmail || p1.representativeEmail.trim().toUpperCase() === 'N/A') return false;
+      if (!p1.representativeAddress || p1.representativeAddress.trim().toUpperCase() === 'N/A') return false;
+      if (!p1.representativeMobile || p1.representativeMobile.trim().toUpperCase() === 'N/A') return false;
+    }
+
     // Check all string fields in page1 are filled (excluding computed fields)
     const requiredP1Fields = [
       'date', 'celebratorName', 'celebratorAddress', 'celebratorLandline', 'celebratorMobile', 'celebratorEmail',
-      'representativeName', 'representativeRelationship', 'representativeAddress', 'representativeEmail', 'representativeMobile', 'representativeLandline',
       'coordinatorName', 'coordinatorMobile', 'coordinatorLandline', 'coordinatorAddress', 'coordinatorEmail',
       'eventDate', 'occasion', 'venue', 'hall', 'ingressTime', 'cocktailTime', 'address', 'arrivalOfGuests', 'servingTime',
       'totalVIP', 'totalRegular', 'kiddiePlated', 'kiddiePacked', 'crewPlated', 'crewPacked',
@@ -381,6 +411,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     for (const field of requiredP1Fields) {
       if (!p1[field] || !p1[field].trim()) return false;
     }
+
+    // Additional check: celebrator name cannot be N/A
+    if (p1.celebratorName && p1.celebratorName.trim().toUpperCase() === 'N/A') return false;
 
     // Email validations
     if (!validateEmail(p1.celebratorEmail)) return false;
@@ -422,10 +455,30 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const validateForm = () => {
     const newErrors = {};
 
+    // Check conditional requirements for representative
+    const isNA = (value) => value && value.trim().toUpperCase() === 'N/A';
+    const celebratorContactsNA = isNA(p1.celebratorEmail) || isNA(p1.celebratorAddress) || isNA(p1.celebratorMobile);
+    if (celebratorContactsNA) {
+      if (!p1.representativeName || !p1.representativeName.trim()) {
+        newErrors.representativeName = "Representative name is required since celebrator contacts are N/A";
+      }
+      if (!p1.representativeRelationship || !p1.representativeRelationship.trim()) {
+        newErrors.representativeRelationship = "Representative relationship is required since celebrator contacts are N/A";
+      }
+      if (!p1.representativeEmail || p1.representativeEmail.trim().toUpperCase() === 'N/A') {
+        newErrors.representativeEmail = "Representative email is required and cannot be N/A since celebrator contacts are N/A";
+      }
+      if (!p1.representativeAddress || p1.representativeAddress.trim().toUpperCase() === 'N/A') {
+        newErrors.representativeAddress = "Representative address is required and cannot be N/A since celebrator contacts are N/A";
+      }
+      if (!p1.representativeMobile || p1.representativeMobile.trim().toUpperCase() === 'N/A') {
+        newErrors.representativeMobile = "Representative mobile is required and cannot be N/A since celebrator contacts are N/A";
+      }
+    }
+
     // Check all string fields in page1 are filled (excluding computed fields)
     const requiredP1Fields = [
       'date', 'celebratorName', 'celebratorAddress', 'celebratorLandline', 'celebratorMobile', 'celebratorEmail',
-      'representativeName', 'representativeRelationship', 'representativeAddress', 'representativeEmail', 'representativeMobile', 'representativeLandline',
       'coordinatorName', 'coordinatorMobile', 'coordinatorLandline', 'coordinatorAddress', 'coordinatorEmail',
       'eventDate', 'occasion', 'venue', 'hall', 'ingressTime', 'cocktailTime', 'address', 'arrivalOfGuests', 'servingTime',
       'totalVIP', 'totalRegular', 'kiddiePlated', 'kiddiePacked', 'crewPlated', 'crewPacked',
@@ -437,6 +490,11 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       if (!p1[field] || !p1[field].trim()) {
         newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
       }
+    }
+
+    // Additional check: celebrator name cannot be N/A
+    if (p1.celebratorName && p1.celebratorName.trim().toUpperCase() === 'N/A') {
+      newErrors.celebratorName = "Celebrator name cannot be N/A";
     }
 
     // Email validations
@@ -469,6 +527,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     if (p1.coordinatorLandline && p1.coordinatorLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.coordinatorLandline)) {
       newErrors.coordinatorLandline = "Landline number must be 7 digits or N/A";
     }
+
+
 
     // Check all string fields in page2 are filled, skip booleans
     const requiredP2Fields = [
@@ -667,584 +727,4 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         <div className="form-group"><label>Name</label><input value={p1.representativeName} onChange={(e)=>setP1({...p1, representativeName:convertToUppercase(e.target.value)})} /></div>
         <div className="form-group"><label>Relationship</label><input value={p1.representativeRelationship} onChange={(e)=>setP1({...p1, representativeRelationship:convertToUppercase(e.target.value)})} /></div>
       </div>
-      <div className="form-row three">
-        <div className="form-group"><label>Email Address</label><input value={p1.representativeEmail} onChange={(e)=>setP1({...p1, representativeEmail:e.target.value})} className={errors.representativeEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeEmail}</div></div>
-        <div className="form-group"><label>Address</label><input value={p1.representativeAddress} onChange={(e)=>setP1({...p1, representativeAddress:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.representativeLandline} onChange={(e)=>setP1({...p1, representativeLandline:e.target.value})} className={errors.representativeLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeLandline}</div></div>
-        </div>
-      <div className="form-row two">
-        <div className="form-group"><label>Mobile No.</label><input value={p1.representativeMobile} onChange={(e)=>setP1({...p1, representativeMobile:e.target.value})} className={errors.representativeMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeMobile}</div></div>
-      </div>
-
-      <h4>Coordinator </h4>
-      <div className="form-row three">
-        <div className="form-group"><label>Coordinator Name</label><input value={p1.coordinatorName} onChange={(e)=>setP1({...p1, coordinatorName:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Mobile No.</label><input value={p1.coordinatorMobile} onChange={(e)=>setP1({...p1, coordinatorMobile:e.target.value})} className={errors.coordinatorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorMobile}</div></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.coordinatorLandline} onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} className={errors.coordinatorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorLandline}</div></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>Email Address</label><input value={p1.coordinatorEmail} onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} className={errors.coordinatorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorEmail}</div></div>
-        <div className="form-group"><label>Address</label><input value={p1.coordinatorAddress} onChange={(e)=>setP1({...p1, coordinatorAddress:convertToUppercase(e.target.value)})} /></div>
-      </div>
-      
-      <h4>Event Details</h4>
-      <div className="form-row three">
-        <div className="form-group"><label>Date of Event</label><input type="date" value={p1.eventDate} onChange={(e)=>setP1({...p1, eventDate:e.target.value})} onBlur={handleAutoSave} /></div>
-        <div className="form-group">
-          <label>Occasion</label>
-          <select value={p1.occasion} onChange={(e)=>setP1({...p1, occasion:e.target.value})}>
-            <option value="">Select Occasion</option>
-            <option value="BIRTHDAY">Birthday</option>
-            <option value="DEBUT">Debut</option>
-            <option value="SPECIAL OCCASION">Special Occasion</option>
-            <option value="CORPORATE">Corporate</option>
-            <option value="WEDDINGS">Weddings</option>
-          </select>
-        </div>
-      <div className="form-group">
-        <label>Venue</label>
-        <select
-          value={p1.venue}
-          onChange={(e) => {
-            const venue = e.target.value;
-            const venueData = VENUES[venue] || { address: "", halls: {} };
-            setP1((prev) => ({
-              ...prev,
-              venue,
-              address: venueData.address,
-              hall: "",
-            }));
-            setAvailableHalls(Object.keys(venueData.halls));
-            setMaxPax(0);
-          }}
-        >
-          <option value="">Select Venue</option>
-          {Object.keys(VENUES).map((venue) => (
-            <option key={venue} value={venue}>
-              {venue}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-    <div className="form-row three">
-      <div className="form-group">
-        <label>Hall</label>
-        {p1.venue === "OTHERS" ? (
-          <input
-            value={p1.hall}
-            onChange={(e) => setP1({ ...p1, hall: e.target.value.toUpperCase() })}
-          />
-        ) : (
-          <select
-            value={p1.hall}
-            onChange={(e) => {
-              const hall = e.target.value;
-              setP1((prev) => ({ ...prev, hall }));
-              if (p1.venue && VENUES[p1.venue]) {
-                const pax = VENUES[p1.venue].halls[hall] || 0;
-                setMaxPax(pax);
-                // Remove alert and rely on error message display instead
-                // const totalGuestsNum = parseInt(p1.totalGuests) || 0;
-                // if (totalGuestsNum > pax) {
-                //   alert(`Warning: The selected hall cannot accommodate the total number of guests (${totalGuestsNum}). Maximum pax is ${pax}.`);
-                // }
-              }
-            }}
-          >
-            <option value="">Select Hall</option>
-            {availableHalls.map((hall) => (
-              <option key={hall} value={hall}>
-                {hall} ({VENUES[p1.venue].halls[hall]} pax)
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-      <div className="form-group">
-        <label>Ingress Time</label>
-        <input
-          value={p1.ingressTime}
-          onChange={(e) => setP1({ ...p1, ingressTime: validateTimeField(e.target.value) })}
-          placeholder="HH:MM AM/PM or N/A"
-          className={!isTimeFieldValid(p1.ingressTime) ? "invalid-input" : ""}
-        />
-        {!isTimeFieldValid(p1.ingressTime) && (
-          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
-        )}
-      </div>
-      <div className="form-group">
-        <label>Cocktail Time</label>
-        <input
-          value={p1.cocktailTime}
-          onChange={(e) => setP1({ ...p1, cocktailTime: validateTimeField(e.target.value) })}
-          placeholder="HH:MM AM/PM or N/A"
-          className={!isTimeFieldValid(p1.cocktailTime) ? "invalid-input" : ""}
-        />
-        {!isTimeFieldValid(p1.cocktailTime) && (
-          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
-        )}
-      </div>
-    </div>
-      <div className="form-row three">
-        <div className="form-group"><label>Address</label><input value={p1.address} onChange={(e)=>setP1({...p1, address:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group">
-          <label>Arrival of Guests</label>
-          <input 
-            value={p1.arrivalOfGuests} 
-            onChange={(e) => setP1({...p1, arrivalOfGuests: validateTimeField(e.target.value)})}
-            placeholder="HH:MM AM/PM or N/A"
-            className={!isTimeFieldValid(p1.arrivalOfGuests) ? "invalid-input" : ""}
-          />
-          {!isTimeFieldValid(p1.arrivalOfGuests) && (
-            <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
-          )}
-        </div>
-        <div className="form-group">
-          <label>Serving Time</label>
-          <input 
-            value={p1.servingTime} 
-            onChange={(e) => setP1({...p1, servingTime: validateTimeField(e.target.value)})}
-            placeholder="HH:MM AM/PM or N/A"
-            className={!isTimeFieldValid(p1.servingTime) ? "invalid-input" : ""}
-          />
-          {!isTimeFieldValid(p1.servingTime) && (
-            <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
-          )}
-        </div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group"><label>VIP</label><input value={p1.totalVIP} onChange={(e) => {
-          const vipValue = e.target.value;
-          setP1((prev) => {
-            const newTotalVIP = vipValue;
-            const newTotalRegular = prev.totalRegular;
-            let newTotalGuests = prev.totalGuests;
-            if (newTotalVIP && newTotalRegular) {
-              const vipNum = parseInt(newTotalVIP) || 0;
-              const regularNum = parseInt(newTotalRegular) || 0;
-              newTotalGuests = (vipNum + regularNum).toString();
-            }
-            return { ...prev, totalVIP: newTotalVIP, totalGuests: newTotalGuests };
-          });
-        }} /></div>
-        <div className="form-group"><label>Regular</label><input value={p1.totalRegular} onChange={(e) => {
-          const regularValue = e.target.value;
-          setP1((prev) => {
-            const newTotalRegular = regularValue;
-            const newTotalVIP = prev.totalVIP;
-            let newTotalGuests = prev.totalGuests;
-            if (newTotalVIP && newTotalRegular) {
-              const vipNum = parseInt(newTotalVIP) || 0;
-              const regularNum = parseInt(newTotalRegular) || 0;
-              newTotalGuests = (vipNum + regularNum).toString();
-            }
-            return { ...prev, totalRegular: newTotalRegular, totalGuests: newTotalGuests };
-          });
-        }} /></div>
-        <div className="form-group">
-          <label>Total No. of Guests</label>
-          <input value={p1.totalGuests} readOnly className={errors.totalGuests ? 'invalid-input' : ''} />
-          {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
-        </div>
-      </div>
-      <div className="form-row four">
-        <div className="form-group"><label>Kiddie Meal Plated</label><input value={p1.kiddiePlated} onChange={(e)=>setP1({...p1, kiddiePlated:e.target.value})} /></div>
-        <div className="form-group"><label>Kiddie Meal Packed</label><input value={p1.kiddiePacked} onChange={(e)=>setP1({...p1, kiddiePacked:e.target.value})} /></div>
-        <div className="form-group"><label>Crew Meal Plated</label><input value={p1.crewPlated} onChange={(e)=>setP1({...p1, crewPlated:e.target.value})} /></div>
-        <div className="form-group"><label>Crew Meal Packed</label><input value={p1.crewPacked} onChange={(e)=>setP1({...p1, crewPacked:e.target.value})} /></div>
-      </div>
-
-      <h4>Set Up</h4>
-      <div className="form-row two">
-        <div className="form-group"><label>Theme Set-up</label><input value={p1.themeSetup} onChange={(e)=>setP1({...p1, themeSetup:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Color Motif</label><input value={p1.colorMotif} onChange={(e)=>setP1({...p1, colorMotif:convertToUppercase(e.target.value)})} /></div>
-      </div>
-      <div className="form-row four">
-        <div className="form-group">
-          <label>VIP Table Type</label>
-          <select value={p1.vipTableType} onChange={(e)=>setP1({...p1, vipTableType:e.target.value})}>
-            <option value="">Select Type</option>
-            <option value="Round Table">Round Table</option>
-            <option value="Long Table">Long Table</option>
-            <option value="Big Round Table">Big Round Table</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>VIP Seats per Table</label>
-          <select value={p1.vipTableSeats} onChange={(e)=>setP1({...p1, vipTableSeats:e.target.value})}>
-            <option value="">Select Seats</option>
-            <option value="6">6</option>
-            <option value="8">8</option>
-            <option value="12">12</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>VIP Table Quantity</label>
-          <input type="number" value={p1.vipTableQuantity} onChange={(e)=>setP1({...p1, vipTableQuantity:e.target.value})} />
-        </div>
-        <div className="form-group">
-          <label>Regular Table Type</label>
-          <select value={p1.regularTableType} onChange={(e)=>setP1({...p1, regularTableType:e.target.value})}>
-            <option value="">Select Type</option>
-            <option value="Round Table">Round Table</option>
-            <option value="Long Table">Long Table</option>
-            <option value="Big Round Table">Big Round Table</option>
-          </select>
-        </div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group">
-          <label>Regular Seats per Table</label>
-          <select value={p1.regularTableSeats} onChange={(e)=>setP1({...p1, regularTableSeats:e.target.value})}>
-            <option value="">Select Seats</option>
-            <option value="6">6</option>
-            <option value="8">8</option>
-            <option value="12">12</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Regular Table Quantity</label>
-          <input type="number" value={p1.regularTableQuantity} onChange={(e)=>setP1({...p1, regularTableQuantity:e.target.value})} />
-        </div>
-        <div className="form-group">
-          <label>Total Tables</label>
-          <input value={p1.totalTables} readOnly />
-        </div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Total Chairs</label>
-          <input value={p1.totalChairs} readOnly />
-        </div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group"><label>VIP Underliner</label><input value={p1.vipUnderliner} onChange={(e)=>setP1({...p1, vipUnderliner:e.target.value})} /></div>
-        <div className="form-group"><label>VIP Topper</label><input value={p1.vipTopper} onChange={(e)=>setP1({...p1, vipTopper:e.target.value})} /></div>
-        <div className="form-group"><label>VIP Napkin</label><input value={p1.vipNapkin} onChange={(e)=>setP1({...p1, vipNapkin:e.target.value})} /></div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group"><label>Guest Underliner</label><input value={p1.guestUnderliner} onChange={(e)=>setP1({...p1, guestUnderliner:e.target.value})} /></div>
-        <div className="form-group"><label>Guest Topper</label><input value={p1.guestTopper} onChange={(e)=>setP1({...p1, guestTopper:e.target.value})} /></div>
-        <div className="form-group"><label>Guest Napkin</label><input value={p1.guestNapkin} onChange={(e)=>setP1({...p1, guestNapkin:e.target.value})} /></div>
-      </div>
-      <div className="form-group"><label>Remarks</label><textarea value={p1.setupRemarks} onChange={(e)=>setP1({...p1, setupRemarks:e.target.value})} /></div>
-
-      <h4>Buffet Set Up</h4>
-      <div className="form-row three">
-        <div className="form-group"><label>Standard Buffet</label><input value={p1.buffetStandard} onChange={(e)=>setP1({...p1, buffetStandard:e.target.value})} /></div>
-        <div className="form-group"><label>Upgraded Buffet - Lighted</label><input value={p1.buffetUpgraded} onChange={(e)=>setP1({...p1, buffetUpgraded:e.target.value})} /></div>
-        <div className="form-group"><label>Upgraded Buffet - Barrel</label><input value={p1.buffetBarrel} onChange={(e)=>setP1({...p1, buffetBarrel:e.target.value})} /></div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group"><label>Premium Buffet - Mirrorized</label><input value={p1.buffetPremium} onChange={(e)=>setP1({...p1, buffetPremium:e.target.value})} /></div>
-        <div className="form-group"><label>Premium Buffet -Oval Buffet</label><input value={p1.buffetOval} onChange={(e)=>setP1({...p1, buffetOval:e.target.value})} /></div>
-      </div>
-      <div className="form-group"><label>Remarks</label><textarea value={p1.buffetRemarks} onChange={(e)=>setP1({...p1, buffetRemarks:e.target.value})} /></div>
-    </div>
-  );
-
-  const renderPage2 = () => (
-    <div className="page">
-      <h4>Chairs</h4>
-      <div className="form-row five">
-        <div className="form-group"><label>Monoblock</label><input value={p2.chairsMonoblock} onChange={(e)=>setP2({...p2, chairsMonoblock:e.target.value})} /></div>
-        <div className="form-group"><label>Tiffany</label><input value={p2.chairsTiffany} onChange={(e)=>setP2({...p2, chairsTiffany:e.target.value})} /></div>
-        <div className="form-group"><label>Crystal</label><input value={p2.chairsCrystal} onChange={(e)=>setP2({...p2, chairsCrystal:e.target.value})} /></div>
-        <div className="form-group"><label>Rustic</label><input value={p2.chairsRustic} onChange={(e)=>setP2({...p2, chairsRustic:e.target.value})} /></div>
-        <div className="form-group"><label>Kiddie</label><input value={p2.chairsKiddie} onChange={(e)=>setP2({...p2, chairsKiddie:e.target.value})} /></div>
-      </div>
-      <div className="form-group"><label>Premium Chairs</label><input value={p2.premiumChairs} onChange={(e)=>setP2({...p2, premiumChairs:e.target.value})} /></div>
-      <div className="form-group"><label>Remarks</label><textarea value={p2.chairsRemarks} onChange={(e)=>setP2({...p2, chairsRemarks:convertToUppercase(e.target.value)})} /></div>
-
-      <h4>Flower Arrangement</h4>
-      <div className="form-row two">
-        <div className="form-group"><label>Backdrop</label><input value={p2.flowerBackdrop} onChange={(e)=>setP2({...p2, flowerBackdrop:e.target.value})} /></div>
-        <div className="form-group"><label>Guest Centerpiece</label><input value={p2.flowerGuestCenterpiece} onChange={(e)=>setP2({...p2, flowerGuestCenterpiece:e.target.value})} /></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>VIP Centerpiece</label><input value={p2.flowerVipCenterpiece} onChange={(e)=>setP2({...p2, flowerVipCenterpiece:e.target.value})} /></div>
-        <div className="form-group"><label>Cake Table</label><input value={p2.flowerCakeTable} onChange={(e)=>setP2({...p2, flowerCakeTable:e.target.value})} /></div>
-      </div>
-      <div className="form-group"><label>Remarks</label><textarea value={p2.flowerRemarks} onChange={(e)=>setP2({...p2, flowerRemarks:e.target.value})} /></div>
-
-      <h4>Other Special Requirements</h4>
-      <div className="form-row two">
-        <div className="form-group"><label>Cake Name/Code</label><input value={p2.cakeNameCode} onChange={(e)=>setP2({...p2, cakeNameCode:e.target.value})} /></div>
-        <div className="form-group"><label>Flavor</label><input value={p2.cakeFlavor} onChange={(e)=>setP2({...p2, cakeFlavor:e.target.value})} /></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>Supplier</label><input value={p2.cakeSupplier} onChange={(e)=>setP2({...p2, cakeSupplier:e.target.value})} /></div>
-        <div className="form-group"><label>Cake Specifications</label><input value={p2.cakeSpecifications} onChange={(e)=>setP2({...p2, cakeSpecifications:e.target.value})} /></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>Celebrator's Car</label><input value={p2.celebratorsCar} onChange={(e)=>setP2({...p2, celebratorsCar:e.target.value})} /></div>
-        <div className="form-group"><label>Emcee</label><input value={p2.emcee} onChange={(e)=>setP2({...p2, emcee:e.target.value})} /></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>Sound System</label><input value={p2.soundSystem} onChange={(e)=>setP2({...p2, soundSystem:e.target.value})} /></div>
-        <div className="form-group"><label>Tent</label><input value={p2.tent} onChange={(e)=>setP2({...p2, tent:e.target.value})} /></div>
-      </div>
-      <div className="form-group"><label>Celebrator's Chair</label><input value={p2.celebratorsChair} onChange={(e)=>setP2({...p2, celebratorsChair:e.target.value})} /></div>
-    
-      <h4>How did you know our company?</h4>
-      <div className="checkbox-grid">
-        {[
-          ["knowUsWebsite","Website"],
-          ["knowUsFacebook","Facebook"],
-          ["knowUsInstagram","Instagram"],
-          ["knowUsFlyers","Flyers"],
-          ["knowUsBillboard","Billboard Ad"],
-          ["knowUsWordOfMouth","Word of Mouth"],
-          ["knowUsVenueReferral","Venue Referral"],
-          ["knowUsRepeatClient","Repeat Client"],
-          ["knowUsBridalFair","Bridal Fair / Exhibit"],
-          ["knowUsFoodTasting","Food Tasting"],
-          ["knowUsCelebrityReferral","Celebrity Referral"],
-          ["knowUsOthers","Others"],
-        ].map(([key, label]) => (
-          <label key={key} className="checkbox-item">
-            <input type="checkbox" checked={p2[key]} onChange={(e)=>setP2({...p2, [key]: e.target.checked})} /> {label}
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderPage3 = () => (
-    <div className="page">
-      <div className="form-group"><label>Price Per Plate</label><input value={p3.pricePerPlate} onChange={(e)=>setP3({...p3, pricePerPlate:e.target.value})} /></div>
-
-      <h4>Menu Details</h4>
-      <div className="form-group">
-        <label>Cocktail Hour</label>
-        <textarea 
-          value={p3.cocktailHour} 
-          onChange={(e)=>setP3({...p3, cocktailHour:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter cocktail hour details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Appetizer</label>
-        <textarea 
-          value={p3.appetizer} 
-          onChange={(e)=>setP3({...p3, appetizer:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter appetizer details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Soup</label>
-        <textarea 
-          value={p3.soup} 
-          onChange={(e)=>setP3({...p3, soup:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter soup details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Bread</label>
-        <textarea 
-          value={p3.bread} 
-          onChange={(e)=>setP3({...p3, bread:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter bread details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Salad</label>
-        <textarea 
-          value={p3.salad} 
-          onChange={(e)=>setP3({...p3, salad:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter salad details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Main Entrée</label>
-        <textarea 
-          value={p3.mainEntree} 
-          onChange={(e)=>setP3({...p3, mainEntree:convertToUppercase(e.target.value)})} 
-          rows={9}
-          placeholder="Enter main entrée details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Dessert</label>
-        <textarea 
-          value={p3.dessert} 
-          onChange={(e)=>setP3({...p3, dessert:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter dessert details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Cake Name</label>
-        <textarea 
-          value={p3.cakeName} 
-          onChange={(e)=>setP3({...p3, cakeName:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter cake name and details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Kids Meal</label>
-        <textarea 
-          value={p3.kidsMeal} 
-          onChange={(e)=>setP3({...p3, kidsMeal:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter kids meal details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Crew Meal</label>
-        <textarea 
-          value={p3.crewMeal} 
-          onChange={(e)=>setP3({...p3, crewMeal:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter crew meal details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Drinks at Cocktail</label>
-        <textarea 
-          value={p3.drinksCocktail} 
-          onChange={(e)=>setP3({...p3, drinksCocktail:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter drinks at cocktail details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Drinks at Meal</label>
-        <textarea 
-          value={p3.drinksMeal} 
-          onChange={(e)=>setP3({...p3, drinksMeal:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter drinks at meal details..."
-        />
-      </div>
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Roasted Pig</label>
-          <textarea 
-            value={p3.roastedPig} 
-            onChange={(e)=>setP3({...p3, roastedPig:convertToUppercase(e.target.value)})} 
-            rows={2}
-            placeholder="Enter roasted pig details..."
-          />
-        </div>
-        <div className="form-group">
-          <label>Roasted Calf</label>
-          <textarea 
-            value={p3.roastedCalf} 
-            onChange={(e)=>setP3({...p3, roastedCalf:convertToUppercase(e.target.value)})} 
-            rows={2}
-            placeholder="Enter roasted calf details..."
-          />
-        </div>
-      </div>
-
-      <h4>Total Cash Layout</h4>
-      <div className="form-group">
-        <label>Total Menu Cost</label>
-        <input value={p3.totalMenuCost} onChange={(e)=>setP3({...p3, totalMenuCost:e.target.value})} />
-      </div>
-      <div className="form-group">
-        <label>Total Special Requirements Cost</label>
-        <input value={p3.totalSpecialReqCost} onChange={(e)=>setP3({...p3, totalSpecialReqCost:e.target.value})} />
-      </div>
-      <div className="form-group">
-        <label>Out of Service Area Charge</label>
-        <input value={p3.outOfServiceAreaCharge} onChange={(e)=>setP3({...p3, outOfServiceAreaCharge:e.target.value})} />
-      </div>
-      <div className="form-group">
-        <label>Mobilization Charge</label>
-        <input value={p3.mobilizationCharge} onChange={(e)=>setP3({...p3, mobilizationCharge:e.target.value})} />
-      </div>
-      <div className="form-group">
-        <label>Taxes</label>
-        <input value={p3.taxes} onChange={(e)=>setP3({...p3, taxes:e.target.value})} />
-      </div>
-      <div className="form-group">
-        <label>Grand Total</label>
-        <input value={p3.grandTotal} onChange={(e)=>setP3({...p3, grandTotal:e.target.value})} />
-      </div>
-
-      <h4>Payment Details</h4>
-      
-      <h5>40% Payment</h5>
-      <div className="form-row two">
-        <div className="form-group"><label>40% Due On</label><input type="date" value={p3.fortyPercentDueOn} onChange={(e)=>setP3({...p3, fortyPercentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>40% Amount</label><input value={p3.fortyPercentAmount} onChange={(e)=>setP3({...p3, fortyPercentAmount:e.target.value})} /></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>40% Received By</label><input value={p3.fortyPercentReceivedBy} onChange={(e)=>setP3({...p3, fortyPercentReceivedBy:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>40% Date Received</label><input type="date" value={p3.fortyPercentDateReceived} onChange={(e)=>setP3({...p3, fortyPercentDateReceived:e.target.value})} /></div>
-      </div>
-
-      <h5>Full Payment</h5>
-      <div className="form-row two">
-        <div className="form-group"><label>Full Payment Due On</label><input type="date" value={p3.fullPaymentDueOn} onChange={(e)=>setP3({...p3, fullPaymentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>Full Payment Amount</label><input value={p3.fullPaymentAmount} onChange={(e)=>setP3({...p3, fullPaymentAmount:e.target.value})} /></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>Full Payment Received By</label><input value={p3.fullPaymentReceivedBy} onChange={(e)=>setP3({...p3, fullPaymentReceivedBy:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Full Payment Date Received</label><input value={p3.fullPaymentDateReceived} onChange={(e)=>setP3({...p3, fullPaymentDateReceived:e.target.value})} /></div>
-      </div>
-
-      <div className="form-group"><label>Remarks</label><textarea value={p3.remarks} onChange={(e)=>setP3({...p3, remarks:e.target.value})} /></div>
-    </div>
-  );
-
-  return (
-    <div className="contract-form">
-      <div className="form-header">
-        <h3>Contract {existing ? "(Edit)" : "(New)"}</h3>
-        {nextNumber && <div className="number">No.: {nextNumber}</div>}
-      </div>
-
-      <form onKeyDown={(e) => { 
-        // Allow Enter key in textarea fields, prevent it in other form elements
-        if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") { 
-          e.preventDefault(); 
-        } 
-      }}>
-        {activePage === 1 && renderPage1()}
-        {activePage === 2 && renderPage2()}
-        {activePage === 3 && renderPage3()}
-
-      <div className="form-actions">
-        <button type="button" className="btn-danger" onClick={onCancel}>Cancel</button>
-        <button type="button" className="btn-secondary" onClick={async () => {
-          // Save form as draft before going back
-          await handleSave(new Event('submit', { cancelable: true }));
-          onCancel();
-        }}>Back to Dashboard</button>
-
-        <div className="pager">
-          <button type="button" className="pager-btn" onClick={back} disabled={activePage === 1}>← Back</button>
-          <span>Page {activePage} of 3</span>
-          {activePage < 3 ? (
-            <button type="button" className="pager-btn" onClick={next}>Next →</button>
-          ) : (
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleSubmit}
-              disabled={!isFormValid()}
-              style={{ display: isFormValid() ? "inline-block" : "none" }}
-            >
-              Submit Contract
-            </button>
-          )}
-        </div>
-      </div>
-      </form>
-    </div>
-  );
-}
-
-export default ContractForm;
-
-
+      <div className="form-row
