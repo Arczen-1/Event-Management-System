@@ -92,4 +92,11 @@
 .btn-secondary { background: transparent; color: #410d1d; border: 2px solid #410d1d; padding: 10px 18px; border-radius: 8px; cursor: pointer; }
 .btn-danger { background-color: #dc3545; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; }
 
+.required-asterisk {
+  color: red;
+  margin-left: 2px;
+  font-weight: bold;
+  vertical-align: super;
+}
+
 
