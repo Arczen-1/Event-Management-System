@@ -414,9 +414,23 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     const mob = parseFloat(p3.mobilizationCharge) || 0;
     const service = parseFloat(p3.serviceCharge) || 0;
     const subtotal = menu + special + mob + service;
-    const grand = p3.taxes === "VAT" ? subtotal * 1.12 : subtotal;
-    setP3((prev) => ({ ...prev, grandTotal: grand.toString() }));
+    const grand = p3.taxes === "VAT" ? (subtotal * 1.12).toFixed(2) : subtotal.toString();
+    setP3((prev) => ({ ...prev, grandTotal: grand }));
   }, [p3.totalMenuCost, p3.totalSpecialReqCost, p3.mobilizationCharge, p3.serviceCharge, p3.taxes]);
+
+  // Auto-compute 40% amount as 40% of grand total
+  useEffect(() => {
+    const grand = parseFloat(p3.grandTotal) || 0;
+    const amount = (grand * 0.4).toFixed(2);
+    setP3((prev) => ({ ...prev, fortyPercentAmount: amount }));
+  }, [p3.grandTotal]);
+
+  // Auto-compute full payment amount as 60% of grand total
+  useEffect(() => {
+    const grand = parseFloat(p3.grandTotal) || 0;
+    const amount = (grand * 0.6).toFixed(2);
+    setP3((prev) => ({ ...prev, fullPaymentAmount: amount }));
+  }, [p3.grandTotal]);
 
   // Validation functions
   const convertToUppercase = (value) => {
@@ -562,7 +576,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
     // Check required fields in page3
     const requiredP3Fields = [
-      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'serviceCharge', 'fortyPercentAmount', 'fullPaymentDueOn', 'fullPaymentAmount'
+      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'serviceCharge', 'fullPaymentDueOn'
     ];
     for (const field of requiredP3Fields) {
       if (!p3[field] || !p3[field].trim()) return false;
@@ -1415,7 +1429,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h5>40% Payment</h5>
       <div className="form-row two">
         <div className="form-group"><label>40% Due On</label><input type="date" value={p3.fortyPercentDueOn} onChange={(e)=>setP3({...p3, fortyPercentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>40% Amount <span className="required-asterisk">*</span></label><input value={p3.fortyPercentAmount} onChange={(e)=>setP3({...p3, fortyPercentAmount:e.target.value})} /></div>
+        <div className="form-group"><label>40% Amount <span className="required-asterisk">*</span></label><input value={p3.fortyPercentAmount} readOnly /></div>
       </div>
       <div className="form-row two">
         <div className="form-group"><label>40% Received By</label><input value={p3.fortyPercentReceivedBy} onChange={(e)=>setP3({...p3, fortyPercentReceivedBy:convertToUppercase(e.target.value)})} /></div>
@@ -1425,7 +1439,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h5>Full Payment</h5>
       <div className="form-row two">
         <div className="form-group"><label>Full Payment Due On <span className="required-asterisk">*</span></label><input type="date" value={p3.fullPaymentDueOn} onChange={(e)=>setP3({...p3, fullPaymentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>Full Payment Amount <span className="required-asterisk">*</span></label><input value={p3.fullPaymentAmount} onChange={(e)=>setP3({...p3, fullPaymentAmount:e.target.value})} /></div>
+        <div className="form-group"><label>Full Payment Amount <span className="required-asterisk">*</span></label><input value={p3.fullPaymentAmount} readOnly /></div>
       </div>
       <div className="form-row two">
         <div className="form-group"><label>Full Payment Received By</label><input value={p3.fullPaymentReceivedBy} onChange={(e)=>setP3({...p3, fullPaymentReceivedBy:convertToUppercase(e.target.value)})} /></div>
