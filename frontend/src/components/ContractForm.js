@@ -389,6 +389,14 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     }
   }, [p1.eventDate]);
 
+  // Auto-compute total menu cost as price per plate * total guests
+  useEffect(() => {
+    const price = parseFloat(p3.pricePerPlate) || 0;
+    const guests = parseInt(p1.totalGuests) || 0;
+    const total = price * guests;
+    setP3((prev) => ({ ...prev, totalMenuCost: total.toString() }));
+  }, [p3.pricePerPlate, p1.totalGuests]);
+
   // Validation functions
   const convertToUppercase = (value) => {
     return value.toUpperCase();
@@ -1354,7 +1362,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h4>Total Cash Layout</h4>
       <div className="form-group">
         <label>Total Menu Cost <span className="required-asterisk">*</span></label>
-        <input value={p3.totalMenuCost} onChange={(e)=>setP3({...p3, totalMenuCost:e.target.value})} />
+        <input value={p3.totalMenuCost} readOnly />
       </div>
       <div className="form-group">
         <label>Total Special Requirements Cost <span className="required-asterisk">*</span></label>
