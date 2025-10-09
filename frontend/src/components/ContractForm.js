@@ -141,7 +141,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   // Page 3 fields
   const [p3, setP3] = useState({
-    pricePerPlate: "",
+    pricePerPlate: "0",
     cocktailHour: "",
     appetizer: "",
     soup: "",
@@ -156,11 +156,12 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     drinksMeal: "",
     roastedPig: "",
     roastedCalf: "",
-    totalMenuCost: "",
-    totalSpecialReqCost: "",
-    mobilizationCharge: "",
+    totalMenuCost: "0",
+    totalSpecialReqCost: "0",
+    mobilizationCharge: "0",
     taxes: "",
-    grandTotal: "",
+    serviceCharge: "",
+    grandTotal: "0",
     fortyPercentDueOn: "",
     fortyPercentAmount: "",
     fortyPercentReceivedBy: "",
@@ -397,6 +398,26 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     setP3((prev) => ({ ...prev, totalMenuCost: total.toString() }));
   }, [p3.pricePerPlate, p1.totalGuests]);
 
+  // Auto-compute service charge as 10% of totalMenuCost + totalSpecialReqCost + mobilizationCharge
+  useEffect(() => {
+    const menu = parseFloat(p3.totalMenuCost) || 0;
+    const special = parseFloat(p3.totalSpecialReqCost) || 0;
+    const mob = parseFloat(p3.mobilizationCharge) || 0;
+    const service = (menu + special + mob) * 0.1;
+    setP3((prev) => ({ ...prev, serviceCharge: service.toString() }));
+  }, [p3.totalMenuCost, p3.totalSpecialReqCost, p3.mobilizationCharge]);
+
+  // Auto-compute grand total based on taxes
+  useEffect(() => {
+    const menu = parseFloat(p3.totalMenuCost) || 0;
+    const special = parseFloat(p3.totalSpecialReqCost) || 0;
+    const mob = parseFloat(p3.mobilizationCharge) || 0;
+    const service = parseFloat(p3.serviceCharge) || 0;
+    const subtotal = menu + special + mob + service;
+    const grand = p3.taxes === "VAT" ? subtotal * 1.12 : subtotal;
+    setP3((prev) => ({ ...prev, grandTotal: grand.toString() }));
+  }, [p3.totalMenuCost, p3.totalSpecialReqCost, p3.mobilizationCharge, p3.serviceCharge, p3.taxes]);
+
   // Validation functions
   const convertToUppercase = (value) => {
     return value.toUpperCase();
@@ -541,7 +562,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
     // Check required fields in page3
     const requiredP3Fields = [
-      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'grandTotal', 'fortyPercentAmount', 'fullPaymentDueOn', 'fullPaymentAmount'
+      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'serviceCharge', 'fortyPercentAmount', 'fullPaymentDueOn', 'fullPaymentAmount'
     ];
     for (const field of requiredP3Fields) {
       if (!p3[field] || !p3[field].trim()) return false;
@@ -601,7 +622,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
     // Check required fields in page3
     const requiredP3Fields = [
-      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'grandTotal', 'fortyPercentAmount', 'fullPaymentDueOn', 'fullPaymentAmount'
+      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'serviceCharge', 'fortyPercentAmount', 'fullPaymentDueOn', 'fullPaymentAmount'
     ];
     for (const field of requiredP3Fields) {
       if (!p3[field] || !p3[field].trim()) {
@@ -1374,11 +1395,19 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       </div>
       <div className="form-group">
         <label>Taxes <span className="required-asterisk">*</span></label>
-        <input value={p3.taxes} onChange={(e)=>setP3({...p3, taxes:e.target.value})} />
+        <select value={p3.taxes} onChange={(e)=>setP3({...p3, taxes:e.target.value})}>
+          <option value="">Select Taxes</option>
+          <option value="VAT">VAT</option>
+          <option value="NON-VAT">NON-VAT</option>
+        </select>
+      </div>
+      <div className="form-group">
+        <label>Service Charge (10%) <span className="required-asterisk">*</span></label>
+        <input value={p3.serviceCharge} readOnly />
       </div>
       <div className="form-group">
         <label>Grand Total <span className="required-asterisk">*</span></label>
-        <input value={p3.grandTotal} onChange={(e)=>setP3({...p3, grandTotal:e.target.value})} />
+        <input value={p3.grandTotal} readOnly />
       </div>
 
       <h4>Payment Details</h4>
