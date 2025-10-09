@@ -158,7 +158,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     roastedCalf: "",
     totalMenuCost: "",
     totalSpecialReqCost: "",
-    outOfServiceAreaCharge: "",
     mobilizationCharge: "",
     taxes: "",
     grandTotal: "",
@@ -519,7 +518,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
     // Check all string fields in page2 are filled, skip booleans
     const requiredP2Fields = [
-      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs', 'chairsRemarks',
+      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs',
       'flowerBackdrop', 'flowerGuestCenterpiece', 'flowerVipCenterpiece', 'flowerCakeTable', 'flowerRemarks',
       'cakeNameCode', 'cakeFlavor', 'cakeSupplier', 'cakeSpecifications', 'celebratorsCar', 'emcee', 'soundSystem', 'tent', 'celebratorsChair'
     ];
@@ -527,10 +526,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       if (!p2[field] || !p2[field].trim()) return false;
     }
 
+    // Check at least one "How did you know our company" option is selected
+    const knowUsFields = ['knowUsWebsite', 'knowUsFacebook', 'knowUsInstagram', 'knowUsFlyers', 'knowUsBillboard', 'knowUsWordOfMouth', 'knowUsVenueReferral', 'knowUsRepeatClient', 'knowUsBridalFair', 'knowUsFoodTasting', 'knowUsCelebrityReferral', 'knowUsOthers'];
+    const hasKnowUs = knowUsFields.some(field => p2[field]);
+    if (!hasKnowUs) return false;
+
     // Check all string fields in page3 are filled
     const requiredP3Fields = [
       'pricePerPlate', 'cocktailHour', 'appetizer', 'soup', 'bread', 'salad', 'mainEntree', 'dessert', 'cakeName', 'kidsMeal', 'crewMeal',
-      'drinksCocktail', 'drinksMeal', 'roastedPig', 'roastedCalf', 'totalMenuCost', 'totalSpecialReqCost', 'outOfServiceAreaCharge',
+      'drinksCocktail', 'drinksMeal', 'roastedPig', 'roastedCalf', 'totalMenuCost', 'totalSpecialReqCost',
       'mobilizationCharge', 'taxes', 'grandTotal', 'fortyPercentDueOn', 'fortyPercentAmount', 'fortyPercentReceivedBy', 'fortyPercentDateReceived',
       'fullPaymentDueOn', 'fullPaymentAmount', 'fullPaymentReceivedBy', 'fullPaymentDateReceived', 'remarks'
     ];
@@ -1139,15 +1143,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     <div className="page">
       <h4>Chairs</h4>
       <div className="form-row five">
-        <div className="form-group"><label>Monoblock</label><input value={p2.chairsMonoblock} onChange={(e)=>setP2({...p2, chairsMonoblock:e.target.value})} /></div>
-        <div className="form-group"><label>Rustic</label><input value={p2.chairsRustic} onChange={(e)=>setP2({...p2, chairsRustic:e.target.value})} /></div>
-        <div className="form-group"><label>Tiffany</label><input value={p2.chairsTiffany} onChange={(e)=>setP2({...p2, chairsTiffany:e.target.value})} /></div>
-        <div className="form-group"><label>Premium</label><input value={p2.premiumChairs} onChange={(e)=>setP2({...p2, premiumChairs:e.target.value})} /></div>
-        <div className="form-group"><label>Crystal</label><input value={p2.chairsCrystal} onChange={(e)=>setP2({...p2, chairsCrystal:e.target.value})} /></div>
+        <div className="form-group"><label>Monoblock <span className="required-asterisk">*</span></label><input value={p2.chairsMonoblock} onChange={(e)=>setP2({...p2, chairsMonoblock:e.target.value})} /></div>
+        <div className="form-group"><label>Rustic <span className="required-asterisk">*</span></label><input value={p2.chairsRustic} onChange={(e)=>setP2({...p2, chairsRustic:e.target.value})} /></div>
+        <div className="form-group"><label>Tiffany <span className="required-asterisk">*</span></label><input value={p2.chairsTiffany} onChange={(e)=>setP2({...p2, chairsTiffany:e.target.value})} /></div>
+        <div className="form-group"><label>Premium <span className="required-asterisk">*</span></label><input value={p2.premiumChairs} onChange={(e)=>setP2({...p2, premiumChairs:e.target.value})} /></div>
+        <div className="form-group"><label>Crystal <span className="required-asterisk">*</span></label><input value={p2.chairsCrystal} onChange={(e)=>setP2({...p2, chairsCrystal:e.target.value})} /></div>
       </div>
       <div className="form-row two">
-        <div className="form-group"><label>Kiddie</label><input value={p2.chairsKiddie} onChange={(e)=>setP2({...p2, chairsKiddie:e.target.value})} /></div>
-        <div className="form-group"><label>Total Chairs</label><input value={p2.totalChairs} readOnly /></div>
+        <div className="form-group"><label>Kiddie <span className="required-asterisk">*</span></label><input value={p2.chairsKiddie} onChange={(e)=>setP2({...p2, chairsKiddie:e.target.value})} /></div>
+        <div className="form-group"><label>Total Chairs <span className="required-asterisk">*</span></label><input value={p2.totalChairs} readOnly /></div>
       </div>
       {errors.chairsSum && <div className="validation-error">{errors.chairsSum}</div>}
       <div className="form-group"><label>Remarks</label><textarea value={p2.chairsRemarks} onChange={(e)=>setP2({...p2, chairsRemarks:convertToUppercase(e.target.value)})} /></div>
@@ -1182,7 +1186,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       </div>
       <div className="form-group"><label>Celebrator's Chair</label><input value={p2.celebratorsChair} onChange={(e)=>setP2({...p2, celebratorsChair:e.target.value})} /></div>
     
-      <h4>How did you know our company?</h4>
+      <h4>How did you know our company? <span className="required-asterisk">*</span></h4>
       <div className="checkbox-grid">
         {[
           ["knowUsWebsite","Website"],
@@ -1348,10 +1352,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <div className="form-group">
         <label>Total Special Requirements Cost</label>
         <input value={p3.totalSpecialReqCost} onChange={(e)=>setP3({...p3, totalSpecialReqCost:e.target.value})} />
-      </div>
-      <div className="form-group">
-        <label>Out of Service Area Charge</label>
-        <input value={p3.outOfServiceAreaCharge} onChange={(e)=>setP3({...p3, outOfServiceAreaCharge:e.target.value})} />
       </div>
       <div className="form-group">
         <label>Mobilization Charge</label>
