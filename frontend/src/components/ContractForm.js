@@ -531,12 +531,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     const hasKnowUs = knowUsFields.some(field => p2[field]);
     if (!hasKnowUs) return false;
 
-    // Check all string fields in page3 are filled
+    // Check required fields in page3
     const requiredP3Fields = [
-      'pricePerPlate', 'cocktailHour', 'appetizer', 'soup', 'bread', 'salad', 'mainEntree', 'dessert', 'cakeName', 'kidsMeal', 'crewMeal',
-      'drinksCocktail', 'drinksMeal', 'roastedPig', 'roastedCalf', 'totalMenuCost', 'totalSpecialReqCost',
-      'mobilizationCharge', 'taxes', 'grandTotal', 'fortyPercentDueOn', 'fortyPercentAmount', 'fortyPercentReceivedBy', 'fortyPercentDateReceived',
-      'fullPaymentDueOn', 'fullPaymentAmount', 'fullPaymentReceivedBy', 'fullPaymentDateReceived', 'remarks'
+      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'grandTotal', 'fortyPercentAmount', 'fullPaymentDueOn', 'fullPaymentAmount'
     ];
     for (const field of requiredP3Fields) {
       if (!p3[field] || !p3[field].trim()) return false;
@@ -590,6 +587,16 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     ];
     for (const field of requiredP1Fields) {
       if (!p1[field] || !p1[field].trim()) {
+        newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
+      }
+    }
+
+    // Check required fields in page3
+    const requiredP3Fields = [
+      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'grandTotal', 'fortyPercentAmount', 'fullPaymentDueOn', 'fullPaymentAmount'
+    ];
+    for (const field of requiredP3Fields) {
+      if (!p3[field] || !p3[field].trim()) {
         newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
       }
     }
@@ -1212,7 +1219,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   const renderPage3 = () => (
     <div className="page">
-      <div className="form-group"><label>Price Per Plate</label><input value={p3.pricePerPlate} onChange={(e)=>setP3({...p3, pricePerPlate:e.target.value})} /></div>
+      <div className="form-group"><label>Price Per Plate <span className="required-asterisk">*</span></label><input value={p3.pricePerPlate} onChange={(e)=>setP3({...p3, pricePerPlate:e.target.value})} /></div>
 
       <h4>Menu Details</h4>
       <div className="form-group">
@@ -1346,23 +1353,23 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
       <h4>Total Cash Layout</h4>
       <div className="form-group">
-        <label>Total Menu Cost</label>
+        <label>Total Menu Cost <span className="required-asterisk">*</span></label>
         <input value={p3.totalMenuCost} onChange={(e)=>setP3({...p3, totalMenuCost:e.target.value})} />
       </div>
       <div className="form-group">
-        <label>Total Special Requirements Cost</label>
+        <label>Total Special Requirements Cost <span className="required-asterisk">*</span></label>
         <input value={p3.totalSpecialReqCost} onChange={(e)=>setP3({...p3, totalSpecialReqCost:e.target.value})} />
       </div>
       <div className="form-group">
-        <label>Mobilization Charge</label>
+        <label>Mobilization Charge <span className="required-asterisk">*</span></label>
         <input value={p3.mobilizationCharge} onChange={(e)=>setP3({...p3, mobilizationCharge:e.target.value})} />
       </div>
       <div className="form-group">
-        <label>Taxes</label>
+        <label>Taxes <span className="required-asterisk">*</span></label>
         <input value={p3.taxes} onChange={(e)=>setP3({...p3, taxes:e.target.value})} />
       </div>
       <div className="form-group">
-        <label>Grand Total</label>
+        <label>Grand Total <span className="required-asterisk">*</span></label>
         <input value={p3.grandTotal} onChange={(e)=>setP3({...p3, grandTotal:e.target.value})} />
       </div>
 
@@ -1371,7 +1378,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h5>40% Payment</h5>
       <div className="form-row two">
         <div className="form-group"><label>40% Due On</label><input type="date" value={p3.fortyPercentDueOn} onChange={(e)=>setP3({...p3, fortyPercentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>40% Amount</label><input value={p3.fortyPercentAmount} onChange={(e)=>setP3({...p3, fortyPercentAmount:e.target.value})} /></div>
+        <div className="form-group"><label>40% Amount <span className="required-asterisk">*</span></label><input value={p3.fortyPercentAmount} onChange={(e)=>setP3({...p3, fortyPercentAmount:e.target.value})} /></div>
       </div>
       <div className="form-row two">
         <div className="form-group"><label>40% Received By</label><input value={p3.fortyPercentReceivedBy} onChange={(e)=>setP3({...p3, fortyPercentReceivedBy:convertToUppercase(e.target.value)})} /></div>
@@ -1380,8 +1387,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
       <h5>Full Payment</h5>
       <div className="form-row two">
-        <div className="form-group"><label>Full Payment Due On</label><input type="date" value={p3.fullPaymentDueOn} onChange={(e)=>setP3({...p3, fullPaymentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>Full Payment Amount</label><input value={p3.fullPaymentAmount} onChange={(e)=>setP3({...p3, fullPaymentAmount:e.target.value})} /></div>
+        <div className="form-group"><label>Full Payment Due On <span className="required-asterisk">*</span></label><input type="date" value={p3.fullPaymentDueOn} onChange={(e)=>setP3({...p3, fullPaymentDueOn:e.target.value})} /></div>
+        <div className="form-group"><label>Full Payment Amount <span className="required-asterisk">*</span></label><input value={p3.fullPaymentAmount} onChange={(e)=>setP3({...p3, fullPaymentAmount:e.target.value})} /></div>
       </div>
       <div className="form-row two">
         <div className="form-group"><label>Full Payment Received By</label><input value={p3.fullPaymentReceivedBy} onChange={(e)=>setP3({...p3, fullPaymentReceivedBy:convertToUppercase(e.target.value)})} /></div>
