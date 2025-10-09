@@ -114,7 +114,6 @@ const ContractSchema = new mongoose.Schema(
       roastedCalf: { type: String, default: "" },
       totalMenuCost: { type: String, default: "" },
       totalSpecialReqCost: { type: String, default: "" },
-      outOfServiceAreaCharge: { type: String, default: "" },
       mobilizationCharge: { type: String, default: "" },
       taxes: { type: String, default: "" },
       grandTotal: { type: String, default: "" },

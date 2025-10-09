@@ -577,5 +577,28 @@ app.put("/profile/:username", async (req, res) => {
   }
 })
 
+// PUT /profile/:username/password - Change user password
+app.put("/profile/:username/password", async (req, res) => {
+  try {
+    const { username } = req.params
+    const { currentPassword, newPassword } = req.body
+    const user = await User.findOne({ username })
+    if (!user) return res.status(404).json({ message: "User not found" })
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password)
+    if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" })
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    user.password = hashedPassword
+    await user.save()
+    res.json({ message: "Password changed successfully" })
+  } catch (error) {
+    console.error("Change password error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
 // Start the server and listen on specified port
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
