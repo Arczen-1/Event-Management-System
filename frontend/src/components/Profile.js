@@ -19,6 +19,7 @@ function Profile({ user, onLogout }) {
     confirmPassword: "",
   });
   const [changingPassword, setChangingPassword] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -58,8 +59,9 @@ function Profile({ user, onLogout }) {
       });
       const data = await res.json();
       if (res.ok) {
-        alert("Profile updated successfully");
         setProfile(data.user);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
       } else {
         alert("Failed to update profile");
       }
@@ -104,69 +106,138 @@ function Profile({ user, onLogout }) {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  const getInitials = (name) => {
+    if (!name) return "U";
+    const names = name.split(" ");
+    if (names.length >= 2) {
+      return names[0][0] + names[1][0];
+    }
+    return name[0];
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="profile">
-      <h2>User Profile</h2>
-      <div className="profile-form">
-        <div className="form-group">
-          <label>Username</label>
-          <div className="read-only-field">{profile.username}</div>
+    <div className="profile-page">
+      <div className="profile-card">
+        {/* Profile Header */}
+        <div className="profile-header">
+          <div className="profile-avatar">
+            {getInitials(profile.fullName)}
+          </div>
+          <div className="profile-header-info">
+            <h2>{profile.fullName}</h2>
+            <p>Sales Employee • Catering Service</p>
+          </div>
         </div>
-        <div className="form-group">
-          <label>Full Name</label>
-          <div className="read-only-field">{profile.fullName}</div>
+
+        {/* Profile Body */}
+        <div className="profile-body">
+          {/* Success Message */}
+          {showSuccess && (
+            <div className="success-message">
+              Profile updated successfully!
+            </div>
+          )}
+
+            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+            {/* Personal Information Section */}
+            <div className="section-title">Personal Information</div>
+
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Username</label>
+                <div className="read-only-field">{profile.username}</div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <div className="read-only-field">{profile.fullName}</div>
+              </div>
+
+              <div className="form-group full-width">
+                <label className="form-label">Email Address</label>
+                <div className="read-only-field">{profile.email}</div>
+              </div>
+            </div>
+
+            <hr className="section-divider" />
+
+            {/* Contact Information Section */}
+            <div className="section-title">Contact Information</div>
+
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Mobile Number</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  name="mobile"
+                  value={profile.mobile}
+                  onChange={handleChange}
+                  placeholder="Enter mobile number"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Landline Number</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  name="landline"
+                  value={profile.landline}
+                  onChange={handleChange}
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div className="form-group full-width">
+                <label className="form-label">Address</label>
+                <textarea
+                  className="form-input"
+                  name="address"
+                  value={profile.address}
+                  onChange={handleChange}
+                  placeholder="Enter your complete address"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="button-group">
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowPasswordModal(true)}
+              >
+                Change Password
+              </button>
+            </div>
+          </form>
         </div>
-        <div className="form-group">
-          <label>Email</label>
-          <div className="read-only-field">{profile.email}</div>
-        </div>
-        <div className="form-group">
-          <label>Mobile Number</label>
-          <input
-            type="text"
-            name="mobile"
-            value={profile.mobile}
-            onChange={handleChange}
-            placeholder="Enter mobile number"
-          />
-        </div>
-        <div className="form-group">
-          <label>Landline Number</label>
-          <input
-            type="text"
-            name="landline"
-            value={profile.landline}
-            onChange={handleChange}
-            placeholder="Enter landline number"
-          />
-        </div>
-        <div className="form-group">
-          <label>Address</label>
-          <textarea
-            name="address"
-            value={profile.address}
-            onChange={handleChange}
-            placeholder="Enter address"
-            rows={3}
-          />
-        </div>
-        <button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
-        <button className="change-password-btn" onClick={() => setShowPasswordModal(true)}>
-          Change Password
-        </button>
       </div>
+
+      {/* Password Modal */}
       {showPasswordModal && (
         <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Change Password</h3>
             <div className="form-group">
-              <label>Current Password</label>
+              <label className="form-label">Current Password</label>
               <input
                 type="password"
+                className="form-input"
                 name="currentPassword"
                 value={passwordData.currentPassword}
                 onChange={handlePasswordChange}
@@ -174,9 +245,10 @@ function Profile({ user, onLogout }) {
               />
             </div>
             <div className="form-group">
-              <label>New Password</label>
+              <label className="form-label">New Password</label>
               <input
                 type="password"
+                className="form-input"
                 name="newPassword"
                 value={passwordData.newPassword}
                 onChange={handlePasswordChange}
@@ -184,19 +256,31 @@ function Profile({ user, onLogout }) {
               />
             </div>
             <div className="form-group">
-              <label>Confirm New Password</label>
+              <label className="form-label">Confirm New Password</label>
               <input
                 type="password"
+                className="form-input"
                 name="confirmPassword"
                 value={passwordData.confirmPassword}
                 onChange={handlePasswordChange}
                 placeholder="Confirm new password"
               />
             </div>
-            <button onClick={handleChangePassword} disabled={changingPassword}>
-              {changingPassword ? "Changing..." : "Change Password"}
-            </button>
-            <button onClick={() => setShowPasswordModal(false)}>Cancel</button>
+            <div className="modal-buttons">
+              <button
+                className="btn btn-primary"
+                onClick={handleChangePassword}
+                disabled={changingPassword}
+              >
+                {changingPassword ? "Changing..." : "Change Password"}
+              </button>
+              <button
+                className="btn btn-cancel"
+                onClick={() => setShowPasswordModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
