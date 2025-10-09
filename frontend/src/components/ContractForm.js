@@ -44,6 +44,7 @@ const VENUES = {
 // Multi-page contract form replicating the client's three contract pages.
 // Saves to backend with monthly-reset contract numbering.
 function ContractForm({ onCancel, onCreated, existing, user }) {
+  const formatNumber = (num) => num ? parseFloat(num).toLocaleString('en-US') : '';
   const [activePage, setActivePage] = useState(1); // 1, 2, 3
   const [nextNumber, setNextNumber] = useState("");
   const [availableHalls, setAvailableHalls] = useState([]);
@@ -1397,7 +1398,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h4>Total Cash Layout</h4>
       <div className="form-group">
         <label>Total Menu Cost <span className="required-asterisk">*</span></label>
-        <input value={p3.totalMenuCost} readOnly />
+        <input value={formatNumber(p3.totalMenuCost)} readOnly />
       </div>
       <div className="form-group">
         <label>Total Special Requirements Cost <span className="required-asterisk">*</span></label>
@@ -1417,11 +1418,11 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       </div>
       <div className="form-group">
         <label>Service Charge (10%) <span className="required-asterisk">*</span></label>
-        <input value={p3.serviceCharge} readOnly />
+        <input value={formatNumber(p3.serviceCharge)} readOnly />
       </div>
       <div className="form-group">
         <label>Grand Total <span className="required-asterisk">*</span></label>
-        <input value={p3.grandTotal} readOnly />
+        <input value={formatNumber(p3.grandTotal)} readOnly />
       </div>
 
       <h4>Payment Details</h4>
@@ -1429,7 +1430,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h5>40% Payment</h5>
       <div className="form-row two">
         <div className="form-group"><label>40% Due On</label><input type="date" value={p3.fortyPercentDueOn} onChange={(e)=>setP3({...p3, fortyPercentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>40% Amount <span className="required-asterisk">*</span></label><input value={p3.fortyPercentAmount} readOnly /></div>
+        <div className="form-group"><label>40% Amount <span className="required-asterisk">*</span></label><input value={formatNumber(p3.fortyPercentAmount)} readOnly /></div>
       </div>
       <div className="form-row two">
         <div className="form-group"><label>40% Received By</label><input value={p3.fortyPercentReceivedBy} onChange={(e)=>setP3({...p3, fortyPercentReceivedBy:convertToUppercase(e.target.value)})} /></div>
@@ -1439,7 +1440,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h5>Full Payment</h5>
       <div className="form-row two">
         <div className="form-group"><label>Full Payment Due On <span className="required-asterisk">*</span></label><input type="date" value={p3.fullPaymentDueOn} onChange={(e)=>setP3({...p3, fullPaymentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>Full Payment Amount <span className="required-asterisk">*</span></label><input value={p3.fullPaymentAmount} readOnly /></div>
+        <div className="form-group"><label>Full Payment Amount <span className="required-asterisk">*</span></label><input value={formatNumber(p3.fullPaymentAmount)} readOnly /></div>
       </div>
       <div className="form-row two">
         <div className="form-group"><label>Full Payment Received By</label><input value={p3.fullPaymentReceivedBy} onChange={(e)=>setP3({...p3, fullPaymentReceivedBy:convertToUppercase(e.target.value)})} /></div>
