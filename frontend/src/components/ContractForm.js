@@ -408,14 +408,23 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     setP3((prev) => ({ ...prev, serviceCharge: service.toString() }));
   }, [p3.totalMenuCost, p3.totalSpecialReqCost, p3.mobilizationCharge]);
 
-  // Auto-compute grand total based on taxes
+  // Auto-compute taxes as 12% of totalMenuCost + totalSpecialReqCost + mobilizationCharge
+  useEffect(() => {
+    const menu = parseFloat(p3.totalMenuCost) || 0;
+    const special = parseFloat(p3.totalSpecialReqCost) || 0;
+    const mob = parseFloat(p3.mobilizationCharge) || 0;
+    const tax = (menu + special + mob) * 0.12;
+    setP3((prev) => ({ ...prev, taxes: tax.toString() }));
+  }, [p3.totalMenuCost, p3.totalSpecialReqCost, p3.mobilizationCharge]);
+
+  // Auto-compute grand total
   useEffect(() => {
     const menu = parseFloat(p3.totalMenuCost) || 0;
     const special = parseFloat(p3.totalSpecialReqCost) || 0;
     const mob = parseFloat(p3.mobilizationCharge) || 0;
     const service = parseFloat(p3.serviceCharge) || 0;
-    const subtotal = menu + special + mob + service;
-    const grand = p3.taxes === "VAT" ? (subtotal * 1.12).toFixed(2) : subtotal.toString();
+    const tax = parseFloat(p3.taxes) || 0;
+    const grand = (menu + special + mob + service + tax).toFixed(2);
     setP3((prev) => ({ ...prev, grandTotal: grand }));
   }, [p3.totalMenuCost, p3.totalSpecialReqCost, p3.mobilizationCharge, p3.serviceCharge, p3.taxes]);
 
@@ -506,7 +515,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   };
 
   const isFormValid = () => {
-    // Check required fields in page1
+    // Check required fields in page1 (only those with asterisks)
     const requiredP1Fields = [
       'celebratorName',
       'representativeName',
@@ -547,44 +556,21 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       if (!p1[field] || !p1[field].trim()) return false;
     }
 
-    // Email validations
-    if (!validateEmail(p1.celebratorEmail)) return false;
-    if (!validateEmail(p1.representativeEmail)) return false;
-    if (!validateEmail(p1.coordinatorEmail)) return false;
-
-    // Phone validations
-    if (p1.celebratorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.celebratorMobile)) return false;
-    if (p1.celebratorLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.celebratorLandline)) return false;
-    if (p1.representativeMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.representativeMobile)) return false;
-    if (p1.representativeLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.representativeLandline)) return false;
-    if (p1.coordinatorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.coordinatorMobile)) return false;
-    if (p1.coordinatorLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.coordinatorLandline)) return false;
-
-    // Check all string fields in page2 are filled, skip booleans
+    // Check required fields in page2 (chairs with asterisks)
     const requiredP2Fields = [
-      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs',
-      'flowerBackdrop', 'flowerGuestCenterpiece', 'flowerVipCenterpiece', 'flowerCakeTable', 'flowerRemarks',
-      'cakeNameCode', 'cakeFlavor', 'cakeSupplier', 'cakeSpecifications', 'celebratorsCar', 'emcee', 'soundSystem', 'tent', 'celebratorsChair'
+      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs'
     ];
     for (const field of requiredP2Fields) {
       if (!p2[field] || !p2[field].trim()) return false;
     }
 
-    // Check at least one "How did you know our company" option is selected
-    const knowUsFields = ['knowUsWebsite', 'knowUsFacebook', 'knowUsInstagram', 'knowUsFlyers', 'knowUsBillboard', 'knowUsWordOfMouth', 'knowUsVenueReferral', 'knowUsRepeatClient', 'knowUsBridalFair', 'knowUsFoodTasting', 'knowUsCelebrityReferral', 'knowUsOthers'];
-    const hasKnowUs = knowUsFields.some(field => p2[field]);
-    if (!hasKnowUs) return false;
-
-    // Check required fields in page3
+    // Check required fields in page3 (only essential ones)
     const requiredP3Fields = [
-      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'serviceCharge', 'fullPaymentDueOn'
+      'pricePerPlate'
     ];
     for (const field of requiredP3Fields) {
       if (!p3[field] || !p3[field].trim()) return false;
     }
-
-    // Check for validation errors
-    if (errors.chairsSum) return false;
 
     return true;
   };
@@ -1409,12 +1395,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         <input value={p3.mobilizationCharge} onChange={(e)=>setP3({...p3, mobilizationCharge:e.target.value})} />
       </div>
       <div className="form-group">
-        <label>Taxes <span className="required-asterisk">*</span></label>
-        <select value={p3.taxes} onChange={(e)=>setP3({...p3, taxes:e.target.value})}>
-          <option value="">Select Taxes</option>
-          <option value="VAT">VAT</option>
-          <option value="NON-VAT">NON-VAT</option>
-        </select>
+        <label>TAX (12% VAT) <span className="required-asterisk">*</span></label>
+        <input value={formatNumber(p3.taxes)} readOnly />
       </div>
       <div className="form-group">
         <label>Service Charge (10%) <span className="required-asterisk">*</span></label>
@@ -1430,7 +1412,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h5>Downpayment (40%)</h5>
       <div className="form-row two">
         <div className="form-group"><label>Downpayment Due On</label><input type="date" value={p3.fortyPercentDueOn} onChange={(e)=>setP3({...p3, fortyPercentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>Downpayment Amount</label><input value={formatNumber(p3.fortyPercentAmount)} readOnly /></div>
+        <div className="form-group"><label>Downpayment Amount <span className="required-asterisk">*</span></label><input value={formatNumber(p3.fortyPercentAmount)} readOnly /></div>
       </div>
       <div className="form-row two">
         <div className="form-group"><label>Downpayment Received by</label><input value={p3.fortyPercentReceivedBy} onChange={(e)=>setP3({...p3, fortyPercentReceivedBy:convertToUppercase(e.target.value)})} /></div>
@@ -1444,7 +1426,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       </div>
       <div className="form-row two">
         <div className="form-group"><label>Remaining Balance Received By</label><input value={p3.fullPaymentReceivedBy} onChange={(e)=>setP3({...p3, fullPaymentReceivedBy:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Remaining Balance Date Received</label><input value={p3.fullPaymentDateReceived} onChange={(e)=>setP3({...p3, fullPaymentDateReceived:e.target.value})} /></div>
+        <div className="form-group"><label>Remaining Balance Date Received <span className="required-asterisk">*</span></label><input type="date" value={p3.fullPaymentDateReceived} onChange={(e)=>setP3({...p3, fullPaymentDateReceived:e.target.value})} /></div>
       </div>
 
       <div className="form-group"><label>Remarks</label><textarea value={p3.remarks} onChange={(e)=>setP3({...p3, remarks:e.target.value})} /></div>
@@ -1482,15 +1464,17 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           {activePage < 3 ? (
             <button type="button" className="pager-btn" onClick={next}>Next →</button>
           ) : (
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleSubmit}
-              disabled={!isFormValid()}
-              style={{ display: isFormValid() ? "inline-block" : "none" }}
-            >
-              Submit Contract
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleSubmit}
+                disabled={!isFormValid()}
+              >
+                Send for Approval
+              </button>
+              {!isFormValid() && <div className="validation-error">Please fill all required fields marked with *.</div>}
+            </>
           )}
         </div>
       </div>

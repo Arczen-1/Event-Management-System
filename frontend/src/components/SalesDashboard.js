@@ -24,30 +24,78 @@ function SalesDashboard({ onLogout, user }) {
     status: "Draft"
   });
 
-  // Validation function to check if contract is fully filled
-  const validateContractFullyFilled = (contract) => {
+  // Validation function to check required fields for approval (only those with asterisks)
+  const validateContractForApproval = (contract) => {
     const errors = [];
+    const p1 = contract.page1 || {};
+    const p2 = contract.page2 || {};
+    const p3 = contract.page3 || {};
 
-    // Check all string fields in page1 are filled
-    Object.entries(contract.page1 || {}).forEach(([key, value]) => {
-      if (typeof value === 'string' && !value.trim()) {
-        errors.push(`Page 1 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    // Required fields in page1
+    const requiredP1Fields = [
+      'celebratorName', 'representativeName', 'representativeRelationship', 'representativeEmail', 'representativeAddress', 'representativeMobile',
+      'coordinatorName', 'coordinatorMobile', 'coordinatorEmail', 'coordinatorAddress', 'eventDate', 'occasion', 'venue', 'hall', 'address',
+      'arrivalOfGuests', 'ingressTime', 'cocktailTime', 'servingTime', 'totalVIP', 'totalRegular', 'totalGuests', 'themeSetup', 'colorMotif',
+      'vipTableType', 'vipTableSeats', 'vipTableQuantity', 'regularTableType', 'regularTableSeats', 'regularTableQuantity',
+      'vipUnderliner', 'vipNapkin', 'guestUnderliner', 'guestNapkin'
+    ];
+    requiredP1Fields.forEach(field => {
+      if (!p1[field] || !p1[field].trim()) {
+        errors.push(`Page 1 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
       }
     });
 
-    // Check all string fields in page2 are filled, skip booleans
-    Object.entries(contract.page2 || {}).forEach(([key, value]) => {
-      if (typeof value === 'string' && !value.trim()) {
-        errors.push(`Page 2 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    // Email validations for required emails
+    const validateEmail = (email) => {
+      if (email.toUpperCase() === "N/A") return true;
+      return email.includes("@gmail.com") || email.includes("@yahoo.com");
+    };
+    if (p1.representativeEmail && !validateEmail(p1.representativeEmail)) {
+      errors.push("Page 1 - Representative email must end with @gmail.com or @yahoo.com");
+    }
+    if (p1.coordinatorEmail && !validateEmail(p1.coordinatorEmail)) {
+      errors.push("Page 1 - Coordinator email must end with @gmail.com or @yahoo.com");
+    }
+
+    // Phone validations for required phones
+    if (p1.representativeMobile && p1.representativeMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.representativeMobile)) {
+      errors.push("Page 1 - Representative mobile must be 11 digits or N/A");
+    }
+    if (p1.coordinatorMobile && p1.coordinatorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.coordinatorMobile)) {
+      errors.push("Page 1 - Coordinator mobile must be 11 digits or N/A");
+    }
+
+    // Required fields in page2 (chairs)
+    const requiredP2Fields = ['chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs'];
+    requiredP2Fields.forEach(field => {
+      if (!p2[field] || !p2[field].trim()) {
+        errors.push(`Page 2 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
       }
     });
 
-    // Check all string fields in page3 are filled
-    Object.entries(contract.page3 || {}).forEach(([key, value]) => {
-      if (typeof value === 'string' && !value.trim()) {
-        errors.push(`Page 3 - ${key.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
-      }
-    });
+    // Check chairs sum
+    const sum = (parseInt(p2.chairsMonoblock) || 0) + (parseInt(p2.chairsTiffany) || 0) + (parseInt(p2.chairsCrystal) || 0) +
+                (parseInt(p2.chairsRustic) || 0) + (parseInt(p2.chairsKiddie) || 0) + (parseInt(p2.premiumChairs) || 0);
+    const total = parseInt(p2.totalChairs) || 0;
+    if (sum !== total) {
+      errors.push(`Page 2 - The total number of chairs entered (${sum}) must equal the Total Chairs (${total}).`);
+    }
+
+    // Check at least one knowUs
+    const knowUsFields = ['knowUsWebsite', 'knowUsFacebook', 'knowUsInstagram', 'knowUsFlyers', 'knowUsBillboard', 'knowUsWordOfMouth',
+                          'knowUsVenueReferral', 'knowUsRepeatClient', 'knowUsBridalFair', 'knowUsFoodTasting', 'knowUsCelebrityReferral', 'knowUsOthers'];
+    const hasKnowUs = knowUsFields.some(field => p2[field]);
+    if (!hasKnowUs) {
+      errors.push("Page 2 - At least one 'How did you know our company' option must be selected");
+    }
+
+  // Required fields in page3
+  const requiredP3Fields = ['pricePerPlate'];
+  requiredP3Fields.forEach(field => {
+    if (!p3[field] || !p3[field].trim()) {
+      errors.push(`Page 3 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    }
+  });
 
     return errors;
   };
@@ -371,27 +419,16 @@ function SalesDashboard({ onLogout, user }) {
                           disabled={(() => {
                             const fullContract = fullContracts.find(c => c._id === contract.id);
                             if (!fullContract) return true;
-                            const errors = validateContractFullyFilled(fullContract);
+                            const errors = validateContractForApproval(fullContract);
                             return errors.length > 0;
                           })()}
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
-                              // First, fetch the full contract data
-                              const fetchRes = await fetch(`http://localhost:5000/contracts/${contract.id}`);
-                              const fetchData = await fetchRes.json();
-                              if (!fetchRes.ok) throw new Error("Failed to fetch contract");
-                              const contractData = fetchData.contract;
-                              // Validate if fully filled
-                              const validationErrors = validateContractFullyFilled(contractData);
-                              if (validationErrors.length > 0) {
-                                alert("Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n"));
-                                return;
-                              }
-                              // Now send for approval
-                              const res = await fetch(`http://localhost:5000/contracts/${contract.id}/send-for-approval`, {
+                              const res = await fetch(`http://localhost:5000/contracts/${contract.id}`, {
                                 method: "PUT",
-                                headers: { "Content-Type": "application/json" }
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ status: "For Approval" })
                               });
                               const data = await res.json();
                               if (res.ok) {
