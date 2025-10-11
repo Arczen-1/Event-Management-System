@@ -229,6 +229,20 @@
   font-family: "Aileron", sans-serif;
 }
 
+.buffet-menu-choice {
+  margin-left: 20px;
+}
+
+.buffet-menu-items {
+  margin-top: 4px;
+  padding-left: 60px;
+}
+
+.buffet-menu-items li {
+  font-style: italic;
+  padding-left: 1px;
+}
+
 /* Package Footer */
 .buffet-package-footer {
   background-color: #fdf8f3;

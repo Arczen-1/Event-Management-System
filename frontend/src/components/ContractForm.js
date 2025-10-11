@@ -1298,7 +1298,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const packages = [
     {
       name: "Buffet Package 1",
-      option: "OPTION 1",
+      option: "BUFFET PACKAGE 1",
       pricing: [
         { pax: "300 pax", price: "2,145.00" },
         { pax: "250 pax", price: "2,200.00" },
@@ -1309,7 +1309,16 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       menu: [
         "Two Cocktail Hours",
         "One Soup",
-        "Main Entree (Beef or Pork), (Fish or Seafood), (Chicken), (Pasta or Noodles or Vegetables or Side Dish)",
+        {
+          title: "Main Entree",
+          choiceOf: "Choice of:",
+          items: [
+            "Beef or Pork",
+            "Fish or Seafood",
+            "Chicken",
+            "Pasta or Noodles or Vegetables or Side Dish"
+          ]
+        },
         "Rice",
         "One Dessert",
         "Two Drinks"
@@ -1317,7 +1326,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     },
     {
       name: "Buffet Package 2",
-      option: "OPTION 2",
+      option: "BUFFET PACKAGE 2",
       pricing: [
         { pax: "300 pax", price: "2,245.00" },
         { pax: "250 pax", price: "2,295.00" },
@@ -1328,7 +1337,17 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       menu: [
         "Two Cocktail Hours",
         "One Soup",
-        "Main Entree (Beef or Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles), (Vegetables/Side Dish)",
+        {
+          title: "Main Entree",
+          choiceOf: "Choice of:",
+          items: [
+            "Beef or Pork",
+            "Fish or Seafood",
+            "Chicken",
+            "Pasta or Noodles",
+            "Vegetables or Side Dish"
+          ]
+        },
         "Rice",
         "Two Desserts",
         "Two Drinks"
@@ -1336,7 +1355,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     },
     {
       name: "Buffet Package 3",
-      option: "OPTION 3",
+      option: "BUFFET PACKAGE 3",
       pricing: [
         { pax: "300 pax", price: "2,380.00" },
         { pax: "250 pax", price: "2,435.00" },
@@ -1347,7 +1366,18 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       menu: [
         "Two Cocktail Hours",
         "One Soup",
-        "Main Entree (Beef), (Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles), (Vegetables/Side Dish)",
+        {
+          title: "Main Entree",
+          choiceOf: "Choice of:",
+          items: [
+            "Beef",
+            "Pork",
+            "Fish or Seafood",
+            "Chicken",
+            "Pasta or Noodles",
+            "Vegetables or Side Dish"
+          ]
+        },
         "Rice",
         "Two Desserts",
         "Two Drinks"
@@ -1415,9 +1445,24 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                 <div className="buffet-section">
                   <h3 className="buffet-section-title">Menu inclusions:</h3>
                   <div className="buffet-menu-list">
-                    {pkg.menu.map((item, i) => (
-                      <div key={i} className="buffet-menu-item">{item}</div>
-                    ))}
+                    {pkg.menu.map((item, i) => {
+                      if (typeof item === 'object' && item.title) {
+                        return (
+                          <div key={i} className="buffet-menu-item">
+                            <div className="buffet-menu-subheader">{item.title}</div>
+                            <div className="buffet-menu-choice">{item.choiceOf}</div>
+                            <ul className="buffet-menu-items">
+                              {item.items.map((subItem, j) => (
+                                <li key={j}>{subItem}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={i} className="buffet-menu-item">{item}</div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
