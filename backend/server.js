@@ -496,7 +496,7 @@ const validateContractForApproval = (contract) => {
   // Required fields in page1
   const requiredP1Fields = [
     'celebratorName', 'representativeName', 'representativeRelationship', 'representativeEmail', 'representativeAddress', 'representativeMobile',
-    'coordinatorName', 'coordinatorMobile', 'coordinatorEmail', 'coordinatorAddress', 'eventDate', 'occasion', 'venue', 'hall', 'address',
+    'coordinatorName', 'coordinatorMobile', 'coordinatorEmail', 'coordinatorAddress', 'eventDate', 'occasion', 'serviceStyle', 'venue', 'hall', 'address',
     'arrivalOfGuests', 'ingressTime', 'cocktailTime', 'servingTime', 'totalVIP', 'totalRegular', 'totalGuests', 'themeSetup', 'colorMotif',
     'vipTableType', 'vipTableSeats', 'vipTableQuantity', 'regularTableType', 'regularTableSeats', 'regularTableQuantity',
     'vipUnderliner', 'vipNapkin', 'guestUnderliner', 'guestNapkin'
