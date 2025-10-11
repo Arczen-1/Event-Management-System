@@ -181,7 +181,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     remarks: "",
   });
 
-  const totalPages = useMemo(() => p1.serviceStyle === "Buffet" ? 4 : 3, [p1.serviceStyle]);
+  const totalPages = useMemo(() => p1.serviceStyle === "Buffet" ? 5 : 3, [p1.serviceStyle]);
 
   // Initialize for create vs edit
   useEffect(() => {
@@ -578,7 +578,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     // Check required fields in buffet page if Buffet
     if (p1.serviceStyle === "Buffet") {
       if (!pBuffet.selectedPackage) return false;
-      if (pBuffet.cocktailSelections.length === 0) return false;
     }
 
     // Check required fields in page3 (only essential ones)
@@ -1290,11 +1289,193 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   );
 
   const renderPage3 = () => {
-    if (p1.serviceStyle !== "Buffet") return null; // Only show if Buffet
+  if (p1.serviceStyle !== "Buffet") return null;
 
-    const handlePackageSelect = (packageName) => {
-      setPBuffet(prev => ({ ...prev, selectedPackage: packageName }));
-    };
+  const handlePackageSelect = (packageName) => {
+    setPBuffet(prev => ({ ...prev, selectedPackage: packageName }));
+  };
+
+  const packages = [
+    {
+      name: "Buffet Package 1",
+      option: "OPTION 1",
+      pricing: [
+        { pax: "300 pax", price: "2,145.00" },
+        { pax: "250 pax", price: "2,200.00" },
+        { pax: "200 pax", price: "2,275.00" },
+        { pax: "150 pax", price: "2,390.00" },
+        { pax: "100 pax", price: "2,800.00" }
+      ],
+      menu: [
+        "Two Cocktail Hours",
+        "One Soup",
+        "Main Entree (Beef or Pork), (Fish or Seafood), (Chicken), (Pasta or Noodles or Vegetables or Side Dish)",
+        "Rice",
+        "One Dessert",
+        "Two Drinks"
+      ]
+    },
+    {
+      name: "Buffet Package 2",
+      option: "OPTION 2",
+      pricing: [
+        { pax: "300 pax", price: "2,245.00" },
+        { pax: "250 pax", price: "2,295.00" },
+        { pax: "200 pax", price: "2,370.00" },
+        { pax: "150 pax", price: "2,475.00" },
+        { pax: "100 pax", price: "2,890.00" }
+      ],
+      menu: [
+        "Two Cocktail Hours",
+        "One Soup",
+        "Main Entree (Beef or Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles), (Vegetables/Side Dish)",
+        "Rice",
+        "Two Desserts",
+        "Two Drinks"
+      ]
+    },
+    {
+      name: "Buffet Package 3",
+      option: "OPTION 3",
+      pricing: [
+        { pax: "300 pax", price: "2,380.00" },
+        { pax: "250 pax", price: "2,435.00" },
+        { pax: "200 pax", price: "2,510.00" },
+        { pax: "150 pax", price: "2,610.00" },
+        { pax: "100 pax", price: "3,030.00" }
+      ],
+      menu: [
+        "Two Cocktail Hours",
+        "One Soup",
+        "Main Entree (Beef), (Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles), (Vegetables/Side Dish)",
+        "Rice",
+        "Two Desserts",
+        "Two Drinks"
+      ]
+    }
+  ];
+
+  const amenities = [
+    "An elevated platform for the couple/celebrant",
+    "A wide array of linens to match your color palette",
+    "Tiffany chairs or rustic folding chairs for style and elegance (to check availability upon confirmation)",
+    "Elegantly dressed up dining tables with table numbers",
+    "Table setting and physical arrangement meticulously done by professionals",
+    "Buffet with food labels that is set to impress",
+    "Exquisitely dress-up tables for gifts, cake, registration and giveaways",
+    "A bottle of Sparkling Wine for the bridal toast to spice up the celebration",
+    "Debut Amenities (18 roses, 18 candles, and a Bouquet for the Debutant)",
+    "Cordial and professional waiters to serve the food"
+  ];
+
+  return (
+    <div className="page buffet-page">
+      <div className="buffet-container">
+        
+        {/* Package Cards */}
+        <div className="buffet-packages-wrapper">
+          {packages.map((pkg, idx) => (
+            <div
+              key={idx}
+              className={`buffet-package-card ${pBuffet.selectedPackage === pkg.name ? 'selected' : ''}`}
+              onClick={() => handlePackageSelect(pkg.name)}
+            >
+              {/* Header */}
+              <div className="buffet-package-header">
+                <h2 className="buffet-option-title">{pkg.option}</h2>
+              </div>
+
+              {/* Content */}
+              <div className="buffet-package-content">
+                {/* Price per Pax */}
+                <div className="buffet-section">
+                  <h3 className="buffet-section-title">price per pax</h3>
+                  <div className="buffet-pricing-list">
+                    {pkg.pricing.map((item, i) => (
+                      <div key={i} className="buffet-price-item">
+                        <strong>₱ {item.price}</strong> per pax
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Minimum of */}
+                <div className="buffet-section">
+                  <h3 className="buffet-section-title">minimum of</h3>
+                  <div className="buffet-pricing-list">
+                    {pkg.pricing.map((item, i) => (
+                      <div key={i} className="buffet-price-item">
+                        {item.pax}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Menu Inclusions */}
+                <div className="buffet-section">
+                  <h3 className="buffet-section-title">Menu inclusions:</h3>
+                  <div className="buffet-menu-list">
+                    {pkg.menu.map((item, i) => (
+                      <div key={i} className="buffet-menu-item">{item}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="buffet-package-footer">
+                <p className="buffet-vat-notice">
+                  Plus 10% Service Charge<br />
+                  Exclusive of 12% VAT
+                </p>
+                <label className="buffet-select-label" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="radio"
+                    name="package"
+                    checked={pBuffet.selectedPackage === pkg.name}
+                    onChange={() => handlePackageSelect(pkg.name)}
+                    className="buffet-radio"
+                  />
+                  <span className="buffet-select-text">
+                    {pBuffet.selectedPackage === pkg.name ? '✓ Selected' : `Select ${pkg.option}`}
+                  </span>
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Amenities Section */}
+        <div className="buffet-amenities-card">
+          <div className="buffet-amenities-header">
+            <h2 className="buffet-option-title">PACKAGE AMENITIES</h2>
+          </div>
+
+          <div className="buffet-amenities-content">
+            <div className="buffet-amenities-grid">
+              {amenities.map((amenity, idx) => (
+                <div key={idx} className="buffet-amenity-item">
+                  <span className="buffet-bullet">•</span>
+                  <p className="buffet-amenity-text">{amenity}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Validation Error */}
+      {errors.selectedPackage && (
+        <div className="buffet-validation-error">
+          <strong> {errors.selectedPackage}</strong>
+        </div>
+      )}
+    </div>
+  );
+};
+
+  const renderPage4 = () => {
+    if (p1.serviceStyle !== "Buffet") return null;
 
     const handleCocktailChange = (option) => {
       setPBuffet(prev => {
@@ -1307,132 +1488,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
     return (
       <div className="page">
-        <h4>Buffet Packages</h4>
-
-        {/* Buffet Package 1 */}
-        <div className="package-section">
-          <h5>Buffet Package 1</h5>
-          <table className="pricing-table">
-            <thead>
-              <tr>
-                <th>Price per Pax</th>
-                <th>Minimum of</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>2,145.00 Pesos per pax</td><td>300 pax</td></tr>
-              <tr><td>2,200.00 Pesos per pax</td><td>250 pax</td></tr>
-              <tr><td>2,275.00 Pesos per pax</td><td>200 pax</td></tr>
-              <tr><td>2,390.00 Pesos per pax</td><td>150 pax</td></tr>
-              <tr><td>2,800.00 Pesos per pax</td><td>100 pax</td></tr>
-            </tbody>
-          </table>
-          <div className="menu-inclusions">
-            <strong>Menu Inclusions:</strong>
-            <ul>
-              <li>Two Cocktail Hours</li>
-              <li>One Soup</li>
-              <li>Main Entree (Beef or Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles or Vegetables/Side Dish)</li>
-              <li>Rice</li>
-              <li>One Dessert</li>
-              <li>Two Drinks</li>
-            </ul>
-            <p>Plus 10% Service Charge Exclusive of 12% VAT</p>
-          </div>
-          <label>
-            <input type="radio" name="package" checked={pBuffet.selectedPackage === "Buffet Package 1"} onChange={() => handlePackageSelect("Buffet Package 1")} />
-            Select Package 1
-          </label>
-        </div>
-
-        {/* Buffet Package 2 */}
-        <div className="package-section">
-          <h5>Buffet Package 2</h5>
-          <table className="pricing-table">
-            <thead>
-              <tr>
-                <th>Price per Pax</th>
-                <th>Minimum of</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>2,245.00 Pesos per pax</td><td>300 pax</td></tr>
-              <tr><td>2,295.00 Pesos per pax</td><td>250 pax</td></tr>
-              <tr><td>2,370.00 Pesos per pax</td><td>200 pax</td></tr>
-              <tr><td>2,475.00 Pesos per pax</td><td>150 pax</td></tr>
-              <tr><td>2,890.00 Pesos per pax</td><td>100 pax</td></tr>
-            </tbody>
-          </table>
-          <div className="menu-inclusions">
-            <strong>Menu Inclusions:</strong>
-            <ul>
-              <li>Two Cocktail Hours</li>
-              <li>One Soup</li>
-              <li>Main Entree (Beef or Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles), (Vegetables/Side Dish)</li>
-              <li>Rice</li>
-              <li>Two Desserts</li>
-              <li>Two Drinks</li>
-            </ul>
-            <p>Plus 10% Service Charge Exclusive of 12% VAT</p>
-          </div>
-          <label>
-            <input type="radio" name="package" checked={pBuffet.selectedPackage === "Buffet Package 2"} onChange={() => handlePackageSelect("Buffet Package 2")} />
-            Select Package 2
-          </label>
-        </div>
-
-        {/* Buffet Package 3 */}
-        <div className="package-section">
-          <h5>Buffet Package 3</h5>
-          <table className="pricing-table">
-            <thead>
-              <tr>
-                <th>Price per Pax</th>
-                <th>Minimum of</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>2,380.00 Pesos per pax</td><td>300 pax</td></tr>
-              <tr><td>2,435.00 Pesos per pax</td><td>250 pax</td></tr>
-              <tr><td>2,510.00 Pesos per pax</td><td>200 pax</td></tr>
-              <tr><td>2,610.00 Pesos per pax</td><td>150 pax</td></tr>
-              <tr><td>3,030.00 Pesos per pax</td><td>100 pax</td></tr>
-            </tbody>
-          </table>
-          <div className="menu-inclusions">
-            <strong>Menu Inclusions:</strong>
-            <ul>
-              <li>Two Cocktail Hours</li>
-              <li>One Soup</li>
-              <li>Main Entree (Beef), (Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles), (Vegetables/Side Dish)</li>
-              <li>Rice</li>
-              <li>Two Desserts</li>
-              <li>Two Drinks</li>
-            </ul>
-            <p>Plus 10% Service Charge Exclusive of 12% VAT</p>
-          </div>
-          <label>
-            <input type="radio" name="package" checked={pBuffet.selectedPackage === "Buffet Package 3"} onChange={() => handlePackageSelect("Buffet Package 3")} />
-            Select Package 3
-          </label>
-        </div>
-
-        <h4>Package Amenities</h4>
-        <ul>
-          <li>An elevated platform for the couple/celebrant</li>
-          <li>A wide array of linens to match your color palette</li>
-          <li>Tiffany chairs or rustic folding chairs for style and elegance (to check availability upon confirmation)</li>
-          <li>Elegantly dressed up dining tables with table numbers</li>
-          <li>Table setting and physical arrangement meticulously done by professionals</li>
-          <li>Buffet with food labels that is set to impress</li>
-          <li>Exquisitely dress-up tables for gifts, cake, registration and giveaways</li>
-          <li>A bottle of Sparkling Wine for the bridal toast to spice up the celebration</li>
-          <li>Debut Amenities (18 roses, 18 candles, and a Bouquet for the Debutant)</li>
-          <li>Cordial and professional waiters to serve the food</li>
-        </ul>
-
         <h4>Cocktail Hour (Select up to 2)</h4>
-        <div className="checkbox-grid">
+        <div className="cocktail-grid">
           {[
             "Money Bag with Pork, Shrimp & Leeks",
             "Wrap Pork Sisig/Wrap Ala Portofino",
@@ -1440,7 +1497,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             "Cone of Caesar Salad with Bacon Bits and Anchovy Croutons",
             "Palabok Spring Rolls with Dried Smoked Fish and Salted Egg"
           ].map(option => (
-            <label key={option} className="checkbox-item">
+            <label key={option} className="cocktail-item">
               <input
                 type="checkbox"
                 checked={pBuffet.cocktailSelections.includes(option)}
@@ -1451,11 +1508,12 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </label>
           ))}
         </div>
+        <p>Selected: {pBuffet.cocktailSelections.length}/2</p>
       </div>
     );
   };
 
-  const renderPage4 = () => (
+  const renderPage5 = () => (
     <div className="page">
       <div className="form-group"><label>Price Per Plate <span className="required-asterisk">*</span></label><input value={p3.pricePerPlate} onChange={(e)=>setP3({...p3, pricePerPlate:e.target.value})} /></div>
 
@@ -1656,8 +1714,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       }}>
         {activePage === 1 && renderPage1()}
         {activePage === 2 && renderPage2()}
-        {activePage === 3 && (totalPages === 3 ? renderPage4() : renderPage3())}
-        {activePage === 4 && renderPage4()}
+        {activePage === 3 && (totalPages === 3 ? renderPage5() : renderPage3())}
+        {activePage === 4 && (totalPages === 5 ? renderPage4() : renderPage5())}
+        {activePage === 5 && renderPage5()}
 
       <div className="form-actions">
         <button type="button" className="btn-danger" onClick={onCancel}>Cancel</button>

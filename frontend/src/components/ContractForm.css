@@ -99,4 +99,297 @@
   vertical-align: super;
 }
 
+/* Buffet Package Styles - Add to ContractForm.css */
 
+/* Ensure smooth transitions for package selection */
+.page input[type="radio"] {
+  transition: all 0.2s ease;
+}
+
+/* Responsive adjustments for buffet packages */
+@media (max-width: 768px) {
+  .page > div > div {
+    gap: 16px !important;
+  }
+  
+  .page h2 {
+    font-size: 1.5rem !important;
+  }
+  
+  .page h3 {
+    font-size: 1rem !important;
+  }
+}
+
+/* Print styles for buffet packages */
+@media print {
+  .page > div {
+    background-color: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+/* Buffet Package Styles */
+
+.buffet-page {
+  padding: 0 !important;
+}
+
+.buffet-container {
+  margin: -24px;
+  padding: 32px 24px;
+  border-radius: 12px;
+}
+
+/* Package Cards Wrapper */
+.buffet-packages-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+/* Individual Package Card */
+.buffet-package-card {
+  background-color: white;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid #d4c4b0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.buffet-package-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.buffet-package-card.selected {
+  border: 4px solid #b8860b;
+  box-shadow: 0 6px 12px rgba(184, 134, 11, 0.2);
+}
+
+/* Package Header */
+.buffet-package-header {
+  background-color: #b39b89;
+  padding: 20px;
+  text-align: center;
+  border-bottom: 2px solid #a68a78;
+}
+
+.buffet-option-title {
+  font-size: 2rem;
+  font-family: Georgia, serif;
+  font-style: italic;
+  color: #3a3a3a;
+  margin: 0;
+  font-weight: normal;
+  letter-spacing: 1px;
+}
+
+/* Package Content */
+.buffet-package-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+  padding: 32px 28px;
+  background-color: #fdf8f3;
+}
+
+.buffet-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.buffet-section-title {
+  font-size: 1.15rem;
+  font-family: Georgia, serif;
+  font-style: italic;
+  color: #3a3a3a;
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-weight: normal;
+  border-bottom: 1px solid #e7ddd1;
+  padding-bottom: 8px;
+}
+
+.buffet-pricing-list,
+.buffet-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.buffet-price-item,
+.buffet-menu-item {
+  color: #4a4a4a;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  font-family: "Aileron", sans-serif;
+}
+
+/* Package Footer */
+.buffet-package-footer {
+  background-color: #fdf8f3;
+  padding: 20px 28px;
+  text-align: center;
+  border-top: 2px solid #e7ddd1;
+}
+
+.buffet-vat-notice {
+  color: #4a4a4a;
+  font-size: 0.875rem;
+  margin-top: 0;
+  margin-bottom: 16px;
+  line-height: 1.6;
+  font-family: "Aileron", sans-serif;
+  font-style: italic;
+}
+
+.buffet-select-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 20px;
+  background-color: #e7ddd1;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  color: #4a4a4a;
+}
+
+.buffet-package-card.selected .buffet-select-label {
+  background-color: #b8860b;
+  color: white;
+}
+
+.buffet-select-label:hover {
+  background-color: #d4c4b0;
+}
+
+.buffet-package-card.selected .buffet-select-label:hover {
+  background-color: #9a7109;
+}
+
+.buffet-radio {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: #b8860b;
+}
+
+.buffet-select-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: "Aileron", sans-serif;
+}
+
+/* Amenities Section */
+.buffet-amenities-card {
+  background-color: white;
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid #d4c4b0;
+}
+
+.buffet-amenities-header {
+  background-color: #b39b89;
+  padding: 20px;
+  text-align: center;
+  border-bottom: 2px solid #a68a78;
+}
+
+.buffet-amenities-content {
+  padding: 32px 28px;
+  background-color: #fdf8f3;
+}
+
+.buffet-amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px 40px;
+}
+
+.buffet-amenity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: #4a4a4a;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  font-family: "Aileron", sans-serif;
+}
+
+.buffet-bullet {
+  color: #b8860b;
+  font-weight: bold;
+  font-size: 1.3rem;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.buffet-amenity-text {
+  margin: 0;
+  flex: 1;
+}
+
+/* Validation Error */
+.buffet-validation-error {
+  margin-top: 16px;
+  text-align: center;
+  padding: 12px;
+  background-color: #fff5f5;
+  border-radius: 6px;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .buffet-container {
+    padding: 20px 16px;
+    margin: -24px;
+  }
+
+  .buffet-option-title {
+    font-size: 1.5rem;
+  }
+
+  .buffet-package-content {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 24px 20px;
+  }
+
+  .buffet-amenities-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .buffet-section-title {
+    font-size: 1rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .buffet-container {
+    background-color: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .buffet-package-card {
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+  }
+
+  .buffet-select-label {
+    display: none;
+  }
+}
