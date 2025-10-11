@@ -103,6 +103,7 @@ const ContractSchema = new mongoose.Schema(
       upgradeSelections125: { type: [String], default: [] },
       upgradeSelections150: { type: [String], default: [] },
       soupSelections: { type: [String], default: [] },
+      upgradeSoupSelections100: { type: [String], default: [] },
       mainEntreeSelections: { type: [String], default: [] },
       riceSelections: { type: [String], default: [] },
       dessertSelections: { type: [String], default: [] },
