@@ -71,6 +71,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     coordinatorEmail: "",
     eventDate: "",
     occasion: "",
+    serviceStyle: "",
     venue: "",
     hall: "",
     ingressTime: "",
@@ -529,6 +530,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       'coordinatorAddress',
       'eventDate',
       'occasion',
+      'serviceStyle',
       'venue',
       'hall',
       'address',
@@ -592,6 +594,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       'coordinatorAddress',
       'eventDate',
       'occasion',
+      'serviceStyle',
       'venue',
       'hall',
       'address',
@@ -883,12 +886,12 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h4>Event Details</h4>
       <div className="form-row three">
         <div className="form-group"><label>
-  Date of Event 
+  Date of Event
   <span className="required-asterisk">*</span>
 </label><input type="date" value={p1.eventDate} onChange={(e)=>setP1({...p1, eventDate:e.target.value})} onBlur={handleAutoSave} className={errors.eventDate ? 'invalid-input' : ''} /><div className="validation-error">{errors.eventDate}</div></div>
         <div className="form-group">
           <label>
-  Occasion 
+  Occasion
   <span className="required-asterisk">*</span>
 </label>
           <select value={p1.occasion} onChange={(e)=>setP1({...p1, occasion:e.target.value})}>
@@ -900,9 +903,22 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             <option value="WEDDINGS">Weddings</option>
           </select>
         </div>
+        <div className="form-group">
+          <label>
+  Service Style
+  <span className="required-asterisk">*</span>
+</label>
+          <select value={p1.serviceStyle} onChange={(e)=>setP1({...p1, serviceStyle:e.target.value})}>
+            <option value="">Select Service Style</option>
+            <option value="Buffet">Buffet</option>
+            <option value="Signature Plated">Signature Plated</option>
+          </select>
+        </div>
+      </div>
+    <div className="form-row four">
       <div className="form-group">
         <label>
-  Venue 
+  Venue
   <span className="required-asterisk">*</span>
 </label>
         <select
@@ -928,11 +944,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           ))}
         </select>
       </div>
-    </div>
-    <div className="form-row three">
       <div className="form-group">
         <label>
-  Hall 
+  Hall
   <span className="required-asterisk">*</span>
 </label>
         {p1.venue === "OTHERS" ? (
@@ -967,12 +981,12 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         )}
       </div>
       <div className="form-group"><label>
-  Address 
+  Address
   <span className="required-asterisk">*</span>
 </label><input value={p1.address} onChange={(e)=>setP1({...p1, address:convertToUppercase(e.target.value)})} /></div>
       <div className="form-group">
         <label>
-  Arrival of Guests 
+  Arrival of Guests
   <span className="required-asterisk">*</span>
 </label>
         <input
