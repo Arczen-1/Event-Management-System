@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import "./ContractForm.css";
 
 // Venue data
@@ -45,7 +45,7 @@ const VENUES = {
 // Saves to backend with monthly-reset contract numbering.
 function ContractForm({ onCancel, onCreated, existing, user }) {
   const formatNumber = (num) => num ? parseFloat(num).toLocaleString('en-US') : '';
-  const [activePage, setActivePage] = useState(1); // 1, 2, 3
+  const [activePage, setActivePage] = useState(1); // 1, 2, 3, 4
   const [nextNumber, setNextNumber] = useState("");
   const [availableHalls, setAvailableHalls] = useState([]);
   const [maxPax, setMaxPax] = useState(0);
@@ -141,7 +141,13 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     knowUsOthers: false,
   });
 
-  // Page 3 fields
+  // Page 3 fields (Buffet)
+  const [pBuffet, setPBuffet] = useState({
+    selectedPackage: "",
+    cocktailSelections: [],
+  });
+
+  // Page 4 fields (Menu/Pricing)
   const [p3, setP3] = useState({
     pricePerPlate: "0",
     cocktailHour: "",
@@ -175,11 +181,14 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     remarks: "",
   });
 
+  const totalPages = useMemo(() => p1.serviceStyle === "Buffet" ? 4 : 3, [p1.serviceStyle]);
+
   // Initialize for create vs edit
   useEffect(() => {
     if (existing) {
       setP1(existing.page1 || {});
       setP2(existing.page2 || {});
+      setPBuffet({ selectedPackage: "", cocktailSelections: [], ...existing.pageBuffet });
       setP3(existing.page3 || {});
       setNextNumber(existing.contractNumber || "");
     } else {
@@ -566,6 +575,12 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       if (!p2[field] || !p2[field].trim()) return false;
     }
 
+    // Check required fields in buffet page if Buffet
+    if (p1.serviceStyle === "Buffet") {
+      if (!pBuffet.selectedPackage) return false;
+      if (pBuffet.cocktailSelections.length === 0) return false;
+    }
+
     // Check required fields in page3 (only essential ones)
     const requiredP3Fields = [
       'pricePerPlate'
@@ -665,6 +680,16 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       newErrors.coordinatorLandline = "Landline number must be 7 digits or N/A";
     }
 
+    // Buffet validations
+    if (p1.serviceStyle === "Buffet") {
+      if (!pBuffet.selectedPackage) {
+        newErrors.selectedPackage = "Please select a buffet package.";
+      }
+      if (pBuffet.cocktailSelections.length === 0) {
+        newErrors.cocktailSelections = "Please select at least one cocktail hour option.";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -691,11 +716,11 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
     try {
       if (existing) {
-        const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ page1: p1, page2: p2, page3: p3, status: "Draft" }),
-        });
+      const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3, status: "Draft" }),
+      });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to save contract");
         if (onCreated) {
@@ -710,8 +735,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             status: "Draft",
           });
         }
+        return true;
       } else {
-        const payload = { department: "Sales", status: "Draft", page1: p1, page2: p2, page3: p3 };
+        const payload = { department: "Sales", status: "Draft", page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3 };
         const res = await fetch("http://localhost:5000/contracts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -731,9 +757,11 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             status: "Draft",
           });
         }
+        return true;
       }
     } catch (err) {
       alert("Failed to save contract. Please try again.");
+      return false;
     }
   };
 
@@ -751,7 +779,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ page1: p1, page2: p2, page3: p3, status: "For Approval" }),
+          body: JSON.stringify({ page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3, status: "For Approval" }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to update contract");
@@ -768,7 +796,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           });
         }
       } else {
-        const payload = { department: "Sales", status: "For Approval", page1: p1, page2: p2, page3: p3 };
+        const payload = { department: "Sales", status: "For Approval", page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3 };
         const res = await fetch("http://localhost:5000/contracts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -796,7 +824,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   const next = () => {
     if (existing) handleAutoSave();
-    setActivePage((p) => Math.min(3, p + 1));
+    setActivePage((p) => Math.min(totalPages, p + 1));
   };
   const back = () => {
     if (existing) handleAutoSave();
@@ -1261,7 +1289,173 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     </div>
   );
 
-  const renderPage3 = () => (
+  const renderPage3 = () => {
+    if (p1.serviceStyle !== "Buffet") return null; // Only show if Buffet
+
+    const handlePackageSelect = (packageName) => {
+      setPBuffet(prev => ({ ...prev, selectedPackage: packageName }));
+    };
+
+    const handleCocktailChange = (option) => {
+      setPBuffet(prev => {
+        const selections = prev.cocktailSelections.includes(option)
+          ? prev.cocktailSelections.filter(s => s !== option)
+          : prev.cocktailSelections.length < 2 ? [...prev.cocktailSelections, option] : prev.cocktailSelections;
+        return { ...prev, cocktailSelections: selections };
+      });
+    };
+
+    return (
+      <div className="page">
+        <h4>Buffet Packages</h4>
+
+        {/* Buffet Package 1 */}
+        <div className="package-section">
+          <h5>Buffet Package 1</h5>
+          <table className="pricing-table">
+            <thead>
+              <tr>
+                <th>Price per Pax</th>
+                <th>Minimum of</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>2,145.00 Pesos per pax</td><td>300 pax</td></tr>
+              <tr><td>2,200.00 Pesos per pax</td><td>250 pax</td></tr>
+              <tr><td>2,275.00 Pesos per pax</td><td>200 pax</td></tr>
+              <tr><td>2,390.00 Pesos per pax</td><td>150 pax</td></tr>
+              <tr><td>2,800.00 Pesos per pax</td><td>100 pax</td></tr>
+            </tbody>
+          </table>
+          <div className="menu-inclusions">
+            <strong>Menu Inclusions:</strong>
+            <ul>
+              <li>Two Cocktail Hours</li>
+              <li>One Soup</li>
+              <li>Main Entree (Beef or Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles or Vegetables/Side Dish)</li>
+              <li>Rice</li>
+              <li>One Dessert</li>
+              <li>Two Drinks</li>
+            </ul>
+            <p>Plus 10% Service Charge Exclusive of 12% VAT</p>
+          </div>
+          <label>
+            <input type="radio" name="package" checked={pBuffet.selectedPackage === "Buffet Package 1"} onChange={() => handlePackageSelect("Buffet Package 1")} />
+            Select Package 1
+          </label>
+        </div>
+
+        {/* Buffet Package 2 */}
+        <div className="package-section">
+          <h5>Buffet Package 2</h5>
+          <table className="pricing-table">
+            <thead>
+              <tr>
+                <th>Price per Pax</th>
+                <th>Minimum of</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>2,245.00 Pesos per pax</td><td>300 pax</td></tr>
+              <tr><td>2,295.00 Pesos per pax</td><td>250 pax</td></tr>
+              <tr><td>2,370.00 Pesos per pax</td><td>200 pax</td></tr>
+              <tr><td>2,475.00 Pesos per pax</td><td>150 pax</td></tr>
+              <tr><td>2,890.00 Pesos per pax</td><td>100 pax</td></tr>
+            </tbody>
+          </table>
+          <div className="menu-inclusions">
+            <strong>Menu Inclusions:</strong>
+            <ul>
+              <li>Two Cocktail Hours</li>
+              <li>One Soup</li>
+              <li>Main Entree (Beef or Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles), (Vegetables/Side Dish)</li>
+              <li>Rice</li>
+              <li>Two Desserts</li>
+              <li>Two Drinks</li>
+            </ul>
+            <p>Plus 10% Service Charge Exclusive of 12% VAT</p>
+          </div>
+          <label>
+            <input type="radio" name="package" checked={pBuffet.selectedPackage === "Buffet Package 2"} onChange={() => handlePackageSelect("Buffet Package 2")} />
+            Select Package 2
+          </label>
+        </div>
+
+        {/* Buffet Package 3 */}
+        <div className="package-section">
+          <h5>Buffet Package 3</h5>
+          <table className="pricing-table">
+            <thead>
+              <tr>
+                <th>Price per Pax</th>
+                <th>Minimum of</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>2,380.00 Pesos per pax</td><td>300 pax</td></tr>
+              <tr><td>2,435.00 Pesos per pax</td><td>250 pax</td></tr>
+              <tr><td>2,510.00 Pesos per pax</td><td>200 pax</td></tr>
+              <tr><td>2,610.00 Pesos per pax</td><td>150 pax</td></tr>
+              <tr><td>3,030.00 Pesos per pax</td><td>100 pax</td></tr>
+            </tbody>
+          </table>
+          <div className="menu-inclusions">
+            <strong>Menu Inclusions:</strong>
+            <ul>
+              <li>Two Cocktail Hours</li>
+              <li>One Soup</li>
+              <li>Main Entree (Beef), (Pork), (Fish or Seafood), (Chicken), (Pasta/Noodles), (Vegetables/Side Dish)</li>
+              <li>Rice</li>
+              <li>Two Desserts</li>
+              <li>Two Drinks</li>
+            </ul>
+            <p>Plus 10% Service Charge Exclusive of 12% VAT</p>
+          </div>
+          <label>
+            <input type="radio" name="package" checked={pBuffet.selectedPackage === "Buffet Package 3"} onChange={() => handlePackageSelect("Buffet Package 3")} />
+            Select Package 3
+          </label>
+        </div>
+
+        <h4>Package Amenities</h4>
+        <ul>
+          <li>An elevated platform for the couple/celebrant</li>
+          <li>A wide array of linens to match your color palette</li>
+          <li>Tiffany chairs or rustic folding chairs for style and elegance (to check availability upon confirmation)</li>
+          <li>Elegantly dressed up dining tables with table numbers</li>
+          <li>Table setting and physical arrangement meticulously done by professionals</li>
+          <li>Buffet with food labels that is set to impress</li>
+          <li>Exquisitely dress-up tables for gifts, cake, registration and giveaways</li>
+          <li>A bottle of Sparkling Wine for the bridal toast to spice up the celebration</li>
+          <li>Debut Amenities (18 roses, 18 candles, and a Bouquet for the Debutant)</li>
+          <li>Cordial and professional waiters to serve the food</li>
+        </ul>
+
+        <h4>Cocktail Hour (Select up to 2)</h4>
+        <div className="checkbox-grid">
+          {[
+            "Money Bag with Pork, Shrimp & Leeks",
+            "Wrap Pork Sisig/Wrap Ala Portofino",
+            "Pork Belly with Chili Caramel Sauce",
+            "Cone of Caesar Salad with Bacon Bits and Anchovy Croutons",
+            "Palabok Spring Rolls with Dried Smoked Fish and Salted Egg"
+          ].map(option => (
+            <label key={option} className="checkbox-item">
+              <input
+                type="checkbox"
+                checked={pBuffet.cocktailSelections.includes(option)}
+                onChange={() => handleCocktailChange(option)}
+                disabled={!pBuffet.cocktailSelections.includes(option) && pBuffet.cocktailSelections.length >= 2}
+              />
+              {option}
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderPage4 = () => (
     <div className="page">
       <div className="form-group"><label>Price Per Plate <span className="required-asterisk">*</span></label><input value={p3.pricePerPlate} onChange={(e)=>setP3({...p3, pricePerPlate:e.target.value})} /></div>
 
@@ -1462,20 +1656,21 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       }}>
         {activePage === 1 && renderPage1()}
         {activePage === 2 && renderPage2()}
-        {activePage === 3 && renderPage3()}
+        {activePage === 3 && (totalPages === 3 ? renderPage4() : renderPage3())}
+        {activePage === 4 && renderPage4()}
 
       <div className="form-actions">
         <button type="button" className="btn-danger" onClick={onCancel}>Cancel</button>
         <button type="button" className="btn-secondary" onClick={async () => {
           // Save form as draft before going back
-          await handleSave(new Event('submit', { cancelable: true }));
-          onCancel();
+          const success = await handleSave(new Event('submit', { cancelable: true }));
+          if (success) onCancel();
         }}>Back to Dashboard</button>
 
         <div className="pager">
           <button type="button" className="pager-btn" onClick={back} disabled={activePage === 1}>← Back</button>
-          <span>Page {activePage} of 3</span>
-          {activePage < 3 ? (
+          <span>Page {activePage} of {totalPages}</span>
+          {activePage < totalPages ? (
             <button type="button" className="pager-btn" onClick={next}>Next →</button>
           ) : (
             <>
