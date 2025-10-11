@@ -32,6 +32,7 @@ function AdminDashboard({ onLogout }) {
     "Accounting",
     "Warehouse",
     "Creative",
+    "Creative Manager",
     "Linen",
     "Logistics",
     "Kitchen",

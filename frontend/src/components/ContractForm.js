@@ -145,6 +145,14 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const [pBuffet, setPBuffet] = useState({
     selectedPackage: "",
     cocktailSelections: [],
+    upgradeSelections125: [],
+    upgradeSelections150: [],
+    upgradeSelectionsDrinks: [],
+    soupSelections: [],
+    mainEntreeSelections: [],
+    riceSelections: [],
+    dessertSelections: [],
+    drinksSelections: [],
   });
 
   // Page 4 fields (Menu/Pricing)
@@ -188,7 +196,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     if (existing) {
       setP1(existing.page1 || {});
       setP2(existing.page2 || {});
-      setPBuffet({ selectedPackage: "", cocktailSelections: [], ...existing.pageBuffet });
+      setPBuffet({ selectedPackage: "", cocktailSelections: [], upgradeSelections125: [], upgradeSelections150: [], upgradeSelectionsDrinks: [], soupSelections: [], mainEntreeSelections: [], riceSelections: [], dessertSelections: [], drinksSelections: [], ...existing.pageBuffet });
       setP3(existing.page3 || {});
       setNextNumber(existing.contractNumber || "");
     } else {
@@ -684,8 +692,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       if (!pBuffet.selectedPackage) {
         newErrors.selectedPackage = "Please select a buffet package.";
       }
-      if (pBuffet.cocktailSelections.length === 0) {
-        newErrors.cocktailSelections = "Please select at least one cocktail hour option.";
+      if (pBuffet.cocktailSelections.length !== 2) {
+        newErrors.cocktailSelections = "Please select exactly 2 cocktail hour options.";
       }
     }
 
@@ -1419,7 +1427,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               <div className="buffet-package-content">
                 {/* Price per Pax */}
                 <div className="buffet-section">
-                  <h3 className="buffet-section-title">price per pax</h3>
+                  <h3 className="buffet-section-title">Price per pax</h3>
                   <div className="buffet-pricing-list">
                     {pkg.pricing.map((item, i) => (
                       <div key={i} className="buffet-price-item">
@@ -1431,7 +1439,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
                 {/* Minimum of */}
                 <div className="buffet-section">
-                  <h3 className="buffet-section-title">minimum of</h3>
+                  <h3 className="buffet-section-title">Minimum of</h3>
                   <div className="buffet-pricing-list">
                     {pkg.pricing.map((item, i) => (
                       <div key={i} className="buffet-price-item">
@@ -1522,14 +1530,45 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const renderPage4 = () => {
     if (p1.serviceStyle !== "Buffet") return null;
 
-    const handleCocktailChange = (option) => {
-      setPBuffet(prev => {
-        const selections = prev.cocktailSelections.includes(option)
-          ? prev.cocktailSelections.filter(s => s !== option)
-          : prev.cocktailSelections.length < 2 ? [...prev.cocktailSelections, option] : prev.cocktailSelections;
-        return { ...prev, cocktailSelections: selections };
-      });
-    };
+  const handleCocktailChange = (option) => {
+    setPBuffet(prev => {
+      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length + prev.upgradeSelectionsDrinks.length;
+      const selections = prev.cocktailSelections.includes(option)
+        ? prev.cocktailSelections.filter(s => s !== option)
+        : totalSelected < 2 ? [...prev.cocktailSelections, option] : prev.cocktailSelections;
+      return { ...prev, cocktailSelections: selections };
+    });
+  };
+
+  const handleUpgrade125Change = (option) => {
+    setPBuffet(prev => {
+      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length + prev.upgradeSelectionsDrinks.length;
+      const selections = prev.upgradeSelections125.includes(option)
+        ? prev.upgradeSelections125.filter(s => s !== option)
+        : totalSelected < 2 ? [...prev.upgradeSelections125, option] : prev.upgradeSelections125;
+      return { ...prev, upgradeSelections125: selections };
+    });
+  };
+
+  const handleUpgrade150Change = (option) => {
+    setPBuffet(prev => {
+      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length + prev.upgradeSelectionsDrinks.length;
+      const selections = prev.upgradeSelections150.includes(option)
+        ? prev.upgradeSelections150.filter(s => s !== option)
+        : totalSelected < 2 ? [...prev.upgradeSelections150, option] : prev.upgradeSelections150;
+      return { ...prev, upgradeSelections150: selections };
+    });
+  };
+
+  const handleUpgradeDrinksChange = (option) => {
+    setPBuffet(prev => {
+      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length + prev.upgradeSelectionsDrinks.length;
+      const selections = prev.upgradeSelectionsDrinks.includes(option)
+        ? prev.upgradeSelectionsDrinks.filter(s => s !== option)
+        : totalSelected < 2 ? [...prev.upgradeSelectionsDrinks, option] : prev.upgradeSelectionsDrinks;
+      return { ...prev, upgradeSelectionsDrinks: selections };
+    });
+  };
 
     return (
       <div className="page">
@@ -1540,20 +1579,80 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             "Wrap Pork Sisig/Wrap Ala Portofino",
             "Pork Belly with Chili Caramel Sauce",
             "Cone of Caesar Salad with Bacon Bits and Anchovy Croutons",
-            "Palabok Spring Rolls with Dried Smoked Fish and Salted Egg"
+            "Palabok Spring Rolls with Dried Smoked Fish and Salted Egg",
+            "Coconut Lime Spanish Mackerel Ceviche",
+            "Chicken Kebabs Skewers",
+            "Baked Mussel Nicoise",
+            "Chicken Express in Lemon Grass Skewers with Spicy Cream Sauce",
           ].map(option => (
             <label key={option} className="cocktail-item">
               <input
                 type="checkbox"
                 checked={pBuffet.cocktailSelections.includes(option)}
                 onChange={() => handleCocktailChange(option)}
-                disabled={!pBuffet.cocktailSelections.includes(option) && pBuffet.cocktailSelections.length >= 2}
+              disabled={!pBuffet.cocktailSelections.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length) >= 2}
               />
               {option}
             </label>
           ))}
         </div>
-        <p>Selected: {pBuffet.cocktailSelections.length}/2</p>
+        <p>Selected: {(pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length)}/2</p>
+
+        <h4>Upgrade Options</h4>
+        <div className="upgrade-section">
+          <h5>Upgrade Options (++125 per pax)</h5>
+          {[
+            "Tuna Tartare in Savory Cone",
+            "Bacon Chives Mini Cheese Balls",
+          ].map(option => (
+            <label key={option} className="upgrade-item">
+                <input
+                  type="checkbox"
+                  checked={pBuffet.upgradeSelections125.includes(option)}
+                  onChange={() => handleUpgrade125Change(option)}
+                  disabled={!pBuffet.upgradeSelections125.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length) >= 2}
+                />
+              {option}
+            </label>
+          ))}
+        </div>
+        <div className="upgrade-section">
+          <h5>Upgrade Options (++150 per pax)</h5>
+          {[
+            "Shrimp Tapas with Mango Shooters",
+            "Blueberry Walnut Toast",
+            "Strawberry Raisin Pine Nuts Toast",
+            "Prosciutto Red Grapes Arugula Toast",
+            "Heirloom Tomatoes Basil Balsamic Toast",
+            "Prosciutto Wrapped Pears with Arugula and Grissini Stick",
+          ].map(option => (
+            <label key={option} className="upgrade-item">
+                <input
+                  type="checkbox"
+                  checked={pBuffet.upgradeSelections150.includes(option)}
+                  onChange={() => handleUpgrade150Change(option)}
+                  disabled={!pBuffet.upgradeSelections150.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length) >= 2}
+                />
+              {option}
+            </label>
+          ))}
+        </div>
+        <div className="upgrade-section">
+          <h5>Upgrade Options for Drinks (++150 per pax)</h5>
+          {[
+            "Juan Carlo Signature Rose'",
+          ].map(option => (
+            <label key={option} className="upgrade-item">
+                <input
+                  type="checkbox"
+                  checked={pBuffet.upgradeSelectionsDrinks.includes(option)}
+                  onChange={() => handleUpgradeDrinksChange(option)}
+                  disabled={!pBuffet.upgradeSelectionsDrinks.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length) >= 2}
+                />
+              {option}
+            </label>
+          ))}
+        </div>
       </div>
     );
   };
@@ -1565,13 +1664,16 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <h4>Menu Details</h4>
       <div className="form-group">
         <label>Cocktail Hour</label>
-        <textarea 
-          value={p3.cocktailHour} 
-          onChange={(e)=>setP3({...p3, cocktailHour:convertToUppercase(e.target.value)})} 
+        <textarea
+          value={p3.cocktailHour}
+          onChange={(e)=>setP3({...p3, cocktailHour:convertToUppercase(e.target.value)})}
           rows={3}
           placeholder="Enter cocktail hour details..."
         />
       </div>
+
+      <h4>Main Entree and Sides</h4>
+
       <div className="form-group">
         <label>Appetizer</label>
         <textarea 

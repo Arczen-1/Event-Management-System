@@ -7,6 +7,7 @@ import SalesManagerDashboard from "./components/SalesManagerDashboard";
 import AccountingDashboard from "./components/AccountingDashboard";
 import WarehouseDashboard from "./components/WarehouseDashboard";
 import CreativeDashboard from "./components/CreativeDashboard";
+import CreativeManagerDashboard from "./components/CreativeManagerDashboard";
 import LinenDashboard from "./components/LinenDashboard";
 import LogisticsDashboard from "./components/LogisticsDashboard";
 import FabricationDashboard from "./components/FabricationDashboard";
@@ -52,6 +53,9 @@ function App() {
               break;
             case 'Creative':
               setCurrentView('creative');
+              break;
+            case 'Creative Manager':
+              setCurrentView('creative-manager');
               break;
             case 'Linen':
               setCurrentView('linen');
@@ -122,6 +126,7 @@ function App() {
   if (currentView === "accounting") return <AccountingDashboard onLogout={handleLogout} />;
   if (currentView === "warehouse") return <WarehouseDashboard onLogout={handleLogout} />;
   if (currentView === "creative") return <CreativeDashboard onLogout={handleLogout} />;
+  if (currentView === "creative-manager") return <CreativeManagerDashboard onLogout={handleLogout} />;
   if (currentView === "linen") return <LinenDashboard onLogout={handleLogout} />;
   if (currentView === "logistics") return <LogisticsDashboard onLogout={handleLogout} />;
   if (currentView === "fabrication") return <FabricationDashboard onLogout={handleLogout} />;
