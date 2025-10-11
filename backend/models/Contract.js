@@ -28,6 +28,7 @@ const ContractSchema = new mongoose.Schema(
       coordinatorEmail: { type: String, default: "" },
       eventDate: { type: String, default: "" },
       occasion: { type: String, default: "" },
+      serviceStyle: { type: String, default: "" },
       venue: { type: String, default: "" },
       hall: { type: String, default: "" },
       ingressTime: { type: String, default: "" },
@@ -94,6 +95,11 @@ const ContractSchema = new mongoose.Schema(
       knowUsFoodTasting: { type: Boolean, default: false },
       knowUsCelebrityReferral: { type: Boolean, default: false },
       knowUsOthers: { type: Boolean, default: false }
+    },
+
+    pageBuffet: {
+      selectedPackage: { type: String, default: "" },
+      cocktailSelections: { type: [String], default: [] }
     },
 
     page3: {

@@ -296,11 +296,11 @@ app.get("/contracts/next-number", async (req, res) => {
 // POST /contracts - Create a new contract with auto-generated number
 app.post("/contracts", async (req, res) => {
   try {
-    const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, page3 = {} } = req.body
+    const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, pageBuffet = {}, page3 = {} } = req.body
 
     // If status is "For Approval", validate required fields
     if (status === "For Approval") {
-      const tempContract = { page1, page2, page3 };
+      const tempContract = { page1, page2, pageBuffet, page3 };
       const validationErrors = validateContractForApproval(tempContract);
       if (validationErrors.length > 0) {
         return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
@@ -315,6 +315,7 @@ app.post("/contracts", async (req, res) => {
       status,
       page1,
       page2,
+      pageBuffet,
       page3,
     })
 
@@ -325,16 +326,16 @@ app.post("/contracts", async (req, res) => {
       // Rare race: regenerate and retry once
       try {
         const contractNumber = await generateNextContractNumber(new Date())
-        const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, page3 = {} } = req.body
+        const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, pageBuffet = {}, page3 = {} } = req.body
         // Re-validate if needed
         if (status === "For Approval") {
-          const tempContract = { page1, page2, page3 };
+          const tempContract = { page1, page2, pageBuffet, page3 };
           const validationErrors = validateContractForApproval(tempContract);
           if (validationErrors.length > 0) {
             return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
           }
         }
-        const contract = await Contract.create({ contractNumber, department, status, page1, page2, page3 })
+        const contract = await Contract.create({ contractNumber, department, status, page1, page2, pageBuffet, page3 })
         return res.json({ message: "Contract created", contract })
       } catch (err2) {
         console.error("Retry create contract error:", err2)
@@ -376,7 +377,7 @@ app.put("/contracts/:id", async (req, res) => {
   try {
     const { id } = req.params
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
-    const { page1 = {}, page2 = {}, page3 = {}, status, rejectionReason } = req.body
+    const { page1 = {}, page2 = {}, pageBuffet = {}, page3 = {}, status, rejectionReason } = req.body
     const contract = await Contract.findById(id)
     if (!contract) return res.status(404).json({ message: "Not found" })
     if (!["Draft", "Rejected"].includes(contract.status)) return res.status(400).json({ message: "Only Draft or Rejected contracts can be edited" })
@@ -384,6 +385,7 @@ app.put("/contracts/:id", async (req, res) => {
     // Update the fields
     contract.page1 = page1
     contract.page2 = page2
+    contract.pageBuffet = pageBuffet
     contract.page3 = page3
     if (rejectionReason !== undefined) contract.rejectionReason = rejectionReason
 
