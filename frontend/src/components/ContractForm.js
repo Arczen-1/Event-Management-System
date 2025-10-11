@@ -108,7 +108,55 @@ const FOOD_STATIONS = [
   { name: "Sushi-Sashimi Platter", cost: 300 },
   { name: "Kebab Station", cost: 325 },
   { name: "European Sausage Station", cost: 350 },
-  { name: "Cheese Raclette Station", cost: 350 }
+  { name: "Cheese Raclette Station", cost: 350 },
+  { name: "Dimsum Platter", cost: 350 },
+  { name: "Seafood on Ice", cost: 395 },
+  { name: "Spanish Cold Cuts & Cheese Platter", cost: 450 },
+  { name: "Sea Shell Station", cost: 600 },
+  { name: "Oyster Bar", cost: 750 }
+];
+
+const OYSTER_BAR_OPTIONS = [
+  "Kumamoto Oyster Rockefeller",
+  "Fresh Pacific Oyster with Tabasco Sauce",
+  "Oyster Mignonette with Peach, Ginger & Mint",
+  "Truffled Mushroom Oyster",
+  "Creamy Sisig Oyster",
+  "Oyster Kilpatrick",
+  "Oyster Motoyaki"
+];
+
+const APPETIZER_UPGRADE_125_OPTIONS = [
+  "Baked Hokkaido Scallop with Pastis Prado Wine in Paprika Cream Sauce",
+  "Escargot A ‘La Bourguignonne"
+];
+
+const APPETIZER_UPGRADE_150_OPTIONS = [
+  "Juan Carlo Signature Rosé"
+];
+
+const BREAD_OPTIONS = [
+  "French Garlic Bread",
+  "Olive Ciabatta",
+  "Garlic and Basil Focaccia",
+  "Toasted Herb French Garlic Bread",
+  "Dinnel Roll",
+  "Biscotti Bread with Pistachio Nuts",
+  "Grissini Stick Squid Bread",
+  "Truffled Cheese Grissini"
+];
+
+const SALAD_UPGRADE_125_OPTIONS = [
+  "Crunchy Apple Salad",
+  "Waldorf Salad",
+  "Russian Salad",
+  "Garden Salad with Caesar Salad Dressing or Raspberry Vinaigrette"
+];
+
+const SALAD_UPGRADE_150_OPTIONS = [
+  "Panzanella Salad",
+  "European Salad",
+  "Crab Tumbler with Mango Ginger Cilantro Dressing"
 ];
 
 // Venue data
@@ -260,8 +308,14 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     upgradeSelections125: [],
     upgradeSelections150: [],
     foodStations: [],
+    oysterBarSelections: [],
+    appetizerUpgradeSelections125: [],
+    appetizerUpgradeSelections150: [],
     soupSelections: [],
     upgradeSoupSelections100: [],
+    breadSelections: [],
+    saladUpgradeSelections125: [],
+    saladUpgradeSelections150: [],
     mainBeefSelections: [],
     mainPorkSelections: [],
     mainFishSelections: [],
@@ -344,10 +398,24 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         ...pBuffet.upgradeSelections125.map(s => `${s} (+125)`),
         ...pBuffet.upgradeSelections150.map(s => `${s} (+150)`)
       ].join(", ");
-      const foodStationsText = pBuffet.foodStations.map(s => `${s.name} (+++${s.cost})`).join(", ");
+      const foodStationsText = pBuffet.foodStations.map(s => {
+        if (s.name === "Oyster Bar") {
+          return `${s.name} (+++${s.cost}) - ${(pBuffet.oysterBarSelections || []).join(", ")}`;
+        }
+        return `${s.name} (+++${s.cost})`;
+      }).join(", ");
+      const appetizerText = [
+        ...pBuffet.appetizerUpgradeSelections125.map(s => `${s} (+125)`),
+        ...pBuffet.appetizerUpgradeSelections150.map(s => `${s} (+150)`)
+      ].join(", ");
       const soupText = [
         ...pBuffet.soupSelections,
         ...pBuffet.upgradeSoupSelections100.map(s => `${s} (+100)`)
+      ].join(", ");
+      const breadText = pBuffet.breadSelections.join(", ");
+      const saladText = [
+        ...pBuffet.saladUpgradeSelections125.map(s => `${s} (+125)`),
+        ...pBuffet.saladUpgradeSelections150.map(s => `${s} (+150)`)
       ].join(", ");
       const mainText = [
         ...pBuffet.mainBeefSelections,
@@ -367,7 +435,10 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         ...prev,
         cocktailHour: cocktailText,
         foodStations: foodStationsText,
+        appetizer: appetizerText,
         soup: soupText,
+        bread: breadText,
+        salad: saladText,
         mainEntree: mainText,
         rice: riceText,
         dessert: dessertText,
@@ -380,8 +451,14 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     pBuffet.upgradeSelections125,
     pBuffet.upgradeSelections150,
     pBuffet.foodStations,
+    pBuffet.oysterBarSelections,
+    pBuffet.appetizerUpgradeSelections125,
+    pBuffet.appetizerUpgradeSelections150,
     pBuffet.soupSelections,
     pBuffet.upgradeSoupSelections100,
+    pBuffet.breadSelections,
+    pBuffet.saladUpgradeSelections125,
+    pBuffet.saladUpgradeSelections150,
     pBuffet.mainBeefSelections,
     pBuffet.mainPorkSelections,
     pBuffet.mainFishSelections,
@@ -444,8 +521,14 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         upgradeSelections125: existing.pageBuffet?.upgradeSelections125 || [],
         upgradeSelections150: existing.pageBuffet?.upgradeSelections150 || [],
         foodStations: existing.pageBuffet?.foodStations || [],
+        oysterBarSelections: existing.pageBuffet?.oysterBarSelections || [],
+        appetizerUpgradeSelections125: existing.pageBuffet?.appetizerUpgradeSelections125 || [],
+        appetizerUpgradeSelections150: existing.pageBuffet?.appetizerUpgradeSelections150 || [],
         soupSelections: existing.pageBuffet?.soupSelections || [],
         upgradeSoupSelections100: existing.pageBuffet?.upgradeSoupSelections100 || [],
+        breadSelections: existing.pageBuffet?.breadSelections || [],
+        saladUpgradeSelections125: existing.pageBuffet?.saladUpgradeSelections125 || [],
+        saladUpgradeSelections150: existing.pageBuffet?.saladUpgradeSelections150 || [],
         mainBeefSelections: existing.pageBuffet?.mainBeefSelections || [],
         mainPorkSelections: existing.pageBuffet?.mainPorkSelections || [],
         mainFishSelections: existing.pageBuffet?.mainFishSelections || [],
@@ -675,10 +758,10 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   useEffect(() => {
     const price = parseFloat(p3.pricePerPlate) || 0;
     const guests = parseInt(p1.totalGuests) || 0;
-    const additionalPerPax = pBuffet.foodStations.reduce((sum, s) => sum + s.cost, 0) + (pBuffet.upgradeSoupSelections100.length * 100);
+    const additionalPerPax = pBuffet.foodStations.reduce((sum, s) => sum + s.cost, 0) + (pBuffet.upgradeSoupSelections100.length * 100) + (pBuffet.appetizerUpgradeSelections125.length * 125) + (pBuffet.appetizerUpgradeSelections150.length * 150) + (pBuffet.saladUpgradeSelections125.length * 125) + (pBuffet.saladUpgradeSelections150.length * 150);
     const total = (price + additionalPerPax) * guests;
     setP3((prev) => ({ ...prev, totalMenuCost: total.toString() }));
-  }, [p3.pricePerPlate, p1.totalGuests, pBuffet.foodStations, pBuffet.upgradeSoupSelections100]);
+  }, [p3.pricePerPlate, p1.totalGuests, pBuffet.foodStations, pBuffet.upgradeSoupSelections100, pBuffet.appetizerUpgradeSelections125, pBuffet.appetizerUpgradeSelections150, pBuffet.saladUpgradeSelections125, pBuffet.saladUpgradeSelections150]);
 
   // Auto-compute service charge as 10% of totalMenuCost + totalSpecialReqCost + mobilizationCharge
   useEffect(() => {
@@ -980,6 +1063,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       const soupUpgradeLimit = !pBuffet.selectedPackage ? 0 : (pBuffet.selectedPackage === "Buffet Package 1" ? 0 : (pBuffet.selectedPackage === "Buffet Package 2" ? 1 : 2));
       if (pBuffet.upgradeSoupSelections100.length > soupUpgradeLimit) {
         newErrors.upgradeSoupSelections100 = `Please select at most ${soupUpgradeLimit} soup upgrade options.`;
+      }
+      if (pBuffet.foodStations.some(s => s.name === "Oyster Bar") && (pBuffet.oysterBarSelections || []).length !== 4) {
+        newErrors.oysterBarSelections = "Please select exactly 4 oyster options.";
       }
     }
 
@@ -1603,21 +1689,21 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         { pax: "100 pax", price: "2,800.00" }
       ],
       menu: [
-        "Two Cocktail Hours",
-        "One Soup",
+        "2 Cocktail Hours",
+        "1 Soup",
         {
           title: "Main Entree",
           choiceOf: "Choice of:",
           items: [
-            "Beef or Pork",
-            "Fish or Seafood",
-            "Chicken",
-            "Pasta or Noodles or Vegetables or Side Dish"
+            "1 Beef or Pork",
+            "1 Fish or Seafood",
+            "1 Chicken",
+            "1 Pasta or Noodles or Vegetables or Side Dish"
           ]
         },
-        "Rice",
-        "One Dessert",
-        "Two Drinks"
+        "1 Rice",
+        "1 Dessert",
+        "2 Drinks"
       ]
     },
     {
@@ -1631,22 +1717,22 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         { pax: "100 pax", price: "2,890.00" }
       ],
       menu: [
-        "Two Cocktail Hours",
-        "One Soup",
+        "2 Cocktail Hours",
+        "1 Soup",
         {
           title: "Main Entree",
           choiceOf: "Choice of:",
           items: [
-            "Beef or Pork",
-            "Fish or Seafood",
-            "Chicken",
-            "Pasta or Noodles",
-            "Vegetables or Side Dish"
+            "1 Beef or Pork",
+            "1 Fish or Seafood",
+            "1 Chicken",
+            "1 Pasta or Noodles",
+            "1 Vegetables or Side Dish"
           ]
         },
-        "Rice",
-        "Two Desserts",
-        "Two Drinks"
+        "1 Rice",
+        "2 Dessert",
+        "2 Drinks"
       ]
     },
     {
@@ -1660,23 +1746,23 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         { pax: "100 pax", price: "3,030.00" }
       ],
       menu: [
-        "Two Cocktail Hours",
-        "One Soup",
+        "2 Cocktail Hours",
+        "1 Soup",
         {
           title: "Main Entree",
           choiceOf: "Choice of:",
           items: [
-            "Beef",
-            "Pork",
-            "Fish or Seafood",
-            "Chicken",
-            "Pasta or Noodles",
-            "Vegetables or Side Dish"
+            "1 Beef",
+            "1 Pork",
+            "1 Fish or Seafood",
+            "1 Chicken",
+            "1 Pasta or Noodles",
+            "1 Vegetables or Side Dish"
           ]
         },
-        "Rice",
-        "Two Desserts",
-        "Two Drinks"
+        "1 Rice",
+        "2 Dessert",
+        "2 Drinks"
       ]
     }
   ];
@@ -1994,7 +2080,50 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     });
   };
 
+  const handleOysterChange = (option) => {
+    setPBuffet(prev => {
+      const selections = (prev.oysterBarSelections || []).includes(option)
+        ? (prev.oysterBarSelections || []).filter(s => s !== option)
+        : (prev.oysterBarSelections || []).length < 4 ? [...(prev.oysterBarSelections || []), option] : (prev.oysterBarSelections || []);
+      return { ...prev, oysterBarSelections: selections };
+    });
+  };
 
+  const handleAppetizer125Change = (option) => {
+    setPBuffet(prev => {
+      const selections = prev.appetizerUpgradeSelections125.includes(option)
+        ? prev.appetizerUpgradeSelections125.filter(s => s !== option)
+        : [...prev.appetizerUpgradeSelections125, option];
+      return { ...prev, appetizerUpgradeSelections125: selections };
+    });
+  };
+
+  const handleAppetizer150Change = (option) => {
+    setPBuffet(prev => {
+      const selections = prev.appetizerUpgradeSelections150.includes(option)
+        ? prev.appetizerUpgradeSelections150.filter(s => s !== option)
+        : [...prev.appetizerUpgradeSelections150, option];
+      return { ...prev, appetizerUpgradeSelections150: selections };
+    });
+  };
+
+  const handleSalad125Change = (option) => {
+    setPBuffet(prev => {
+      const selections = prev.saladUpgradeSelections125.includes(option)
+        ? prev.saladUpgradeSelections125.filter(s => s !== option)
+        : [...prev.saladUpgradeSelections125, option];
+      return { ...prev, saladUpgradeSelections125: selections };
+    });
+  };
+
+  const handleSalad150Change = (option) => {
+    setPBuffet(prev => {
+      const selections = prev.saladUpgradeSelections150.includes(option)
+        ? prev.saladUpgradeSelections150.filter(s => s !== option)
+        : [...prev.saladUpgradeSelections150, option];
+      return { ...prev, saladUpgradeSelections150: selections };
+    });
+  };
 
     return (
       <div className="page">
@@ -2024,7 +2153,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             ))}
           </div>
         </div>
-        <p>Cocktail Selections: {totalCocktailSelections}/{cocktailLimit}</p>
 
         <div className="upgrade-section">
           <h5>Upgrade Options (++125 per pax)</h5>
@@ -2067,6 +2195,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               </label>
             ))}
           </div>
+          <p>Cocktail Selections: {totalCocktailSelections}/{cocktailLimit}</p>
         </div>
 
         <div className="menu-section">
@@ -2090,6 +2219,60 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           ))}
         </div>
 
+        {pBuffet.foodStations.some(s => s.name === "Oyster Bar") && pBuffet.oysterBarSelections && (
+          <div className="menu-section">
+            <h5>Oyster Bar Choices (Select 4)</h5>
+            <div className="menu-grid">
+              {OYSTER_BAR_OPTIONS.map(option => (
+                <label key={option} className="menu-item">
+                  <input
+                    type="checkbox"
+                    checked={pBuffet.oysterBarSelections.includes(option)}
+                    onChange={() => handleOysterChange(option)}
+                    disabled={!pBuffet.oysterBarSelections.includes(option) && pBuffet.oysterBarSelections.length >= 4}
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+            <p>Oyster Selections: {pBuffet.oysterBarSelections.length}/4</p>
+          </div>
+        )}
+
+        <div className="menu-section">
+          <h5>Appetizer (Optional)</h5>
+          <div className="menu-category">
+            <h6>++125 per pax</h6>
+            <div className="menu-grid">
+              {APPETIZER_UPGRADE_125_OPTIONS.map(option => (
+                <label key={option} className="menu-item">
+                  <input
+                    type="checkbox"
+                    checked={pBuffet.appetizerUpgradeSelections125.includes(option)}
+                    onChange={() => handleAppetizer125Change(option)}
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="menu-category">
+            <h6>++150 per pax</h6>
+            <div className="menu-grid">
+              {APPETIZER_UPGRADE_150_OPTIONS.map(option => (
+                <label key={option} className="menu-item">
+                  <input
+                    type="checkbox"
+                    checked={pBuffet.appetizerUpgradeSelections150.includes(option)}
+                    onChange={() => handleAppetizer150Change(option)}
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="menu-section">
           <h5>Soup</h5>
           <div className="menu-grid">
@@ -2099,7 +2282,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                   type="checkbox"
                   checked={pBuffet.soupSelections.includes(option)}
                   onChange={() => handleSoupChange(option)}
-                  disabled={!pBuffet.soupSelections.includes(option) && pBuffet.soupSelections.length >= 1}
+                  disabled={!pBuffet.soupSelections.includes(option) && (pBuffet.soupSelections.length + pBuffet.upgradeSoupSelections100.length) >= (1 + soupUpgradeLimit)}
                 />
                 {option}
               </label>
@@ -2116,14 +2299,48 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                   type="checkbox"
                   checked={pBuffet.upgradeSoupSelections100.includes(option)}
                   onChange={() => handleUpgradeSoupChange(option)}
-                  disabled={!pBuffet.upgradeSoupSelections100.includes(option) && pBuffet.upgradeSoupSelections100.length >= soupUpgradeLimit}
+                  disabled={!pBuffet.upgradeSoupSelections100.includes(option) && (pBuffet.soupSelections.length + pBuffet.upgradeSoupSelections100.length) >= (1 + soupUpgradeLimit)}
                 />
                 <span>{option}</span>
               </label>
             ))}
           </div>
         </div>
-        <p>Soup Upgrade Selections: {pBuffet.upgradeSoupSelections100.length}/{soupUpgradeLimit}</p>
+        <p>Soup Selections: {pBuffet.soupSelections.length + pBuffet.upgradeSoupSelections100.length}/{1 + soupUpgradeLimit}</p>
+
+        <div className="menu-section">
+          <h5>Salad (Optional)</h5>
+          <div className="menu-category">
+            <h6>++125 per pax</h6>
+            <div className="menu-grid">
+              {SALAD_UPGRADE_125_OPTIONS.map(option => (
+                <label key={option} className="menu-item">
+                  <input
+                    type="checkbox"
+                    checked={pBuffet.saladUpgradeSelections125.includes(option)}
+                    onChange={() => handleSalad125Change(option)}
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="menu-category">
+            <h6>++150 per pax</h6>
+            <div className="menu-grid">
+              {SALAD_UPGRADE_150_OPTIONS.map(option => (
+                <label key={option} className="menu-item">
+                  <input
+                    type="checkbox"
+                    checked={pBuffet.saladUpgradeSelections150.includes(option)}
+                    onChange={() => handleSalad150Change(option)}
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
 
         <div className="menu-section">
           <h5>Main Entrees</h5>
@@ -2265,7 +2482,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         </div>
 
         <div className="menu-section">
-          <h5>Rice (Select 1)</h5>
+          <h5>Rice</h5>
           <div className="menu-grid">
             {RICE_OPTIONS.map(option => (
               <label key={option} className="menu-item">
@@ -2282,7 +2499,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         </div>
 
         <div className="menu-section">
-          <h5>Dessert (Select 1-2)</h5>
+          <h5>Dessert</h5>
           <div className="menu-grid">
             {DESSERT_OPTIONS.map(option => (
               <label key={option} className="menu-item">
@@ -2299,7 +2516,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         </div>
 
         <div className="menu-section">
-          <h5>Drinks (Select 2)</h5>
+          <h5>Drinks</h5>
           <div className="menu-grid">
             {DRINKS_OPTIONS.map(option => (
               <label key={option} className="menu-item">

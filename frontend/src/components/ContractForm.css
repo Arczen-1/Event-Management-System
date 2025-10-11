@@ -466,6 +466,8 @@
   background-color: #fdf8f3;
   border-radius: 8px;
   border: 1px solid #e7ddd1;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .menu-section h5 {
