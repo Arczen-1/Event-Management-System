@@ -99,9 +99,16 @@ const ContractSchema = new mongoose.Schema(
 
     pageBuffet: {
       selectedPackage: { type: String, default: "" },
-      cocktailSelections: { type: [String], default: [] }
+      cocktailSelections: { type: [String], default: [] },
+      upgradeSelections125: { type: [String], default: [] },
+      upgradeSelections150: { type: [String], default: [] },
+      upgradeSelectionsDrinks: { type: [String], default: [] },
+      soupSelections: { type: [String], default: [] },
+      mainEntreeSelections: { type: [String], default: [] },
+      riceSelections: { type: [String], default: [] },
+      dessertSelections: { type: [String], default: [] },
+      drinksSelections: { type: [String], default: [] }
     },
-
     page3: {
       pricePerPlate: { type: String, default: "" },
       cocktailHour: { type: String, default: "" },

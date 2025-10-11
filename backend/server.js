@@ -34,6 +34,16 @@ db.once("open", () => console.log("MongoDB Connected")) // Log successful connec
   }
 })()
 
+// Seed default Creative Manager account (only runs if no Creative Manager exists)
+;(async () => {
+  const existing = await User.findOne({ username: "creativemanager" }) // Check if Creative Manager already exists
+  if (!existing) {
+    const hashed = await bcrypt.hash("password123", 10) // Hash the default password
+    await User.create({ username: "creativemanager", fullName: "Creative Manager", password: hashed, email: "creativemanager@example.com", role: "Creative Manager", status: "approved" }) // Create default Creative Manager
+    console.log("👤 Default Creative Manager created (username: creativemanager, password: password123)")
+  }
+})()
+
 // ==================== API ROUTES ====================
 
 // POST /login - User authentication endpoint

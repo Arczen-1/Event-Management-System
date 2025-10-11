@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
   address: { type: String, default: "" },
   role: {
     type: String,
-    enum: ['Sales', 'Sales Manager', 'Accounting', 'Warehouse', 'Creative', 'Linen', 'Logistics', 'Kitchen', 'Stockroom', 'Purchasing', 'Banquet Staff', 'Admin'],
+    enum: ['Sales', 'Sales Manager', 'Accounting', 'Warehouse', 'Creative', 'Creative Manager', 'Linen', 'Logistics', 'Kitchen', 'Stockroom', 'Purchasing', 'Banquet Staff', 'Admin'],
     default: null
   },
   status: {
