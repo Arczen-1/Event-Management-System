@@ -147,7 +147,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     cocktailSelections: [],
     upgradeSelections125: [],
     upgradeSelections150: [],
-    upgradeSelectionsDrinks: [],
     soupSelections: [],
     mainEntreeSelections: [],
     riceSelections: [],
@@ -159,12 +158,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const [p3, setP3] = useState({
     pricePerPlate: "0",
     cocktailHour: "",
+    foodStations: "",
     appetizer: "",
     soup: "",
     bread: "",
     salad: "",
     mainEntree: "",
+    rice: "",
     dessert: "",
+    drinks: "",
     cakeName: "",
     kidsMeal: "",
     crewMeal: "",
@@ -196,7 +198,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     if (existing) {
       setP1(existing.page1 || {});
       setP2(existing.page2 || {});
-      setPBuffet({ selectedPackage: "", cocktailSelections: [], upgradeSelections125: [], upgradeSelections150: [], upgradeSelectionsDrinks: [], soupSelections: [], mainEntreeSelections: [], riceSelections: [], dessertSelections: [], drinksSelections: [], ...existing.pageBuffet });
+      setPBuffet({ selectedPackage: "", cocktailSelections: [], upgradeSelections125: [], upgradeSelections150: [], soupSelections: [], mainEntreeSelections: [], riceSelections: [], dessertSelections: [], drinksSelections: [], ...existing.pageBuffet });
       setP3(existing.page3 || {});
       setNextNumber(existing.contractNumber || "");
     } else {
@@ -592,6 +594,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     const requiredP3Fields = [
       'pricePerPlate'
     ];
+    if (p1.serviceStyle === "Buffet") {
+      requiredP3Fields.push('cocktailHour', 'soup', 'mainEntree', 'rice', 'dessert', 'drinks');
+    }
     for (const field of requiredP3Fields) {
       if (!p3[field] || !p3[field].trim()) return false;
     }
@@ -650,6 +655,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     const requiredP3Fields = [
       'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'serviceCharge', 'fortyPercentAmount', 'fullPaymentDueOn', 'fullPaymentAmount'
     ];
+    if (p1.serviceStyle === "Buffet") {
+      requiredP3Fields.push('cocktailHour', 'soup', 'mainEntree', 'rice', 'dessert', 'drinks');
+    }
     for (const field of requiredP3Fields) {
       if (!p3[field] || !p3[field].trim()) {
         newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
@@ -1532,7 +1540,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   const handleCocktailChange = (option) => {
     setPBuffet(prev => {
-      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length + prev.upgradeSelectionsDrinks.length;
+      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length;
       const selections = prev.cocktailSelections.includes(option)
         ? prev.cocktailSelections.filter(s => s !== option)
         : totalSelected < 2 ? [...prev.cocktailSelections, option] : prev.cocktailSelections;
@@ -1542,7 +1550,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   const handleUpgrade125Change = (option) => {
     setPBuffet(prev => {
-      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length + prev.upgradeSelectionsDrinks.length;
+      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length;
       const selections = prev.upgradeSelections125.includes(option)
         ? prev.upgradeSelections125.filter(s => s !== option)
         : totalSelected < 2 ? [...prev.upgradeSelections125, option] : prev.upgradeSelections125;
@@ -1552,7 +1560,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   const handleUpgrade150Change = (option) => {
     setPBuffet(prev => {
-      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length + prev.upgradeSelectionsDrinks.length;
+      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length;
       const selections = prev.upgradeSelections150.includes(option)
         ? prev.upgradeSelections150.filter(s => s !== option)
         : totalSelected < 2 ? [...prev.upgradeSelections150, option] : prev.upgradeSelections150;
@@ -1560,19 +1568,11 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     });
   };
 
-  const handleUpgradeDrinksChange = (option) => {
-    setPBuffet(prev => {
-      const totalSelected = prev.cocktailSelections.length + prev.upgradeSelections125.length + prev.upgradeSelections150.length + prev.upgradeSelectionsDrinks.length;
-      const selections = prev.upgradeSelectionsDrinks.includes(option)
-        ? prev.upgradeSelectionsDrinks.filter(s => s !== option)
-        : totalSelected < 2 ? [...prev.upgradeSelectionsDrinks, option] : prev.upgradeSelectionsDrinks;
-      return { ...prev, upgradeSelectionsDrinks: selections };
-    });
-  };
+
 
     return (
       <div className="page">
-        <h4>Cocktail Hour (Select up to 2)</h4>
+        <h4>Cocktail Hour</h4>
         <div className="cocktail-grid">
           {[
             "Money Bag with Pork, Shrimp & Leeks",
@@ -1590,13 +1590,13 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                 type="checkbox"
                 checked={pBuffet.cocktailSelections.includes(option)}
                 onChange={() => handleCocktailChange(option)}
-              disabled={!pBuffet.cocktailSelections.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length) >= 2}
+              disabled={!pBuffet.cocktailSelections.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length) >= 2}
               />
               {option}
             </label>
           ))}
         </div>
-        <p>Selected: {(pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length)}/2</p>
+        <p>Selected: {(pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length)}/2</p>
 
         <h4>Upgrade Options</h4>
         <div className="upgrade-section">
@@ -1610,7 +1610,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                   type="checkbox"
                   checked={pBuffet.upgradeSelections125.includes(option)}
                   onChange={() => handleUpgrade125Change(option)}
-                  disabled={!pBuffet.upgradeSelections125.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length) >= 2}
+                  disabled={!pBuffet.upgradeSelections125.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length) >= 2}
                 />
               {option}
             </label>
@@ -1631,28 +1631,13 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                   type="checkbox"
                   checked={pBuffet.upgradeSelections150.includes(option)}
                   onChange={() => handleUpgrade150Change(option)}
-                  disabled={!pBuffet.upgradeSelections150.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length) >= 2}
+                  disabled={!pBuffet.upgradeSelections150.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length) >= 2}
                 />
               {option}
             </label>
           ))}
         </div>
-        <div className="upgrade-section">
-          <h5>Upgrade Options for Drinks (++150 per pax)</h5>
-          {[
-            "Juan Carlo Signature Rose'",
-          ].map(option => (
-            <label key={option} className="upgrade-item">
-                <input
-                  type="checkbox"
-                  checked={pBuffet.upgradeSelectionsDrinks.includes(option)}
-                  onChange={() => handleUpgradeDrinksChange(option)}
-                  disabled={!pBuffet.upgradeSelectionsDrinks.includes(option) && (pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length + pBuffet.upgradeSelectionsDrinks.length) >= 2}
-                />
-              {option}
-            </label>
-          ))}
-        </div>
+
       </div>
     );
   };
