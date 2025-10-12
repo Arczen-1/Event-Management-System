@@ -15,10 +15,12 @@ import {
   MAIN_FISH_OPTIONS,
   MAIN_SEAFOOD_OPTIONS,
   MAIN_CHICKEN_OPTIONS,
+  UPGRADE_CHICKEN_95_OPTIONS,
+  UPGRADE_CHICKEN_100_OPTIONS,
+  UPGRADE_CHICKEN_110_OPTIONS,
   MAIN_PASTA_OPTIONS,
   MAIN_NOODLES_OPTIONS,
-  MAIN_VEG_OPTIONS,
-  MAIN_SIDE_DISH_OPTIONS,
+  MAIN_VEG_SIDE_DISH_OPTIONS,
   RICE_OPTIONS,
   DESSERT_OPTIONS,
   DRINKS_OPTIONS,
@@ -213,6 +215,129 @@ function Page4MenuSelections({ pBuffet, setPBuffet, p1 }) {
                   type="checkbox"
                   checked={(pBuffet.upgradePork15000Selections || []).includes(option)}
                   onChange={(e) => handleSelectionChange("upgradePork15000Selections", option, e.target.checked)}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+          <h6>Chicken</h6>
+          <div className="checkbox-grid">
+            {MAIN_CHICKEN_OPTIONS.map((option) => (
+              <label key={option} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={(pBuffet.mainChickenSelections || []).includes(option)}
+                  onChange={(e) => handleSelectionChange("mainChickenSelections", option, e.target.checked)}
+                  disabled={!(pBuffet.mainChickenSelections || []).includes(option) && (pBuffet.mainChickenSelections || []).length >= limits.mainLimit}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+          <h6>Chicken Upgrades (+95 per pax)</h6>
+          <div className="checkbox-grid">
+            {UPGRADE_CHICKEN_95_OPTIONS.map((option) => (
+              <label key={option} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={(pBuffet.upgradeChicken95Selections || []).includes(option)}
+                  onChange={(e) => handleSelectionChange("upgradeChicken95Selections", option, e.target.checked)}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+          <h6>Chicken Upgrades (+100 per pax)</h6>
+          <div className="checkbox-grid">
+            {UPGRADE_CHICKEN_100_OPTIONS.map((option) => (
+              <label key={option} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={(pBuffet.upgradeChicken100Selections || []).includes(option)}
+                  onChange={(e) => handleSelectionChange("upgradeChicken100Selections", option, e.target.checked)}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+          <h6>Chicken Upgrades (+110 per pax)</h6>
+          <div className="checkbox-grid">
+            {UPGRADE_CHICKEN_110_OPTIONS.map((option) => (
+              <label key={option} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={(pBuffet.upgradeChicken110Selections || []).includes(option)}
+                  onChange={(e) => handleSelectionChange("upgradeChicken110Selections", option, e.target.checked)}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+          <h6>Fish</h6>
+          <div className="checkbox-grid">
+            {MAIN_FISH_OPTIONS.map((option) => (
+              <label key={option} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={(pBuffet.mainFishSelections || []).includes(option)}
+                  onChange={(e) => handleSelectionChange("mainFishSelections", option, e.target.checked)}
+                  disabled={!(pBuffet.mainFishSelections || []).includes(option) && (pBuffet.mainFishSelections || []).length >= 1}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+          <h6>Seafood</h6>
+          <div className="checkbox-grid">
+            {MAIN_SEAFOOD_OPTIONS.map((option) => (
+              <label key={option} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={(pBuffet.mainSeafoodSelections || []).includes(option)}
+                  onChange={(e) => handleSelectionChange("mainSeafoodSelections", option, e.target.checked)}
+                  disabled={!(pBuffet.mainSeafoodSelections || []).includes(option) && (pBuffet.mainSeafoodSelections || []).length >= 1}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+          <h6>Pasta</h6>
+          <div className="checkbox-grid">
+            {MAIN_PASTA_OPTIONS.map((option) => (
+              <label key={option} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={(pBuffet.mainPastaSelections || []).includes(option)}
+                  onChange={(e) => handleSelectionChange("mainPastaSelections", option, e.target.checked)}
+                  disabled={!(pBuffet.mainPastaSelections || []).includes(option) && (pBuffet.mainPastaSelections || []).length >= 1}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+          <h6>Noodles</h6>
+          <div className="checkbox-grid">
+            {MAIN_NOODLES_OPTIONS.map((option) => (
+              <label key={option} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={(pBuffet.mainNoodlesSelections || []).includes(option)}
+                  onChange={(e) => handleSelectionChange("mainNoodlesSelections", option, e.target.checked)}
+                  disabled={!(pBuffet.mainNoodlesSelections || []).includes(option) && (pBuffet.mainNoodlesSelections || []).length >= 1}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+          <h6>Vegetables/Side Dish</h6>
+          <div className="checkbox-grid">
+            {MAIN_VEG_SIDE_DISH_OPTIONS.map((option) => (
+              <label key={option} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={(pBuffet.mainVegSideDishSelections || []).includes(option)}
+                  onChange={(e) => handleSelectionChange("mainVegSideDishSelections", option, e.target.checked)}
+                  disabled={!(pBuffet.mainVegSideDishSelections || []).includes(option) && (pBuffet.mainVegSideDishSelections || []).length >= 1}
                 />
                 {option}
               </label>

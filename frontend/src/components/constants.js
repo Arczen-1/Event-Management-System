@@ -29,7 +29,7 @@ export const MAIN_BEEF_OPTIONS = [
 ];
 
 export const UPGRADE_BEEF_100_OPTIONS = [
-  "Beef Kalderetang Batangas"
+  "Beef Calderetang Batangas"
 ];
 
 export const UPGRADE_BEEF_125_OPTIONS = [
@@ -37,7 +37,7 @@ export const UPGRADE_BEEF_125_OPTIONS = [
 ];
 
 export const UPGRADE_BEEF_500_OPTIONS = [
-  "Tricolore Pepper Cream Sauce"
+  "Carving Station: Six-hour Slow Cooked Beef Brisket with Tricolore Pepper Cream Sauce"
 ];
 
 export const UPGRADE_BEEF_1100_OPTIONS = [
@@ -74,8 +74,29 @@ export const UPGRADE_PORK_15000_OPTIONS = [
 ];
 
 export const MAIN_FISH_OPTIONS = [
-  "Grilled Salmon",
-  "Tuna Steak"
+  "Fish Fillet with Creamy Dill Sauce",
+  "Pescado Con Queso",
+  "Pangasius Fish Fillet with Sweet and Sour Sauce",
+  "Fish Fillet with Homemade Tartar Sauce",
+  "Cobbler Steak in Tequila Cream Sauce",
+  "Cobbler Steak with Pesto Sauce",
+  "Pan-grilled Tanigue with Ala Pobre Sauce",
+  "Golden Fry Fish Finger with Mango Cilantro Sauce",
+  "Parmesan Crusted Fish Fillet with Homemade Tartar Sauce",
+  "Steamed Cobbler Fillet in Mandarin Sauce",
+  "Lemon Grass Soy Steamed Basa Fish with Salsa Fresco",
+  "Fish Steak with Tomato and Vegetable Salsa",
+  "Golden Fry Pangasius in Desiccated Coconut with Mango",
+  "Cilantro Dressing Sauce"
+];
+
+export const UPGRADE_FISH_200_OPTIONS = [
+  "Pacific Ocean Blue Marlin in Lemon Butter Sauce"
+];
+
+export const UPGRADE_FISH_225_OPTIONS = [
+  "Norwegian Pink Salmon in Tequila Cream Sauce",
+  "Ocean Pan-grilled Blue Marlin A la Meuniére with Capers and Italian Parsley"
 ];
 
 export const MAIN_SEAFOOD_OPTIONS = [
@@ -85,11 +106,32 @@ export const MAIN_SEAFOOD_OPTIONS = [
 ];
 
 export const MAIN_CHICKEN_OPTIONS = [
+  "Chicken Breast Fillet with Piri-piri Sauce",
+  "Chicken Cakes with Teriyaki Sauce",
   "Chicken Cordon Bleu",
-  "Roast Chicken",
-  "Chicken Teriyaki",
-  "Chicken Alfredo",
-  "Fried Chicken"
+  "Chicken Galantine with Brown Sauce",
+  "Broiled Mustard Chicken",
+  "Chicken Al’Orange",
+  "Ilonggo Chicken Inasal with Lime, Pepper, Vinegar and Annatto",
+  "Garlic Broiled Chicken",
+  "Grilled Harissa Chicken",
+  "Oven Roasted Peruvian Chicken with Aji Verde Sauce",
+  "German Style Roast Chicken",
+  "Chicken Kebab with Garlic Yoghurt Sauce"
+];
+
+export const UPGRADE_CHICKEN_95_OPTIONS = [
+  "Chicken Hongkong Style"
+];
+
+export const UPGRADE_CHICKEN_100_OPTIONS = [
+  "Black Summer Truffled Parmesan Roasted Chicken",
+  "Portugese Roasted Peri-peri Chicken",
+  "Honey Garlic Chicken with Chimichuri Sauce"
+];
+
+export const UPGRADE_CHICKEN_110_OPTIONS = [
+  "Chicken Peking Duck Style with Hoisin Sauce"
 ];
 
 export const MAIN_PASTA_OPTIONS = [
@@ -103,15 +145,12 @@ export const MAIN_NOODLES_OPTIONS = [
   "Mac and Cheese"
 ];
 
-export const MAIN_VEG_OPTIONS = [
+export const MAIN_VEG_SIDE_DISH_OPTIONS = [
   "Vegetable Stir Fry",
   "Eggplant Parmesan",
   "Quinoa Salad",
   "Stuffed Peppers",
-  "Veggie Curry"
-];
-
-export const MAIN_SIDE_DISH_OPTIONS = [
+  "Veggie Curry",
   "Garlic Bread",
   "Mashed Potatoes",
   "Coleslaw",
