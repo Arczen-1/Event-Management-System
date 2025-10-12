@@ -111,7 +111,15 @@ const ContractSchema = new mongoose.Schema(
       saladUpgradeSelections125: { type: [String], default: [] },
       saladUpgradeSelections150: { type: [String], default: [] },
       mainBeefSelections: { type: [String], default: [] },
+      upgradeBeef100Selections: { type: [String], default: [] },
+      upgradeBeef125Selections: { type: [String], default: [] },
+      upgradeBeef500Selections: { type: [String], default: [] },
+      upgradeBeef1100Selections: { type: [String], default: [] },
       mainPorkSelections: { type: [String], default: [] },
+      upgradePork200Selections: { type: [String], default: [] },
+      upgradePork250Selections: { type: [String], default: [] },
+      upgradePork275Selections: { type: [String], default: [] },
+      upgradePork15000Selections: { type: [String], default: [] },
       mainFishSelections: { type: [String], default: [] },
       mainSeafoodSelections: { type: [String], default: [] },
       mainChickenSelections: { type: [String], default: [] },
@@ -121,7 +129,8 @@ const ContractSchema = new mongoose.Schema(
       mainSideDishSelections: { type: [String], default: [] },
       riceSelections: { type: [String], default: [] },
       dessertSelections: { type: [String], default: [] },
-      drinksSelections: { type: [String], default: [] }
+      drinksSelections: { type: [String], default: [] },
+      oysterBarSelections: { type: [String], default: [] }
     },
     page3: {
       pricePerPlate: { type: String, defaulyt: "" },
@@ -162,5 +171,3 @@ const ContractSchema = new mongoose.Schema(
 )
 
 module.exports = mongoose.model("Contract", ContractSchema)
-
-
