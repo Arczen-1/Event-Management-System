@@ -1,5 +1,10 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "./ContractForm.css";
+import Page1Celebrator from "./Page1Celebrator";
+import Page2Chairs from "./Page2Chairs";
+import Page3BuffetPackages from "./Page3BuffetPackages";
+import Page4MenuSelections from "./Page4MenuSelections";
+import Page5Pricing from "./Page5Pricing";
 
 // Menu options for buffet
 const SOUP_OPTIONS = [
@@ -21,15 +26,59 @@ const UPGRADE_SOUP_OPTIONS = [
 ];
 
 const MAIN_BEEF_OPTIONS = [
-  "Beef Tenderloin",
-  "Roast Beef",
-  "Beef Stew"
+  "Pot Roast Beef",
+  "Callos Ala Madrileña",
+  "Kare-kare with Alamang",
+  "Beef Tenderloin Tips with Mongo Sprouts in Teriyaki Sauce",
+  "Beef Salpicao",
+  "Beef Straganoff",
+  "Beef Bokchoy",
+  "Beef Broccoli in Oyster Sauce"
+];
+
+const UPGRADE_BEEF_100_OPTIONS = [
+  "Beef Kalderetang Batangas"
+];
+
+const UPGRADE_BEEF_125_OPTIONS = [
+  "Beef Brassatto with Buttered Mushroom"
+];
+
+const UPGRADE_BEEF_500_OPTIONS = [
+  "Tricolore Pepper Cream Sauce"
+];
+
+const UPGRADE_BEEF_1100_OPTIONS = [
+  "Carving Station: US Certified Prime Angus Rib Eye with Tricolore Pepper Cream Sauce",
+  "Carving Station: Oven Roasted US Certified Prime Angus Rib Eye with Chimichurri Sauce"
 ];
 
 const MAIN_PORK_OPTIONS = [
-  "Pork Belly",
-  "Roast Pork",
-  "Pork Ribs"
+  "Baked Pork Galantine with Raisins",
+  "Roast Pork with Prunes and Walnuts",
+  "Puerco Conpellejo",
+  "Pork Polpetta with Quail Egg in Chili and Sour Sauce",
+  "Pork Humba with Banana",
+  "Pork Calderetang Batangas",
+  "Tuscan Smothered Pork Chop",
+  "Korean Pork Spareribs",
+  "Pork Tenderloin Geneva Style"
+];
+
+const UPGRADE_PORK_200_OPTIONS = [
+  "Baby Back Ribs"
+];
+
+const UPGRADE_PORK_250_OPTIONS = [
+  "Cinnamon Honey Glazed Pork Paupiette Wrapped in Bacon Stuffed with Garlic River Spinach"
+];
+
+const UPGRADE_PORK_275_OPTIONS = [
+  "Oven Roasted Pig with Liver Sauce"
+];
+
+const UPGRADE_PORK_15000_OPTIONS = [
+  "Hirshon Balinese Suckling Pig with Seafood Paella"
 ];
 
 const MAIN_FISH_OPTIONS = [
@@ -317,7 +366,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     saladUpgradeSelections125: [],
     saladUpgradeSelections150: [],
     mainBeefSelections: [],
+    upgradeBeef100Selections: [],
+    upgradeBeef125Selections: [],
+    upgradeBeef500Selections: [],
+    upgradeBeef1100Selections: [],
     mainPorkSelections: [],
+    upgradePork200Selections: [],
+    upgradePork250Selections: [],
+    upgradePork275Selections: [],
+    upgradePork15000Selections: [],
     mainFishSelections: [],
     mainSeafoodSelections: [],
     mainChickenSelections: [],
@@ -419,7 +476,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       ].join(", ");
       const mainText = [
         ...pBuffet.mainBeefSelections,
+        ...(pBuffet.upgradeBeef100Selections || []).map(s => `${s} (+100)`),
+        ...(pBuffet.upgradeBeef125Selections || []).map(s => `${s} (+125)`),
+        ...(pBuffet.upgradeBeef500Selections || []).map(s => `${s} (+500)`),
+        ...(pBuffet.upgradeBeef1100Selections || []).map(s => `${s} (+1100)`),
         ...pBuffet.mainPorkSelections,
+        ...(pBuffet.upgradePork200Selections || []).map(s => `${s} (+200)`),
+        ...(pBuffet.upgradePork250Selections || []).map(s => `${s} (+250)`),
+        ...(pBuffet.upgradePork275Selections || []).map(s => `${s} (+275)`),
+        ...(pBuffet.upgradePork15000Selections || []).map(s => `${s} (+15000)`),
         ...pBuffet.mainFishSelections,
         ...pBuffet.mainSeafoodSelections,
         ...pBuffet.mainChickenSelections,
@@ -460,7 +525,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     pBuffet.saladUpgradeSelections125,
     pBuffet.saladUpgradeSelections150,
     pBuffet.mainBeefSelections,
+    pBuffet.upgradeBeef100Selections,
+    pBuffet.upgradeBeef125Selections,
+    pBuffet.upgradeBeef500Selections,
+    pBuffet.upgradeBeef1100Selections,
     pBuffet.mainPorkSelections,
+    pBuffet.upgradePork200Selections,
+    pBuffet.upgradePork250Selections,
+    pBuffet.upgradePork275Selections,
+    pBuffet.upgradePork15000Selections,
     pBuffet.mainFishSelections,
     pBuffet.mainSeafoodSelections,
     pBuffet.mainChickenSelections,
@@ -531,6 +604,10 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         saladUpgradeSelections150: existing.pageBuffet?.saladUpgradeSelections150 || [],
         mainBeefSelections: existing.pageBuffet?.mainBeefSelections || [],
         mainPorkSelections: existing.pageBuffet?.mainPorkSelections || [],
+        upgradePork200Selections: existing.pageBuffet?.upgradePork200Selections || [],
+        upgradePork250Selections: existing.pageBuffet?.upgradePork250Selections || [],
+        upgradePork275Selections: existing.pageBuffet?.upgradePork275Selections || [],
+        upgradePork15000Selections: existing.pageBuffet?.upgradePork15000Selections || [],
         mainFishSelections: existing.pageBuffet?.mainFishSelections || [],
         mainSeafoodSelections: existing.pageBuffet?.mainSeafoodSelections || [],
         mainChickenSelections: existing.pageBuffet?.mainChickenSelections || [],
@@ -758,10 +835,10 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   useEffect(() => {
     const price = parseFloat(p3.pricePerPlate) || 0;
     const guests = parseInt(p1.totalGuests) || 0;
-    const additionalPerPax = pBuffet.foodStations.reduce((sum, s) => sum + s.cost, 0) + (pBuffet.upgradeSoupSelections100.length * 100) + (pBuffet.appetizerUpgradeSelections125.length * 125) + (pBuffet.appetizerUpgradeSelections150.length * 150) + (pBuffet.saladUpgradeSelections125.length * 125) + (pBuffet.saladUpgradeSelections150.length * 150);
+    const additionalPerPax = pBuffet.foodStations.reduce((sum, s) => sum + s.cost, 0) + ((pBuffet.upgradeSoupSelections100 || []).length * 100) + ((pBuffet.appetizerUpgradeSelections125 || []).length * 125) + ((pBuffet.appetizerUpgradeSelections150 || []).length * 150) + ((pBuffet.saladUpgradeSelections125 || []).length * 125) + ((pBuffet.saladUpgradeSelections150 || []).length * 150) + ((pBuffet.upgradeBeef100Selections || []).length * 100) + ((pBuffet.upgradeBeef125Selections || []).length * 125) + ((pBuffet.upgradeBeef500Selections || []).length * 500) + ((pBuffet.upgradeBeef1100Selections || []).length * 1100) + ((pBuffet.upgradePork200Selections || []).length * 200) + ((pBuffet.upgradePork250Selections || []).length * 250) + ((pBuffet.upgradePork275Selections || []).length * 275) + ((pBuffet.upgradePork15000Selections || []).length * 15000);
     const total = (price + additionalPerPax) * guests;
     setP3((prev) => ({ ...prev, totalMenuCost: total.toString() }));
-  }, [p3.pricePerPlate, p1.totalGuests, pBuffet.foodStations, pBuffet.upgradeSoupSelections100, pBuffet.appetizerUpgradeSelections125, pBuffet.appetizerUpgradeSelections150, pBuffet.saladUpgradeSelections125, pBuffet.saladUpgradeSelections150]);
+  }, [p3.pricePerPlate, p1.totalGuests, pBuffet.foodStations, pBuffet.upgradeSoupSelections100, pBuffet.appetizerUpgradeSelections125, pBuffet.appetizerUpgradeSelections150, pBuffet.saladUpgradeSelections125, pBuffet.saladUpgradeSelections150, pBuffet.upgradeBeef100Selections, pBuffet.upgradeBeef125Selections, pBuffet.upgradeBeef500Selections, pBuffet.upgradeBeef1100Selections, pBuffet.upgradePork200Selections, pBuffet.upgradePork250Selections, pBuffet.upgradePork275Selections, pBuffet.upgradePork15000Selections]);
 
   // Auto-compute service charge as 10% of totalMenuCost + totalSpecialReqCost + mobilizationCharge
   useEffect(() => {
@@ -1215,387 +1292,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activePage]);
 
-  const renderPage1 = () => (
-    <div className="page">
-      <div className="form-row">
-        <div className="form-group">
-          <label>Contract No.</label>
-          <input type="text" value={nextNumber} readOnly />
-        </div>
-      </div>
 
-      <h4>Celebrator</h4>
-      <div className="form-row two">
-        <div className="form-group"><label>
-  Celebrator/Corporate Name 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.celebratorName} onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} onBlur={handleAutoSave} /></div>
-        <div className="form-group"><label>Email Address</label><input value={p1.celebratorEmail} onChange={(e)=>setP1({...p1, celebratorEmail:e.target.value})} className={errors.celebratorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorEmail}</div></div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group"><label>Address</label><input value={p1.celebratorAddress} onChange={(e)=>setP1({...p1, celebratorAddress:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.celebratorLandline} onChange={(e)=>setP1({...p1, celebratorLandline:e.target.value})} className={errors.celebratorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorLandline}</div></div>
-        <div className="form-group"><label>Mobile No.</label><input value={p1.celebratorMobile} onChange={(e)=>setP1({...p1, celebratorMobile:e.target.value})} className={errors.celebratorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorMobile}</div></div>
-      </div>
-
-      <h4>Representative</h4>
-      <div className="form-row two">
-        <div className="form-group"><label>
-  Name 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeName} onChange={(e)=>setP1({...p1, representativeName:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>
-  Relationship 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeRelationship} onChange={(e)=>setP1({...p1, representativeRelationship:convertToUppercase(e.target.value)})} /></div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group"><label>
-  Email Address 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeEmail} onChange={(e)=>setP1({...p1, representativeEmail:e.target.value})} className={errors.representativeEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeEmail}</div></div>
-        <div className="form-group"><label>
-  Address 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeAddress} onChange={(e)=>setP1({...p1, representativeAddress:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.representativeLandline} onChange={(e)=>setP1({...p1, representativeLandline:e.target.value})} className={errors.representativeLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeLandline}</div></div>
-        </div>
-      <div className="form-row two">
-        <div className="form-group"><label>
-  Mobile No. 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeMobile} onChange={(e)=>setP1({...p1, representativeMobile:e.target.value})} className={errors.representativeMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeMobile}</div></div>
-      </div>
-
-      <h4>Coordinator </h4>
-      <div className="form-row three">
-        <div className="form-group"><label>
-  Coordinator Name 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.coordinatorName} onChange={(e)=>setP1({...p1, coordinatorName:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>
-  Mobile No. 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.coordinatorMobile} onChange={(e)=>setP1({...p1, coordinatorMobile:e.target.value})} className={errors.coordinatorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorMobile}</div></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.coordinatorLandline} onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} className={errors.coordinatorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorLandline}</div></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>
-  Email Address 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.coordinatorEmail} onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} className={errors.coordinatorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorEmail}</div></div>
-        <div className="form-group"><label>
-  Address 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.coordinatorAddress} onChange={(e)=>setP1({...p1, coordinatorAddress:convertToUppercase(e.target.value)})} /></div>
-      </div>
-      
-      <h4>Event Details</h4>
-      <div className="form-row three">
-        <div className="form-group"><label>
-  Date of Event
-  <span className="required-asterisk">*</span>
-</label><input type="date" value={p1.eventDate} onChange={(e)=>setP1({...p1, eventDate:e.target.value})} onBlur={handleAutoSave} className={errors.eventDate ? 'invalid-input' : ''} /><div className="validation-error">{errors.eventDate}</div></div>
-        <div className="form-group">
-          <label>
-  Occasion
-  <span className="required-asterisk">*</span>
-</label>
-          <select value={p1.occasion} onChange={(e)=>setP1({...p1, occasion:e.target.value})}>
-            <option value="">Select Occasion</option>
-            <option value="BIRTHDAY">Birthday</option>
-            <option value="DEBUT">Debut</option>
-            <option value="SPECIAL OCCASION">Special Occasion</option>
-            <option value="CORPORATE">Corporate</option>
-            <option value="WEDDINGS">Weddings</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>
-  Service Style
-  <span className="required-asterisk">*</span>
-</label>
-          <select value={p1.serviceStyle} onChange={(e)=>setP1({...p1, serviceStyle:e.target.value})}>
-            <option value="">Select Service Style</option>
-            <option value="Buffet">Buffet</option>
-            <option value="Signature Plated">Signature Plated</option>
-          </select>
-        </div>
-      </div>
-    <div className="form-row four">
-      <div className="form-group">
-        <label>
-  Venue
-  <span className="required-asterisk">*</span>
-</label>
-        <select
-          value={p1.venue}
-          onChange={(e) => {
-            const venue = e.target.value;
-            const venueData = VENUES[venue] || { address: "", halls: {} };
-            setP1((prev) => ({
-              ...prev,
-              venue,
-              address: venueData.address,
-              hall: "",
-            }));
-            setAvailableHalls(Object.keys(venueData.halls));
-            setMaxPax(0);
-          }}
-        >
-          <option value="">Select Venue</option>
-          {Object.keys(VENUES).map((venue) => (
-            <option key={venue} value={venue}>
-              {venue}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="form-group">
-        <label>
-  Hall
-  <span className="required-asterisk">*</span>
-</label>
-        {p1.venue === "OTHERS" ? (
-          <input
-            value={p1.hall}
-            onChange={(e) => setP1({ ...p1, hall: e.target.value.toUpperCase() })}
-          />
-        ) : (
-          <select
-            value={p1.hall}
-            onChange={(e) => {
-              const hall = e.target.value;
-              setP1((prev) => ({ ...prev, hall }));
-              if (p1.venue && VENUES[p1.venue]) {
-                const pax = VENUES[p1.venue].halls[hall] || 0;
-                setMaxPax(pax);
-                // Remove alert and rely on error message display instead
-                // const totalGuestsNum = parseInt(p1.totalGuests) || 0;
-                // if (totalGuestsNum > pax) {
-                //   alert(`Warning: The selected hall cannot accommodate the total number of guests (${totalGuestsNum}). Maximum pax is ${pax}.`);
-                // }
-              }
-            }}
-          >
-            <option value="">Select Hall</option>
-            {availableHalls.map((hall) => (
-              <option key={hall} value={hall}>
-                {hall} ({VENUES[p1.venue].halls[hall]} pax)
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-      <div className="form-group"><label>
-  Address
-  <span className="required-asterisk">*</span>
-</label><input value={p1.address} onChange={(e)=>setP1({...p1, address:convertToUppercase(e.target.value)})} /></div>
-      <div className="form-group">
-        <label>
-  Arrival of Guests
-  <span className="required-asterisk">*</span>
-</label>
-        <input
-          value={p1.arrivalOfGuests}
-          onChange={(e) => setP1({...p1, arrivalOfGuests: validateTimeField(e.target.value)})}
-          placeholder="HH:MM AM/PM or N/A"
-          className={!isTimeFieldValid(p1.arrivalOfGuests) ? "invalid-input" : ""}
-        />
-        {!isTimeFieldValid(p1.arrivalOfGuests) && (
-          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
-        )}
-      </div>
-    </div>
-    <div className="form-row three">
-      <div className="form-group">
-        <label>
-  Ingress Time 
-  <span className="required-asterisk">*</span>
-</label>
-        <input
-          value={p1.ingressTime}
-          onChange={(e) => setP1({ ...p1, ingressTime: validateTimeField(e.target.value) })}
-          placeholder="HH:MM AM/PM or N/A"
-          className={!isTimeFieldValid(p1.ingressTime) ? "invalid-input" : ""}
-        />
-        {!isTimeFieldValid(p1.ingressTime) && (
-          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
-        )}
-      </div>
-      <div className="form-group">
-        <label>
-  Cocktail Time 
-  <span className="required-asterisk">*</span>
-</label>
-        <input
-          value={p1.cocktailTime}
-          readOnly
-          placeholder="HH:MM AM/PM or N/A"
-        />
-      </div>
-      <div className="form-group">
-        <label>
-  Serving Time 
-  <span className="required-asterisk">*</span>
-</label>
-        <input
-          value={p1.servingTime}
-          onChange={(e) => setP1({ ...p1, servingTime: validateTimeField(e.target.value) })}
-          placeholder="HH:MM AM/PM or N/A"
-          className={!isTimeFieldValid(p1.servingTime) ? "invalid-input" : ""}
-        />
-        {!isTimeFieldValid(p1.servingTime) && (
-          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
-        )}
-      </div>
-    </div>
-      <div className="form-row three">
-        <div className="form-group"><label>
-  VIP 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.totalVIP} onChange={(e) => {
-          const vipValue = e.target.value;
-          setP1((prev) => {
-            const newTotalVIP = vipValue;
-            const newTotalRegular = prev.totalRegular;
-            let newTotalGuests = prev.totalGuests;
-            if (newTotalVIP && newTotalRegular) {
-              const vipNum = parseInt(newTotalVIP) || 0;
-              const regularNum = parseInt(newTotalRegular) || 0;
-              newTotalGuests = (vipNum + regularNum).toString();
-            }
-            return { ...prev, totalVIP: newTotalVIP, totalGuests: newTotalGuests };
-          });
-        }} /></div>
-        <div className="form-group"><label>
-  Regular 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.totalRegular} onChange={(e) => {
-          const regularValue = e.target.value;
-          setP1((prev) => {
-            const newTotalRegular = regularValue;
-            const newTotalVIP = prev.totalVIP;
-            let newTotalGuests = prev.totalGuests;
-            if (newTotalVIP && newTotalRegular) {
-              const vipNum = parseInt(newTotalVIP) || 0;
-              const regularNum = parseInt(newTotalRegular) || 0;
-              newTotalGuests = (vipNum + regularNum).toString();
-            }
-            return { ...prev, totalRegular: newTotalRegular, totalGuests: newTotalGuests };
-          });
-        }} /></div>
-        <div className="form-group">
-          <label>
-  Total No. of Guests 
-  <span className="required-asterisk">*</span>
-</label>
-          <input value={p1.totalGuests} readOnly className={errors.totalGuests ? 'invalid-input' : ''} />
-          {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
-        </div>
-      </div>
-      <div className="form-row four">
-        <div className="form-group"><label>Kiddie Meal Plated</label><input value={p1.kiddiePlated} onChange={(e)=>setP1({...p1, kiddiePlated:e.target.value})} /></div>
-        <div className="form-group"><label>Kiddie Meal Packed</label><input value={p1.kiddiePacked} onChange={(e)=>setP1({...p1, kiddiePacked:e.target.value})} /></div>
-        <div className="form-group"><label>Crew Meal Plated</label><input value={p1.crewPlated} onChange={(e)=>setP1({...p1, crewPlated:e.target.value})} /></div>
-        <div className="form-group"><label>Crew Meal Packed</label><input value={p1.crewPacked} onChange={(e)=>setP1({...p1, crewPacked:e.target.value})} /></div>
-      </div>
-
-      <h4>Set Up</h4>
-      <div className="form-row two">
-        <div className="form-group"><label>
-  Theme Set-up 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.themeSetup} onChange={(e)=>setP1({...p1, themeSetup:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>
-  Color Motif 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.colorMotif} onChange={(e)=>setP1({...p1, colorMotif:convertToUppercase(e.target.value)})} /></div>
-      </div>
-      <div className="form-row four">
-        <div className="form-group">
-          <label>
-  VIP Table Type 
-  <span className="required-asterisk">*</span>
-</label>
-          <select value={p1.vipTableType} onChange={(e)=>setP1({...p1, vipTableType:e.target.value})}>
-            <option value="">Select Type</option>
-            <option value="Round Table">Round Table</option>
-            <option value="Rectangle Table">Rectangle Table</option>
-            <option value="Big Round Table">Big Round Table</option>
-            <option value="Long Rectangle Table">Long Rectangle Table</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>
-  VIP Seats per Table 
-  <span className="required-asterisk">*</span>
-</label>
-          <input value={p1.vipTableSeats ? `${p1.vipTableSeats} Seater` : ''} readOnly />
-        </div>
-        <div className="form-group">
-          <label>
-  VIP Table Quantity 
-  <span className="required-asterisk">*</span>
-</label>
-          <input type="number" value={p1.vipTableQuantity} onChange={(e)=>setP1({...p1, vipTableQuantity:e.target.value})} />
-        </div>
-        <div className="form-group">
-          <label>
-  Regular Table Type 
-  <span className="required-asterisk">*</span>
-</label>
-          <select value={p1.regularTableType} onChange={(e)=>setP1({...p1, regularTableType:e.target.value})}>
-            <option value="">Select Type</option>
-            <option value="Round Table">Round Table</option>
-            <option value="Rectangle Table">Rectangle Table</option>
-            <option value="Big Round Table">Big Round Table</option>
-            <option value="Long Rectangle Table">Long Rectangle Table</option>
-          </select>
-        </div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group">
-          <label>
-  Regular Seats per Table 
-  <span className="required-asterisk">*</span>
-</label>
-          <input value={p1.regularTableSeats ? `${p1.regularTableSeats} Seater` : ''} readOnly />
-        </div>
-        <div className="form-group">
-          <label>
-  Regular Table Quantity 
-  <span className="required-asterisk">*</span>
-</label>
-          <input type="number" value={p1.regularTableQuantity} onChange={(e)=>setP1({...p1, regularTableQuantity:e.target.value})} />
-        </div>
-      </div>
-
-      <div className="form-row three">
-        <div className="form-group"><label>
-  VIP Underliner 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.vipUnderliner} onChange={(e)=>setP1({...p1, vipUnderliner:e.target.value})} /></div>
-        <div className="form-group"><label>VIP Topper</label><input value={p1.vipTopper} onChange={(e)=>setP1({...p1, vipTopper:e.target.value})} /></div>
-        <div className="form-group"><label>
-  VIP Napkin 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.vipNapkin} onChange={(e)=>setP1({...p1, vipNapkin:e.target.value})} /></div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group"><label>
-  Guest Underliner 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.guestUnderliner} onChange={(e)=>setP1({...p1, guestUnderliner:e.target.value})} /></div>
-        <div className="form-group"><label>Guest Topper</label><input value={p1.guestTopper} onChange={(e)=>setP1({...p1, guestTopper:e.target.value})} /></div>
-        <div className="form-group"><label>
-  Guest Napkin 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.guestNapkin} onChange={(e)=>setP1({...p1, guestNapkin:e.target.value})} /></div>
-      </div>
-      <div className="form-group"><label>Remarks</label><textarea value={p1.setupRemarks} onChange={(e)=>setP1({...p1, setupRemarks:e.target.value})} /></div>
-    </div>
-  );
 
   const renderPage2 = () => (
     <div className="page">
@@ -1990,6 +1687,42 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     });
   };
 
+  const handleUpgradePork200Change = (option) => {
+    setPBuffet(prev => {
+      const selections = prev.upgradePork200Selections.includes(option)
+        ? prev.upgradePork200Selections.filter(s => s !== option)
+        : [...prev.upgradePork200Selections, option];
+      return { ...prev, upgradePork200Selections: selections };
+    });
+  };
+
+  const handleUpgradePork250Change = (option) => {
+    setPBuffet(prev => {
+      const selections = prev.upgradePork250Selections.includes(option)
+        ? prev.upgradePork250Selections.filter(s => s !== option)
+        : [...prev.upgradePork250Selections, option];
+      return { ...prev, upgradePork250Selections: selections };
+    });
+  };
+
+  const handleUpgradePork275Change = (option) => {
+    setPBuffet(prev => {
+      const selections = prev.upgradePork275Selections.includes(option)
+        ? prev.upgradePork275Selections.filter(s => s !== option)
+        : [...prev.upgradePork275Selections, option];
+      return { ...prev, upgradePork275Selections: selections };
+    });
+  };
+
+  const handleUpgradePork15000Change = (option) => {
+    setPBuffet(prev => {
+      const selections = prev.upgradePork15000Selections.includes(option)
+        ? prev.upgradePork15000Selections.filter(s => s !== option)
+        : [...prev.upgradePork15000Selections, option];
+      return { ...prev, upgradePork15000Selections: selections };
+    });
+  };
+
   const handleMainFishChange = (option) => {
     setPBuffet(prev => {
       const selections = prev.mainFishSelections.includes(option)
@@ -2140,7 +1873,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               "Chicken Kebabs Skewers",
               "Baked Mussel Nicoise",
               "Chicken Express in Lemon Grass Skewers with Spicy Cream Sauce",
-            ].map(option => (
+            ].map(option => (       
               <label key={option} className="menu-item">
                 <input
                   type="checkbox"
@@ -2152,9 +1885,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               </label>
             ))}
           </div>
-        </div>
-
-        <div className="upgrade-section">
+          <div className="upgrade-section">
           <h5>Upgrade Options (++125 per pax)</h5>
           <div className="upgrade-grid">
             {[
@@ -2196,6 +1927,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             ))}
           </div>
           <p>Cocktail Selections: {totalCocktailSelections}/{cocktailLimit}</p>
+        </div>
         </div>
 
         <div className="menu-section">
@@ -2288,9 +2020,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               </label>
             ))}
           </div>
-        </div>
-
-        <div className="upgrade-section">
+          <div className="upgrade-section">
           <h5>Upgrade Soup Options (++100 per pax)</h5>
           <div className="upgrade-grid">
             {UPGRADE_SOUP_OPTIONS.map(option => (
@@ -2307,7 +2037,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           </div>
         </div>
         <p>Soup Selections: {pBuffet.soupSelections.length + pBuffet.upgradeSoupSelections100.length}/{1 + soupUpgradeLimit}</p>
-
+        </div>
+        
         <div className="menu-section">
           <h5>Salad (Optional)</h5>
           <div className="menu-category">
@@ -2372,6 +2103,66 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                   {option}
                 </label>
               ))}
+            </div>
+            <div className="upgrade-section">
+              <h6>Upgrade Options (++200 per pax)</h6>
+              <div className="upgrade-grid">
+                {UPGRADE_PORK_200_OPTIONS.map(option => (
+                  <label key={option} className="upgrade-item">
+                    <input
+                      type="checkbox"
+                      checked={(pBuffet.upgradePork200Selections || []).includes(option)}
+                      onChange={() => handleUpgradePork200Change(option)}
+                    />
+                    <span>{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="upgrade-section">
+              <h6>Upgrade Options (++250 per pax)</h6>
+              <div className="upgrade-grid">
+                {UPGRADE_PORK_250_OPTIONS.map(option => (
+                  <label key={option} className="upgrade-item">
+                    <input
+                      type="checkbox"
+                      checked={(pBuffet.upgradePork250Selections || []).includes(option)}
+                      onChange={() => handleUpgradePork250Change(option)}
+                    />
+                    <span>{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="upgrade-section">
+              <h6>Upgrade Options (++275 per pax)</h6>
+              <div className="upgrade-grid">
+                {UPGRADE_PORK_275_OPTIONS.map(option => (
+                  <label key={option} className="upgrade-item">
+                    <input
+                      type="checkbox"
+                      checked={(pBuffet.upgradePork275Selections || []).includes(option)}
+                      onChange={() => handleUpgradePork275Change(option)}
+                    />
+                    <span>{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="upgrade-section">
+              <h6>Upgrade Options (++15000 per pax)</h6>
+              <div className="upgrade-grid">
+                {UPGRADE_PORK_15000_OPTIONS.map(option => (
+                  <label key={option} className="upgrade-item">
+                    <input
+                      type="checkbox"
+                      checked={(pBuffet.upgradePork15000Selections || []).includes(option)}
+                      onChange={() => handleUpgradePork15000Change(option)}
+                    />
+                    <span>{option}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <div className="menu-category">
@@ -2738,7 +2529,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           e.preventDefault(); 
         } 
       }}>
-        {activePage === 1 && renderPage1()}
+  {activePage === 1 && (
+    <Page1Celebrator
+      p1={p1}
+      setP1={setP1}
+      errors={errors}
+      nextNumber={nextNumber}
+      availableHalls={availableHalls}
+      maxPax={maxPax}
+      convertToUppercase={convertToUppercase}
+      validateTimeField={validateTimeField}
+      isTimeFieldValid={isTimeFieldValid}
+      handleAutoSave={handleAutoSave}
+    />
+  )}
         {activePage === 2 && renderPage2()}
         {activePage === 3 && (totalPages === 3 ? renderPage5() : renderPage3())}
         {activePage === 4 && (totalPages === 5 ? renderPage4() : renderPage5())}
