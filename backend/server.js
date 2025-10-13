@@ -211,6 +211,20 @@ app.delete("/creativeRequests/:id", async (req, res) => {
   }
 });
 
+// ==================== CONTRACT ROUTES FOR CREATIVE DASHBOARD ====================
+
+app.get("/contracts/creative", async (req, res) => {
+  try {
+    // Only return Sales contracts (so creatives see contracts passed from Sales)
+    const contracts = await Contract.find({ department: "Sales" }).sort({ createdAt: -1 });
+    res.json({ contracts });
+  } catch (error) {
+    console.error("Error fetching creative contracts:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 // ==================== SERVER START ====================
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
