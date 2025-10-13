@@ -1,664 +1,216 @@
 // Import required dependencies
-const express = require("express") // Web framework for Node.js
-const mongoose = require("mongoose") // MongoDB object modeling tool
-const bcrypt = require("bcryptjs") // Password hashing library
-const cors = require("cors") // Cross-Origin Resource Sharing middleware
-const Admin = require("./models/Admin") // Admin user model
-const User = require("./models/User") // Regular user model
-const Contract = require("./models/Contract") // Contract model
-const Counter = require("./models/Counter") // Monthly counter for contract numbers
+const express = require("express");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const cors = require("cors");
+const Admin = require("./models/Admin");
+const User = require("./models/User");
+const Contract = require("./models/Contract");
+const Counter = require("./models/Counter");
+const CreativeRequest = require("./models/CreativeRequest"); // Added CreativeRequest model
 
 // Initialize Express application
-const app = express()
-const PORT = 5000 // Server port number
+const app = express();
+const PORT = 5000;
 
 // Middleware configuration
-app.use(cors()) // Enable CORS for all routes (allows frontend to connect)
-app.use(express.json()) // Parse JSON request bodies
+app.use(cors());
+app.use(express.json());
 
 // MongoDB database connection
-mongoose.connect("mongodb://127.0.0.1:27017/testdb") // Connect to local MongoDB instance
+mongoose.connect("mongodb://127.0.0.1:27017/testdb");
 
 // Database connection event handlers
-const db = mongoose.connection
-db.on("error", console.error.bind(console, "MongoDB connection error:")) // Log connection errors
-db.once("open", () => console.log("MongoDB Connected")) // Log successful connection
+const db = mongoose.connection;
+db.on("error", console.error.bind(console, "MongoDB connection error:"));
+db.once("open", () => console.log("MongoDB Connected"));
 
 // Seed default admin account (only runs if no admin exists)
-;(async () => {
-  const existing = await Admin.findOne({ username: "admin" }) // Check if admin already exists
+(async () => {
+  const existing = await Admin.findOne({ username: "admin" });
   if (!existing) {
-    const hashed = await bcrypt.hash("password123", 10) // Hash the default password
-    await Admin.create({ username: "admin", password: hashed }) // Create default admin
-    console.log("👤 Default admin created (username: admin, password: password123)")
+    const hashed = await bcrypt.hash("password123", 10);
+    await Admin.create({ username: "admin", password: hashed });
+    console.log("Default admin created (username: admin, password: password123)");
   }
-})()
+})();
 
-// Seed default Creative Manager account (only runs if no Creative Manager exists)
-;(async () => {
-  const existing = await User.findOne({ username: "creativemanager" }) // Check if Creative Manager already exists
+// Seed default Creative Manager account (only runs if none exists)
+(async () => {
+  const existing = await User.findOne({ username: "creativemanager" });
   if (!existing) {
-    const hashed = await bcrypt.hash("password123", 10) // Hash the default password
-    await User.create({ username: "creativemanager", fullName: "Creative Manager", password: hashed, email: "creativemanager@example.com", role: "Creative Manager", status: "approved" }) // Create default Creative Manager
-    console.log("👤 Default Creative Manager created (username: creativemanager, password: password123)")
+    const hashed = await bcrypt.hash("password123", 10);
+    await User.create({
+      username: "creativemanager",
+      fullName: "Creative Manager",
+      password: hashed,
+      email: "creativemanager@example.com",
+      role: "Creative Manager",
+      status: "approved",
+    });
+    console.log("Default Creative Manager created (username: creativemanager, password: password123)");
   }
-})()
+})();
 
-// ==================== API ROUTES ====================
+// ==================== AUTHENTICATION ROUTES ====================
 
-// POST /login - User authentication endpoint
 app.post("/login", async (req, res) => {
   try {
-    const { username, password } = req.body // Extract credentials from request
+    const { username, password } = req.body;
 
-    // First check if user is an admin
-    const admin = await Admin.findOne({ username })
+    const admin = await Admin.findOne({ username });
     if (admin) {
-      const isMatch = await bcrypt.compare(password, admin.password) // Compare password with hash
-      if (!isMatch) return res.status(400).json({ message: "Invalid password" })
-      return res.json({ message: "Login successful", user: { username: admin.username, role: admin.role } })
+      const isMatch = await bcrypt.compare(password, admin.password);
+      if (!isMatch) return res.status(400).json({ message: "Invalid password" });
+      return res.json({ message: "Login successful", user: { username: admin.username, role: "Admin" } });
     }
 
-    // If not admin, check regular users (only approved ones can login)
-    const user = await User.findOne({ username, status: "approved" })
-    if (!user) return res.status(400).json({ message: "Invalid username or account not approved" })
+    const user = await User.findOne({ username, status: "approved" });
+    if (!user) return res.status(400).json({ message: "Invalid username or account not approved" });
 
-    const isMatch = await bcrypt.compare(password, user.password) // Compare password with hash
-    if (!isMatch) return res.status(400).json({ message: "Invalid password" })
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid password" });
 
-    res.json({ message: "Login successful", user: { username: user.username, role: user.role } })
+    res.json({ message: "Login successful", user: { username: user.username, role: user.role } });
   } catch (error) {
-    console.error("Login error:", error)
-    res.status(500).json({ message: "Server error" })
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Server error" });
   }
-})
+});
 
-// POST /register - User registration endpoint
 app.post("/register", async (req, res) => {
   try {
-    const { username, fullName, password, email } = req.body // Extract user data from request
+    const { username, fullName, password, email } = req.body;
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (existingUser) return res.status(400).json({ message: "Username or email already exists" });
 
-    // Check if username or email already exists in database
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] })
-    if (existingUser) {
-      return res.status(400).json({ message: "Username or email already exists" })
-    }
-
-    // Hash the password for security (salt rounds: 10)
-    const hashedPassword = await bcrypt.hash(password, 10)
-
-    // Create new user with pending status (requires admin approval)
-    const user = new User({
-      username,
-      fullName,
-      password: hashedPassword,
-      email,
-      status: "pending", // New users start as pending
-    })
-
-    await user.save() // Save user to database
-    res.json({ message: "Registration successful. Waiting for admin approval." })
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ username, fullName, password: hashedPassword, email, status: "pending" });
+    await user.save();
+    res.json({ message: "Registration successful. Waiting for admin approval." });
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
-})
+});
 
-// GET /admin/pending-users - Get all users waiting for approval (admin only)
+// ==================== ADMIN ROUTES ====================
+
 app.get("/admin/pending-users", async (req, res) => {
   try {
-    // Find all users with pending status, exclude password field for security
-    const pendingUsers = await User.find({ status: "pending" }).select("-password")
-    res.json(pendingUsers)
+    const pendingUsers = await User.find({ status: "pending" }).select("-password");
+    res.json(pendingUsers);
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
-})
+});
 
-// PUT /admin/approve-user/:userId - Approve a pending user and assign department (admin only)
 app.put("/admin/approve-user/:userId", async (req, res) => {
   try {
-    const { userId } = req.params // Extract user ID from URL
-    const { role } = req.body // Extract department/role from request body
+    const { userId } = req.params;
+    const { role } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(userId)) return res.status(400).json({ message: "Invalid user ID" });
+    if (!role) return res.status(400).json({ message: "Role is required" });
 
-    // Validate MongoDB ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "Invalid user ID format" })
-    }
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.status === "approved") return res.status(400).json({ message: "User already approved" });
 
-    // Validate that role/department is provided
-    if (!role) {
-      return res.status(400).json({ message: "Role is required" })
-    }
-
-    // Find user by ID
-    const user = await User.findById(userId)
-    if (!user) {
-      return res.status(404).json({ message: "User not found" })
-    }
-
-    // Prevent approving already approved users
-    if (user.status === "approved") {
-      return res.status(400).json({ message: "User is already approved" })
-    }
-
-    // Update user status to approved and assign role/department
-    user.role = role
-    user.status = "approved"
-    await user.save() // Save changes to database
-
-    res.json({
-      message: "User approved successfully",
-      user: { id: user._id, username: user.username, role: user.role },
-    })
+    user.role = role;
+    user.status = "approved";
+    await user.save();
+    res.json({ message: "User approved successfully", user });
   } catch (error) {
-    console.error("Approve user error:", error)
-    res.status(500).json({ message: "Server error: " + error.message })
+    console.error("Approve user error:", error);
+    res.status(500).json({ message: "Server error: " + error.message });
   }
-})
+});
 
-// PUT /admin/reject-user/:userId - Reject and permanently delete a pending user (admin only)
 app.put("/admin/reject-user/:userId", async (req, res) => {
   try {
-    const { userId } = req.params // Extract user ID from URL
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) return res.status(400).json({ message: "Invalid user ID" });
 
-    // Validate MongoDB ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "Invalid user ID format" })
-    }
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.status !== "pending") return res.status(400).json({ message: "Only pending users can be rejected" });
 
-    // Find user by ID
-    const user = await User.findById(userId)
-    if (!user) {
-      return res.status(404).json({ message: "User not found" })
-    }
-
-    // Only allow rejecting pending users (not already approved/rejected)
-    if (user.status !== "pending") {
-      return res.status(400).json({ message: "Only pending users can be rejected" })
-    }
-
-    // Permanently delete the user account from database
-    await User.findByIdAndDelete(userId)
-
-    res.json({ message: "User account rejected and removed successfully" })
+    await User.findByIdAndDelete(userId);
+    res.json({ message: "User rejected and removed" });
   } catch (error) {
-    console.error("Reject user error:", error)
-    res.status(500).json({ message: "Server error: " + error.message })
+    console.error("Reject user error:", error);
+    res.status(500).json({ message: "Server error: " + error.message });
   }
-})
+});
 
-// PUT /admin/assign-role/:userId - Change department/role of an existing user (admin only)
-app.put("/admin/assign-role/:userId", async (req, res) => {
+// ==================== CREATIVE REQUEST ROUTES ====================
+
+app.get("/creativeRequests", async (req, res) => {
   try {
-    const { userId } = req.params // Extract user ID from URL
-    const { role } = req.body // Extract new role/department from request body
-
-    // Validate MongoDB ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "Invalid user ID format" })
-    }
-
-    // Validate that role/department is provided
-    if (!role) {
-      return res.status(400).json({ message: "Role is required" })
-    }
-
-    // Find user by ID
-    const user = await User.findById(userId)
-    if (!user) {
-      return res.status(404).json({ message: "User not found" })
-    }
-
-    // Update user's role/department
-    user.role = role
-    await user.save() // Save changes to database
-
-    res.json({
-      message: "Role assigned successfully",
-      user: { id: user._id, username: user.username, role: user.role },
-    })
+    const requests = await CreativeRequest.find().sort({ createdAt: -1 });
+    res.json(requests);
   } catch (error) {
-    console.error("Assign role error:", error)
-    res.status(500).json({ message: "Server error: " + error.message })
+    console.error("Fetch creative requests error:", error);
+    res.status(500).json({ message: "Server error" });
   }
-})
+});
 
-// GET /admin/users - Get all users in the system (admin only)
-app.get("/admin/users", async (req, res) => {
+app.post("/creativeRequests", async (req, res) => {
   try {
-    // Find all users, exclude password field for security
-    const users = await User.find().select("-password")
-    res.json(users)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-// DELETE /admin/delete-user/:userId - Permanently delete any user account (admin only)
-app.delete("/admin/delete-user/:userId", async (req, res) => {
-  try {
-    const { userId } = req.params // Extract user ID from URL
-
-    // Validate MongoDB ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "Invalid user ID format" })
-    }
-
-    // Find user by ID
-    const user = await User.findById(userId)
-    if (!user) {
-      return res.status(404).json({ message: "User not found" })
-    }
-
-    // Permanently delete user from database
-    await User.findByIdAndDelete(userId)
-    res.json({ message: "User deleted successfully" })
-  } catch (error) {
-    console.error("Delete user error:", error)
-    res.status(500).json({ message: "Server error: " + error.message })
-  }
-})
-
-// ==================== CONTRACT ROUTES ====================
-
-// Helper to build the next contract number with monthly reset.
-// Format: YYYY/MM/DD-XXXX where XXXX is 4-digit sequence reset monthly.
-async function generateNextContractNumber(date = new Date()) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  const key = `${year}/${month}`
-
-  // Atomically increment the counter for this month
-  const counter = await Counter.findOneAndUpdate(
-    { key },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true }
-  )
-
-  const seq = String(counter.seq).padStart(4, "0")
-  return `${year}${month}${day}-${seq}`
-}
-
-// GET /contracts/next-number - Preview the next contract number (no write besides counter)
-app.get("/contracts/next-number", async (req, res) => {
-  try {
-    // Use a sessionless peek without increment? Requirement says increases unless deleted,
-    // but we need stability. We'll increment only on creation, so here we simulate next
-    // by reading current seq. If none, next is 0001.
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, "0")
-    const key = `${year}/${month}`
-    const doc = await Counter.findOne({ key })
-    const nextSeq = String(((doc && doc.seq) || 0) + 1).padStart(4, "0")
-    const day = String(now.getDate()).padStart(2, "0")
-    res.json({ nextNumber: `${year}${month}${day}-${nextSeq}` })
-  } catch (error) {
-    console.error("Next number error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-// POST /contracts - Create a new contract with auto-generated number
-app.post("/contracts", async (req, res) => {
-  try {
-    const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, pageBuffet = {}, page3 = {} } = req.body
-
-    // If status is "For Approval", validate required fields
-    if (status === "For Approval") {
-      const tempContract = { page1, page2, pageBuffet, page3 };
-      const validationErrors = validateContractForApproval(tempContract);
-      if (validationErrors.length > 0) {
-        return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
-      }
-    }
-
-    const contractNumber = await generateNextContractNumber(new Date())
-
-    const contract = await Contract.create({
-      contractNumber,
-      department,
+    let { requestName, designer, dueDate, status, contractRef, materials, notes, materialsNeeded } = req.body;
+    if (!materials && materialsNeeded) materials = [{ name: materialsNeeded }];
+    const creativeRequest = new CreativeRequest({
+      requestName,
+      designer,
+      dueDate,
       status,
-      page1,
-      page2,
-      pageBuffet,
-      page3,
-    })
-
-    res.json({ message: "Contract created", contract })
+      contractRef,
+      materials: materials || [],
+      notes: notes || "",
+    });
+    await creativeRequest.save();
+    res.json({ request: creativeRequest });
   } catch (error) {
-    console.error("Create contract error:", error)
-    if (error.code === 11000) {
-      // Rare race: regenerate and retry once
-      try {
-        const contractNumber = await generateNextContractNumber(new Date())
-        const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, pageBuffet = {}, page3 = {} } = req.body
-        // Re-validate if needed
-        if (status === "For Approval") {
-          const tempContract = { page1, page2, pageBuffet, page3 };
-          const validationErrors = validateContractForApproval(tempContract);
-          if (validationErrors.length > 0) {
-            return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
-          }
-        }
-        const contract = await Contract.create({ contractNumber, department, status, page1, page2, pageBuffet, page3 })
-        return res.json({ message: "Contract created", contract })
-      } catch (err2) {
-        console.error("Retry create contract error:", err2)
-      }
-    }
-    res.status(500).json({ message: "Server error" })
+    console.error("Create creative request error:", error);
+    res.status(500).json({ message: "Server error: " + error.message });
   }
-})
+});
 
-// GET /contracts/:id - Fetch full contract details
-app.get("/contracts/:id", async (req, res) => {
+app.put("/creativeRequests/:id", async (req, res) => {
   try {
-    const { id } = req.params
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid contract id" })
-    }
-    const contract = await Contract.findById(id)
-    if (!contract) return res.status(404).json({ message: "Not found" })
-    res.json({ contract })
-  } catch (error) {
-    console.error("Get contract error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
+    const { id } = req.params;
+    const { requestName, designer, dueDate, status, materials, notes } = req.body;
+    const creativeRequest = await CreativeRequest.findById(id);
+    if (!creativeRequest) return res.status(404).json({ message: "Request not found" });
 
-// GET /contracts - List contracts (basic, newest first)
-app.get("/contracts", async (req, res) => {
+    creativeRequest.requestName = requestName;
+    creativeRequest.designer = designer;
+    creativeRequest.dueDate = dueDate;
+    creativeRequest.status = status;
+    creativeRequest.materials = materials;
+    creativeRequest.notes = notes;
+    await creativeRequest.save();
+
+    res.json({ updatedRequest: creativeRequest });
+  } catch (error) {
+    console.error("Update creative request error:", error);
+    res.status(500).json({ message: "Server error: " + error.message });
+  }
+});
+
+app.delete("/creativeRequests/:id", async (req, res) => {
   try {
-    const contracts = await Contract.find({}).sort({ createdAt: -1 })
-    res.json({ contracts })
+    const { id } = req.params;
+    const creativeRequest = await CreativeRequest.findByIdAndDelete(id);
+    if (!creativeRequest) return res.status(404).json({ message: "Request not found" });
+    res.json({ message: "Creative request deleted" });
   } catch (error) {
-    console.error("List contracts error:", error)
-    res.status(500).json({ message: "Server error" })
+    console.error("Delete creative request error:", error);
+    res.status(500).json({ message: "Server error: " + error.message });
   }
-})
+});
 
-// PUT /contracts/:id - Update a contract (allowed while Draft or Rejected)
-app.put("/contracts/:id", async (req, res) => {
-  try {
-    const { id } = req.params
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
-    const { page1 = {}, page2 = {}, pageBuffet = {}, page3 = {}, status, rejectionReason } = req.body
-    const contract = await Contract.findById(id)
-    if (!contract) return res.status(404).json({ message: "Not found" })
-    if (!["Draft", "Rejected"].includes(contract.status)) return res.status(400).json({ message: "Only Draft or Rejected contracts can be edited" })
+// ==================== SERVER START ====================
 
-    // Update the fields
-    contract.page1 = page1
-    contract.page2 = page2
-    contract.pageBuffet = pageBuffet
-    contract.page3 = page3
-    if (rejectionReason !== undefined) contract.rejectionReason = rejectionReason
-
-    // If status is being set to "For Approval", validate required fields
-    if (status === "For Approval") {
-      const validationErrors = validateContractForApproval(contract);
-      if (validationErrors.length > 0) {
-        return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
-      }
-      contract.status = status
-    } else if (status) {
-      contract.status = status
-    }
-
-    await contract.save()
-    res.json({ message: "Contract updated", contract })
-  } catch (error) {
-    console.error("Update contract error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-// PUT /contracts/:id/approve - Approve a contract (Sales Manager only)
-app.put("/contracts/:id/approve", async (req, res) => {
-  try {
-    const { id } = req.params
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
-    const contract = await Contract.findById(id)
-    if (!contract) return res.status(404).json({ message: "Not found" })
-    if (contract.status !== "For Approval") return res.status(400).json({ message: "Only contracts with 'For Approval' status can be approved" })
-    
-    contract.status = "For Accounting Review"
-    await contract.save()
-    res.json({ message: "Contract approved and sent to Accounting", contract })
-  } catch (error) {
-    console.error("Approve contract error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-app.put("/contracts/:id/reject", async (req, res) => {
-  try {
-    const { id } = req.params
-    const { reason } = req.body
-    console.log("Received reject request for ID:", id); // Debug log
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      console.log("Invalid ObjectId format for ID:", id); // Debug log
-      return res.status(400).json({ message: "Invalid contract id" })
-    }
-    const contract = await Contract.findById(id)
-    if (!contract) return res.status(404).json({ message: "Not found" })
-    console.log(`Reject request for contract ${id} with current status: '${contract.status}'`)  // Added quotes for debug
-    if (contract.status.trim().toLowerCase() !== "for approval") return res.status(400).json({ message: "Only contracts with 'For Approval' status can be rejected" })
-
-    contract.status = "Rejected"
-    contract.rejectionReason = reason || ""
-    await contract.save()
-    res.json({ message: "Contract rejected and status set to Rejected", contract })
-  } catch (error) {
-    console.error("Reject contract error:", error)
-    res.status(500).json({ message: "Server error: " + error.message })  // More detailed error message
-  }
-})
-
-// PUT /contracts/:id/accounting-approve - Approve a contract (Accounting only)
-app.put("/contracts/:id/accounting-approve", async (req, res) => {
-  try {
-    const { id } = req.params
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
-    const contract = await Contract.findById(id)
-    if (!contract) return res.status(404).json({ message: "Not found" })
-    if (contract.status !== "For Accounting Review") return res.status(400).json({ message: "Only contracts with 'For Accounting Review' status can be approved by Accounting" })
-    
-    contract.status = "Active"
-    await contract.save()
-    res.json({ message: "Contract approved by Accounting and activated", contract })
-  } catch (error) {
-    console.error("Accounting approve contract error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-// PUT /contracts/:id/accounting-reject - Reject a contract (Accounting only)
-app.put("/contracts/:id/accounting-reject", async (req, res) => {
-  try {
-    const { id } = req.params
-    const { reason } = req.body
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
-    const contract = await Contract.findById(id)
-    if (!contract) return res.status(404).json({ message: "Not found" })
-    if (contract.status !== "For Accounting Review") return res.status(400).json({ message: "Only contracts with 'For Accounting Review' status can be rejected by Accounting" })
-
-    contract.status = "For Approval"
-    contract.rejectionReason = reason || ""
-    await contract.save()
-    res.json({ message: "Contract rejected by Accounting and returned to Sales Manager", contract })
-  } catch (error) {
-    console.error("Accounting reject contract error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-// Helper function to validate contract for approval (only required fields with asterisks)
-const validateContractForApproval = (contract) => {
-  const errors = [];
-  const p1 = contract.page1 || {};
-  const p2 = contract.page2 || {};
-  const p3 = contract.page3 || {};
-
-  // Required fields in page1
-  const requiredP1Fields = [
-    'celebratorName', 'representativeName', 'representativeRelationship', 'representativeEmail', 'representativeAddress', 'representativeMobile',
-    'coordinatorName', 'coordinatorMobile', 'coordinatorEmail', 'coordinatorAddress', 'eventDate', 'occasion', 'serviceStyle', 'venue', 'hall', 'address',
-    'arrivalOfGuests', 'ingressTime', 'cocktailTime', 'servingTime', 'totalVIP', 'totalRegular', 'totalGuests', 'themeSetup', 'colorMotif',
-    'vipTableType', 'vipTableSeats', 'vipTableQuantity', 'regularTableType', 'regularTableSeats', 'regularTableQuantity',
-    'vipUnderliner', 'vipNapkin', 'guestUnderliner', 'guestNapkin'
-  ];
-  requiredP1Fields.forEach(field => {
-    if (!p1[field] || !p1[field].trim()) {
-      errors.push(`Page 1 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
-    }
-  });
-
-  // Email validations for required emails
-  const validateEmail = (email) => {
-    if (email.toUpperCase() === "N/A") return true;
-    return email.includes("@gmail.com") || email.includes("@yahoo.com");
-  };
-  if (p1.representativeEmail && !validateEmail(p1.representativeEmail)) {
-    errors.push("Page 1 - Representative email must end with @gmail.com or @yahoo.com");
-  }
-  if (p1.coordinatorEmail && !validateEmail(p1.coordinatorEmail)) {
-    errors.push("Page 1 - Coordinator email must end with @gmail.com or @yahoo.com");
-  }
-
-  // Phone validations for required phones
-  if (p1.representativeMobile && p1.representativeMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.representativeMobile)) {
-    errors.push("Page 1 - Representative mobile must be 11 digits or N/A");
-  }
-  if (p1.coordinatorMobile && p1.coordinatorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.coordinatorMobile)) {
-    errors.push("Page 1 - Coordinator mobile must be 11 digits or N/A");
-  }
-
-  // Required fields in page2 (chairs)
-  const requiredP2Fields = ['chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs'];
-  requiredP2Fields.forEach(field => {
-    if (!p2[field] || !p2[field].trim()) {
-      errors.push(`Page 2 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
-    }
-  });
-
-  // Check chairs sum
-  const sum = (parseInt(p2.chairsMonoblock) || 0) + (parseInt(p2.chairsTiffany) || 0) + (parseInt(p2.chairsCrystal) || 0) +
-              (parseInt(p2.chairsRustic) || 0) + (parseInt(p2.chairsKiddie) || 0) + (parseInt(p2.premiumChairs) || 0);
-  const total = parseInt(p2.totalChairs) || 0;
-  if (sum !== total) {
-    errors.push(`Page 2 - The total number of chairs entered (${sum}) must equal the Total Chairs (${total}).`);
-  }
-
-  // Check at least one knowUs
-  const knowUsFields = ['knowUsWebsite', 'knowUsFacebook', 'knowUsInstagram', 'knowUsFlyers', 'knowUsBillboard', 'knowUsWordOfMouth',
-                        'knowUsVenueReferral', 'knowUsRepeatClient', 'knowUsBridalFair', 'knowUsFoodTasting', 'knowUsCelebrityReferral', 'knowUsOthers'];
-  const hasKnowUs = knowUsFields.some(field => p2[field]);
-  if (!hasKnowUs) {
-    errors.push("Page 2 - At least one 'How did you know our company' option must be selected");
-  }
-
-  // Required fields in page3
-  const requiredP3Fields = ['pricePerPlate'];
-  requiredP3Fields.forEach(field => {
-    if (!p3[field] || !p3[field].trim()) {
-      errors.push(`Page 3 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
-    }
-  });
-
-  return errors;
-};
-
-// PUT /contracts/:id/send-for-approval - Send a contract for approval
-app.put("/contracts/:id/send-for-approval", async (req, res) => {
-  try {
-    const { id } = req.params
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid contract id" })
-    }
-    const contract = await Contract.findById(id)
-    if (!contract) {
-      return res.status(404).json({ message: "Not found" })
-    }
-    if (contract.status !== "Draft") {
-      return res.status(400).json({ message: "Only Draft contracts can be sent for approval" })
-    }
-
-    // Validate that the contract is fully filled
-    const validationErrors = validateContractFullyFilled(contract);
-    if (validationErrors.length > 0) {
-      return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
-    }
-
-    contract.status = "For Approval"
-    await contract.save()
-    res.json({ message: "Contract sent for approval", contract })
-  } catch (error) {
-    console.error("Send for approval error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-// ==================== PROFILE ROUTES ====================
-
-// GET /profile/:username - Get user profile details
-app.get("/profile/:username", async (req, res) => {
-  try {
-    const { username } = req.params
-    const user = await User.findOne({ username }).select("-password")
-    if (!user) return res.status(404).json({ message: "User not found" })
-    res.json({ user })
-  } catch (error) {
-    console.error("Get profile error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-// PUT /profile/:username - Update user profile details
-app.put("/profile/:username", async (req, res) => {
-  try {
-    const { username } = req.params
-    const { mobile, landline, address } = req.body
-    const user = await User.findOne({ username })
-    if (!user) return res.status(404).json({ message: "User not found" })
-    user.mobile = mobile || ""
-    user.landline = landline || ""
-    user.address = address || ""
-    await user.save()
-    res.json({ message: "Profile updated successfully", user: { username: user.username, fullName: user.fullName, email: user.email, mobile: user.mobile, landline: user.landline, address: user.address } })
-  } catch (error) {
-    console.error("Update profile error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-// PUT /profile/:username/password - Change user password
-app.put("/profile/:username/password", async (req, res) => {
-  try {
-    const { username } = req.params
-    const { currentPassword, newPassword } = req.body
-    const user = await User.findOne({ username })
-    if (!user) return res.status(404).json({ message: "User not found" })
-
-    // Verify current password
-    const isMatch = await bcrypt.compare(currentPassword, user.password)
-    if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" })
-
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10)
-    user.password = hashedPassword
-    await user.save()
-    res.json({ message: "Password changed successfully" })
-  } catch (error) {
-    console.error("Change password error:", error)
-    res.status(500).json({ message: "Server error" })
-  }
-})
-
-// Start the server and listen on specified port
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
