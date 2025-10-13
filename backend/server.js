@@ -224,6 +224,22 @@ app.get("/contracts/creative", async (req, res) => {
   }
 });
 
+// ==================== CONTRACT DETAILS ROUTE ====================
+
+// Fetch full contract details by ID (used in CreativeDashboard modal)
+app.get("/contracts/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const contract = await Contract.findById(id);
+    if (!contract) return res.status(404).json({ message: "Contract not found" });
+    res.json({ contract });
+  } catch (error) {
+    console.error("Error fetching contract details:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 
 // ==================== SERVER START ====================
 

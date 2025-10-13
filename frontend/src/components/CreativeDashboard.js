@@ -7,6 +7,7 @@ function CreativeDashboard({ onLogout }) {
   const [showForm, setShowForm] = useState(false);
   const [activeContract, setActiveContract] = useState(null);
   const [editingRequest, setEditingRequest] = useState(null);
+  const [selectedContract, setSelectedContract] = useState(null); // <-- for modal details
   const [newRequest, setNewRequest] = useState({
     requestName: "",
     materialsNeeded: "",
@@ -22,13 +23,15 @@ function CreativeDashboard({ onLogout }) {
 
   const fetchContracts = async () => {
     try {
-      const res = await fetch("http://localhost:5000/contracts/creative"); // ✅ now filtered for Sales contracts
+      // pulls Sales contracts specifically (server endpoint added)
+      const res = await fetch("http://localhost:5000/contracts/creative");
       const data = await res.json();
       const raw = Array.isArray(data) ? data : data.contracts || [];
       const mapped = raw.map((c) => ({
         id: c._id,
         name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
-        client: (c.page1 && (c.page1.celebratorName || c.page1.client || c.page1.clientName)) || "",
+        client:
+          (c.page1 && (c.page1.celebratorName || c.page1.client || c.page1.clientName)) || "",
         value: (c.page3 && c.page3.grandTotal) || (c.page1 && c.page1.value) || "",
         startDate: (c.page1 && (c.page1.eventDate || c.page1.startDate)) || "",
         endDate: (c.page1 && (c.page1.eventDate || c.page1.endDate)) || "",
@@ -66,13 +69,15 @@ function CreativeDashboard({ onLogout }) {
     });
   };
 
+  // --- Helper: convert textarea string to array of material objects ---
   const parseMaterials = (input) => {
-    if (!input.trim()) return [];
+    if (!input || !input.trim()) return [];
     return input
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
+        // format "Item Name (3)" or "Item Name"
         const match = line.match(/^(.*?)(?:\((\d+)\))?$/);
         return {
           name: match ? match[1].trim() : line,
@@ -82,17 +87,20 @@ function CreativeDashboard({ onLogout }) {
       });
   };
 
+  // --- Helper: convert materials array to textarea string ---
   const formatMaterials = (materials) => {
     if (!Array.isArray(materials)) return "";
     return materials.map((m) => `${m.name} (${m.quantity})`).join("\n");
   };
 
+  // --- Create or update creative request ---
   const handleCreateOrUpdateRequest = async (e) => {
     e.preventDefault();
     try {
       const materialsArray = parseMaterials(newRequest.materialsNeeded);
 
       if (editingRequest) {
+        // Update existing
         const res = await fetch(`http://localhost:5000/creativeRequests/${editingRequest._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -103,11 +111,13 @@ function CreativeDashboard({ onLogout }) {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to update request");
+
         setCreativeRequests((prev) =>
           prev.map((r) => (r._id === editingRequest._id ? data.updatedRequest || data : r))
         );
         setEditingRequest(null);
       } else {
+        // Create new
         if (!activeContract) {
           alert("Please select a contract first (Add Creative Request button).");
           return;
@@ -134,6 +144,7 @@ function CreativeDashboard({ onLogout }) {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to create request");
+
         const created = data.request || data.createdRequest || data;
         setCreativeRequests((prev) => [...prev, created]);
       }
@@ -153,6 +164,7 @@ function CreativeDashboard({ onLogout }) {
     }
   };
 
+  // --- Delete creative request ---
   const handleDeleteRequest = async (id) => {
     if (!window.confirm("Are you sure you want to delete this request?")) return;
     try {
@@ -168,8 +180,24 @@ function CreativeDashboard({ onLogout }) {
     }
   };
 
+  // --- Helpers for rendering ---
   const statusClass = (s = "") => s.toLowerCase().replace(/\s+/g, "-");
   const sectionStyle = { marginTop: "28px" };
+
+  // When a contract row is clicked, fetch full contract details and open modal
+  const onContractRowClick = async (contract) => {
+    try {
+      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedContract(data.contract);
+      } else {
+        console.error("Failed to fetch contract details:", data);
+      }
+    } catch (err) {
+      console.error("Error fetching contract details:", err);
+    }
+  };
 
   const renderContractsTable = () => (
     <div className="contracts-table-container">
@@ -196,17 +224,25 @@ function CreativeDashboard({ onLogout }) {
               </tr>
             ) : (
               contracts.map((c) => (
-                <tr key={c.id}>
+                <tr
+                  key={c.id}
+                  className="clickable-row"
+                  onClick={() => onContractRowClick(c)}
+                >
                   <td>{c.name}</td>
                   <td>{c.client}</td>
                   <td>{c.contractNumber || "-"}</td>
                   <td>{c.startDate ? String(c.startDate).slice(0, 10) : ""}</td>
                   <td>{c.endDate ? String(c.endDate).slice(0, 10) : ""}</td>
-                  <td><span className={`status ${statusClass(c.status)}`}>{c.status}</span></td>
+                  <td>
+                    <span className={`status ${statusClass(c.status)}`}>{c.status}</span>
+                  </td>
                   <td>
                     <button
                       className="action-btn primary"
-                      onClick={() => {
+                      onClick={(e) => {
+                        // stop propagation so clicking Add Creative Request does not open modal
+                        e.stopPropagation();
                         setActiveContract(c);
                         setEditingRequest(null);
                         setShowForm(true);
@@ -360,6 +396,77 @@ function CreativeDashboard({ onLogout }) {
     </div>
   );
 
+  // Modal that shows page1 + page2 details (same fields as your friend's version)
+  const renderDetailsModal = () => (
+    <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Creative Contract Details</h3>
+          <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
+        </div>
+        <div className="modal-body">
+          {selectedContract && (
+            <div className="contract-details contract-details-comprehensive">
+              <div className="detail-section">
+                <h4>Contract Information</h4>
+                <div className="detail-row">
+                  <strong>Contract Number:</strong> {selectedContract.contractNumber}
+                </div>
+                <div className="detail-row">
+                  <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Theme and Setup</h4>
+                <div className="detail-row">
+                  <strong>Theme Set-Up:</strong> {selectedContract.page1?.themeSetup || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Color Motif:</strong> {selectedContract.page1?.colorMotif || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Remarks:</strong> {selectedContract.page1?.setupRemarks || "N/A"}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Flower Arrangements</h4>
+                <div className="detail-row">
+                  <strong>Backdrop:</strong> {selectedContract.page2?.flowerBackdrop || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Guest Centerpiece:</strong> {selectedContract.page2?.flowerGuestCenterpiece || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>VIP Centerpiece:</strong> {selectedContract.page2?.flowerVipCenterpiece || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Cake Table:</strong> {selectedContract.page2?.flowerCakeTable || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Couple Chair:</strong> {selectedContract.page2?.celebratorsChair || "N/A"}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="modal-actions">
+          <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="sales-manager-dashboard">
       <div className="dashboard-header">
@@ -375,6 +482,7 @@ function CreativeDashboard({ onLogout }) {
             {renderRequestsTable()}
           </>
         )}
+        {selectedContract && renderDetailsModal()}
       </div>
     </div>
   );
