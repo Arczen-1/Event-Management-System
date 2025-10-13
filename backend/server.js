@@ -158,17 +158,27 @@ app.get("/creativeRequests", async (req, res) => {
 
 app.post("/creativeRequests", async (req, res) => {
   try {
-    let { requestName, designer, dueDate, status, contractRef, materials, notes, materialsNeeded } = req.body;
-    if (!materials && materialsNeeded) materials = [{ name: materialsNeeded }];
+    // Extract fields from frontend payload
+    let { requestName, dueDate, status, contractRef, materials, notes, contractName, client, contractNo, startDate, endDate } = req.body;
+
+    // Defensive: ensure required fields
+    if (!requestName || !dueDate)
+      return res.status(400).json({ message: "Request name and due date are required." });
+
     const creativeRequest = new CreativeRequest({
       requestName,
-      designer,
       dueDate,
       status,
       contractRef,
       materials: materials || [],
       notes: notes || "",
+      contractName: contractName || "",
+      client: client || "",
+      contractNo: contractNo || "",
+      startDate,
+      endDate,
     });
+
     await creativeRequest.save();
     res.json({ request: creativeRequest });
   } catch (error) {
@@ -180,12 +190,11 @@ app.post("/creativeRequests", async (req, res) => {
 app.put("/creativeRequests/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { requestName, designer, dueDate, status, materials, notes } = req.body;
+    const { requestName, dueDate, status, materials, notes } = req.body;
     const creativeRequest = await CreativeRequest.findById(id);
     if (!creativeRequest) return res.status(404).json({ message: "Request not found" });
 
     creativeRequest.requestName = requestName;
-    creativeRequest.designer = designer;
     creativeRequest.dueDate = dueDate;
     creativeRequest.status = status;
     creativeRequest.materials = materials;
@@ -238,8 +247,6 @@ app.get("/contracts/:id", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-
 
 // ==================== SERVER START ====================
 

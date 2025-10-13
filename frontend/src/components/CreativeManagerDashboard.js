@@ -1,194 +1,358 @@
 import React, { useState, useEffect } from "react";
-import "./DepartmentDashboard.css";
+import "./SalesManagerDashboard.css";
 
 function CreativeManagerDashboard({ onLogout }) {
-  const [contracts, setContracts] = useState([]);
-  const [selectedContract, setSelectedContract] = useState(null);
-  const [page, setPage] = useState(1);
+  const [creativeRequests, setCreativeRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState("all"); // all, for-approval, sent-to-purchasing
+  const [reviewingRequest, setReviewingRequest] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectModal, setShowRejectModal] = useState(false);
 
-  // Load contracts from backend on mount
   useEffect(() => {
-    fetchContracts();
+    fetchCreativeRequests();
   }, []);
 
-  const fetchContracts = async () => {
+  // === FETCH CREATIVE REQUESTS ===
+  const fetchCreativeRequests = async () => {
     try {
-      const res = await fetch("http://localhost:5000/contracts");
+      const res = await fetch("http://localhost:5000/creativeRequests");
       const data = await res.json();
-      if (res.ok) {
-        setContracts(
-          (data.contracts || []).filter(c => c.status === "Active").map((c) => ({
-            id: c._id,
-            name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
-            celebratorName: (c.page1 && c.page1.celebratorName) || "",
-            contractNumber: c.contractNumber,
-            page1: c.page1,
-            page2: c.page2,
-            page3: c.page3,
-          }))
-        );
-      }
-    } catch (e) {
-      console.error("Error fetching contracts:", e);
+      let arr = [];
+      if (Array.isArray(data)) arr = data;
+      else if (Array.isArray(data.requests)) arr = data.requests;
+      else if (Array.isArray(data.creativeRequests))
+        arr = data.creativeRequests;
+      else if (data.request) arr = [data.request];
+      setCreativeRequests(arr);
+    } catch (err) {
+      console.error("Error fetching creative requests:", err);
+      setCreativeRequests([]);
     }
   };
 
-  const renderContractsTable = () => {
-    const itemsPerPage = 10;
-    const startIndex = (page - 1) * itemsPerPage;
-    const paginatedContracts = contracts.slice(startIndex, startIndex + itemsPerPage);
-
-    return (
-      <div className="contracts-table-container">
-        <div className="table-header">
-          <h3>Active Contracts</h3>
-          <div className="pager">
-            <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
-            <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
-            <button className="pager-btn" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(contracts.length / itemsPerPage)}>→</button>
-          </div>
-        </div>
-        <div className="contracts-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Contract Name</th>
-                <th>Celebrator/Corporate Name</th>
-                <th>Contract No.</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedContracts.length === 0 ? (
-                <tr className="no-contracts">
-                  <td colSpan="4">No active contracts available</td>
-                </tr>
-              ) : (
-                paginatedContracts.map(contract => (
-                  <tr key={contract.id} className="clickable-row" onClick={async () => {
-                    try {
-                      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
-                      const data = await res.json();
-                      if (res.ok) setSelectedContract(data.contract);
-                    } catch (e) {}
-                  }}>
-                    <td>{contract.name}</td>
-                    <td>{contract.celebratorName}</td>
-                    <td>{contract.contractNumber || "-"}</td>
-                    <td>
-                      <button
-                        className="btn-review"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
-                            const data = await res.json();
-                            if (res.ok) setSelectedContract(data.contract);
-                          } catch (e) {
-                            console.error("Error fetching contract details:", e);
-                          }
-                        }}
-                      >
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
+  // === DELETE REQUEST ===
+  const handleDeleteRequest = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this request?")) return;
+    try {
+      const res = await fetch(`http://localhost:5000/creativeRequests/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to delete request");
+      setCreativeRequests((prev) => prev.filter((r) => r._id !== id));
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to delete request: " + (err.message || ""));
+    }
   };
 
-  const renderDetailsModal = () => (
-    <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Creative Contract Details</h3>
-          <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
-        </div>
-        <div className="modal-body">
-          {selectedContract && (
-            <div className="contract-details">
-              <div className="detail-section">
-                <h4>Contract Information</h4>
-                <div className="detail-row">
-                  <strong>Contract Number:</strong> {selectedContract.contractNumber}
-                </div>
-                <div className="detail-row">
-                  <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
-                </div>
-              </div>
+  // === APPROVE REQUEST ===
+  const handleApproveRequest = async (id) => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/creativeRequests/${id}/approve`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to approve");
 
-              <div className="detail-section">
-                <h4>Theme and Setup</h4>
-                <div className="detail-row">
-                  <strong>Theme Set-Up:</strong> {selectedContract.page1?.themeSetup || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Color Motif:</strong> {selectedContract.page1?.colorMotif || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Remarks:</strong> {selectedContract.page1?.setupRemarks || "N/A"}
-                </div>
-              </div>
+      // Update local state instantly
+      setCreativeRequests((prev) =>
+        prev.map((r) =>
+          r._id === id ? { ...r, status: "Sent to Purchasing" } : r
+        )
+      );
 
-              <div className="detail-section">
-                <h4>Flower Arrangements</h4>
-                <div className="detail-row">
-                  <strong>Backdrop:</strong> {selectedContract.page2?.flowerBackdrop || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Guest Centerpiece:</strong> {selectedContract.page2?.flowerGuestCenterpiece || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>VIP Centerpiece:</strong> {selectedContract.page2?.flowerVipCenterpiece || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Cake Table:</strong> {selectedContract.page2?.flowerCakeTable || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Couple Chair:</strong> {selectedContract.page2?.celebratorsChair || "N/A"}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="modal-actions">
-          <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
-        </div>
-      </div>
-    </div>
-  );
+      // Close modal and switch tab
+      setShowReviewModal(false);
+      setReviewingRequest(null);
+      setActiveTab("sent-to-purchasing");
+      alert("Creative request approved and sent to Purchasing!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to approve request: " + err.message);
+    }
+  };
+
+  // === REJECT REQUEST ===
+  const handleRejectSubmit = async () => {
+    if (!reviewingRequest) return;
+    try {
+      const res = await fetch(
+        `http://localhost:5000/creativeRequests/${reviewingRequest._id}/reject`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: rejectReason }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to reject");
+
+      // Update instantly
+      setCreativeRequests((prev) =>
+        prev.map((r) =>
+          r._id === reviewingRequest._id
+            ? { ...r, status: "Rejected", rejectionReason: rejectReason }
+            : r
+        )
+      );
+
+      setRejectReason("");
+      setShowRejectModal(false);
+      setReviewingRequest(null);
+      alert("Creative request rejected successfully.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to reject request: " + err.message);
+    }
+  };
+
+  // === FILTER LOGIC ===
+  const getFilteredRequests = () => {
+    switch (activeTab) {
+      case "for-approval":
+        return creativeRequests.filter((r) => r.status === "For Approval");
+      case "sent-to-purchasing":
+        return creativeRequests.filter((r) => r.status === "Sent to Purchasing");
+      default:
+        return creativeRequests;
+    }
+  };
+
+  // === DYNAMIC COUNTS (LIVE UPDATES) ===
+  const countForApproval = creativeRequests.filter(
+    (r) => r.status === "For Approval"
+  ).length;
+  const countSentToPurchasing = creativeRequests.filter(
+    (r) => r.status === "Sent to Purchasing"
+  ).length;
+
+  const statusClass = (s = "") => s.toLowerCase().replace(/\s+/g, "-");
+  const sectionStyle = { marginTop: "28px" };
+  const filteredRequests = getFilteredRequests();
 
   return (
-    <div className="department-dashboard">
+    <div className="sales-manager-dashboard">
+      {/* === HEADER === */}
       <div className="dashboard-header">
         <div className="dashboard-header-inner">
-          <h1>Creative Dashboard</h1>
-          <button onClick={onLogout} className="logout-btn header-logout">Logout</button>
+          <h1>Creative Manager Dashboard</h1>
+          <button onClick={onLogout} className="logout-btn header-logout">
+            Logout
+          </button>
         </div>
       </div>
+
+      {/* === MAIN CONTENT === */}
       <div className="dashboard-content">
-        {renderContractsTable()}
-        {selectedContract && renderDetailsModal()}
+        <div className="contracts-table-container" style={sectionStyle}>
+          <div className="table-header">
+            <h3>Creative Requests Management</h3>
+          </div>
+
+          {/* === MENU BAR (TABS) === */}
+          <div className="tabs">
+            <button
+              className={`tab ${activeTab === "all" ? "active" : ""}`}
+              onClick={() => setActiveTab("all")}
+            >
+              All Requests ({creativeRequests.length})
+            </button>
+            <button
+              className={`tab ${activeTab === "for-approval" ? "active" : ""}`}
+              onClick={() => setActiveTab("for-approval")}
+            >
+              For Approval ({countForApproval})
+            </button>
+            <button
+              className={`tab ${
+                activeTab === "sent-to-purchasing" ? "active" : ""
+              }`}
+              onClick={() => setActiveTab("sent-to-purchasing")}
+            >
+              Sent to Purchasing ({countSentToPurchasing})
+            </button>
+          </div>
+
+          {/* === CREATIVE REQUESTS TABLE === */}
+          <div className="contracts-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Request Name</th>
+                  <th>Contract No.</th>
+                  <th>Client</th>
+                  <th>Materials Needed</th>
+                  <th>Due Date</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRequests.length === 0 ? (
+                  <tr className="no-contracts">
+                    <td colSpan="7">No creative requests found</td>
+                  </tr>
+                ) : (
+                  filteredRequests.map((r, idx) => (
+                    <tr key={r._id || idx}>
+                      <td>{r.requestName || ""}</td>
+                      <td>{r.contractNo || "-"}</td>
+                      <td>{r.client || ""}</td>
+                      <td style={{ maxWidth: 240, whiteSpace: "pre-wrap" }}>
+                        {r.materials
+                          ?.map((m) => `${m.name} (${m.quantity})`)
+                          .join("\n") || ""}
+                      </td>
+                      <td>
+                        {r.dueDate ? String(r.dueDate).slice(0, 10) : ""}
+                      </td>
+                      <td>
+                        <span className={`status ${statusClass(r.status)}`}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="btn-group">
+                          <button
+                            className="btn-delete"
+                            onClick={() => handleDeleteRequest(r._id)}
+                          >
+                            Delete
+                          </button>
+
+                          {r.status === "For Approval" && (
+                            <button
+                              className="btn-review"
+                              onClick={() => {
+                                setReviewingRequest(r);
+                                setShowReviewModal(true);
+                              }}
+                            >
+                              Review
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* === REVIEW MODAL === */}
+        {showReviewModal && reviewingRequest && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowReviewModal(false)}
+          >
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Review Creative Request</h3>
+                <button
+                  className="close-btn"
+                  onClick={() => setShowReviewModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <p>
+                  <strong>Request Name:</strong> {reviewingRequest.requestName}
+                </p>
+                <p>
+                  <strong>Contract No.:</strong> {reviewingRequest.contractNo}
+                </p>
+                <p>
+                  <strong>Client:</strong> {reviewingRequest.client}
+                </p>
+                <p>
+                  <strong>Due Date:</strong>{" "}
+                  {reviewingRequest.dueDate?.slice(0, 10)}
+                </p>
+                <p>
+                  <strong>Materials:</strong>
+                </p>
+                <pre>
+                  {reviewingRequest.materials
+                    ?.map((m) => `${m.name} (${m.quantity})`)
+                    .join("\n")}
+                </pre>
+              </div>
+              <div className="modal-actions">
+                <button
+                  className="btn-approve"
+                  onClick={() => handleApproveRequest(reviewingRequest._id)}
+                >
+                  Approve
+                </button>
+                <button
+                  className="btn-reject"
+                  onClick={() => {
+                    setShowReviewModal(false);
+                    setShowRejectModal(true);
+                  }}
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* === REJECT MODAL === */}
+        {showRejectModal && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowRejectModal(false)}
+          >
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Reject Creative Request</h3>
+                <button
+                  className="close-btn"
+                  onClick={() => setShowRejectModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <label>Reason for Rejection</label>
+                <textarea
+                  placeholder="Enter reason..."
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={5}
+                />
+              </div>
+              <div className="modal-actions">
+                <button
+                  className="btn-reject"
+                  onClick={handleRejectSubmit}
+                  disabled={!rejectReason.trim()}
+                >
+                  Submit
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setShowRejectModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 export default CreativeManagerDashboard;
-
-
-

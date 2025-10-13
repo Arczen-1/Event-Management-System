@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+
 // --- Material Schema ---
 const MaterialSchema = new mongoose.Schema(
   {
@@ -8,11 +9,11 @@ const MaterialSchema = new mongoose.Schema(
   },
   { _id: false }
 );
+
 // --- Creative Request Schema ---
 const CreativeRequestSchema = new mongoose.Schema(
   {
     requestName: { type: String, required: true },
-    designer: { type: String, required: true },
     dueDate: { type: Date, required: true },
     status: {
       type: String,
@@ -42,4 +43,5 @@ const CreativeRequestSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 module.exports = mongoose.model("CreativeRequest", CreativeRequestSchema);
