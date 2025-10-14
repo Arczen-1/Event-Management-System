@@ -537,6 +537,50 @@
   color: #b8860b;
 }
 
+/* Styles for upgrade options that use div wrapper instead of label */
+.menu-grid > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: white;
+  border: 1px solid #d4c4b0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  color: #4a4a4a;
+}
+
+.menu-grid > div:hover {
+  background-color: #f9f5f0;
+  border-color: #b8860b;
+}
+
+.menu-grid > div input[type="checkbox"] {
+  margin: 0;
+  accent-color: #b8860b;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.menu-grid > div input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menu-grid > div input[type="checkbox"]:checked ~ label {
+  font-weight: 600;
+  color: #b8860b;
+}
+
+.menu-grid > div label {
+  cursor: pointer;
+  margin: 0;
+  flex: 1;
+}
+
 /* Responsive for menu grids */
 @media (max-width: 768px) {
   .menu-grid {

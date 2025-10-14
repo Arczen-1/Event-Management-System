@@ -1,11 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "./ContractForm.css";
-import Page1Celebrator from "./Page1Celebrator";
-import Page2Chairs from "./Page2Chairs";
-import Page3BuffetPackages from "./Page3BuffetPackages";
-import Page4MenuSelections from "./Page4MenuSelections";
-import Page5Pricing from "./Page5Pricing";
-import { MAIN_BEEF_OPTIONS, UPGRADE_BEEF_100_OPTIONS, UPGRADE_BEEF_125_OPTIONS, UPGRADE_BEEF_500_OPTIONS, UPGRADE_BEEF_1100_OPTIONS, UPGRADE_CHICKEN_95_OPTIONS, UPGRADE_CHICKEN_100_OPTIONS, UPGRADE_CHICKEN_110_OPTIONS } from "./constants";
 
 // Menu options for buffet
 const SOUP_OPTIONS = [
@@ -26,31 +20,59 @@ const UPGRADE_SOUP_OPTIONS = [
   "Andalusian Tomato Soup"
 ];
 
+const MAIN_BEEF_OPTIONS = [
+  "Pot Roast Beef",
+  "Callos Ala Madrileña",
+  "Kare-kare with Alamang",
+  "Beef Tenderloin Tips with Mongo Sprouts in Teriyaki Sauce",
+  "Beef Salpicao",
+  "Beef Straganoff",
+  "Beef Bokchoy",
+  "Beef Broccoli in Oyster Sauce"
+];
+
+const BEEF_UPGRADE_100_OPTIONS = [
+  "Beef Calderetang Batangas"
+];
+
+const BEEF_UPGRADE_125_OPTIONS = [
+  "Beef Brassatto with Buttered Mushroom"
+];
+
+const BEEF_UPGRADE_500_OPTIONS = [
+  "Carving Station: Six-hour Slow Cooked Beef Brisket with Tricolore Pepper Cream Sauce"
+];
+
+const BEEF_UPGRADE_1100_OPTIONS = [
+  "Carving Station: US Certified Prime Angus Rib Eye with Tricolore Pepper Cream Sauce",
+  "Carving Station: Oven Roasted US Certified Prime Angus Rib Eye with Chimichurri Sauce"
+];
+
 const MAIN_PORK_OPTIONS = [
   "Baked Pork Galantine with Raisins",
   "Roast Pork with Prunes and Walnuts",
-  "Puerco Conpellejo",
+  "Puerto Conpellejo",
   "Pork Polpetta with Quail Egg in Chili and Sour Sauce",
   "Pork Humba with Banana",
   "Pork Calderetang Batangas",
   "Tuscan Smothered Pork Chop",
   "Korean Pork Spareribs",
-  "Pork Tenderloin Geneva Style"
+  "Pork Tenderloin Geneva Style",
 ];
 
-const UPGRADE_PORK_200_OPTIONS = [
-  "Baby Back Ribs"
+const PORK_UPGRADE_200_OPTIONS = [
+  "Baby Back Ribs with Smoked Hickory Sauce"
 ];
 
-const UPGRADE_PORK_250_OPTIONS = [
+const PORK_UPGRADE_250_OPTIONS = [
   "Cinnamon Honey Glazed Pork Paupiette Wrapped in Bacon Stuffed with Garlic River Spinach"
 ];
 
-const UPGRADE_PORK_275_OPTIONS = [
+const PORK_UPGRADE_275_OPTIONS = [
   "Oven Roasted Pig with Liver Sauce"
 ];
 
-const UPGRADE_PORK_15000_OPTIONS = [
+const PORK_UPGRADE_15000_OPTIONS = [
   "Hirshon Balinese Suckling Pig with Seafood Paella"
 ];
 
@@ -67,80 +89,238 @@ const MAIN_FISH_OPTIONS = [
   "Steamed Cobbler Fillet in Mandarin Sauce",
   "Lemon Grass Soy Steamed Basa Fish with Salsa Fresco",
   "Fish Steak with Tomato and Vegetable Salsa",
-  "Golden Fry Pangasius in Desiccated Coconut with Mango",
-  "Cilantro Dressing Sauce"
+  "Golden Fry Pangasius in Desiccated Coconut with Mango Cilantro Dressing Sauce",
 ];
 
-const UPGRADE_FISH_200_OPTIONS = [
+const MAIN_SEAFOOD_OPTIONS = [
+  "Octopus Adobo in Coconut Cream",
+  "Baked Mussels with Garlic-Parmesan Crust",
+  "Sweet Chili Glazed Squid",
+  "Calamari Rings in Garlic Butter"
+];
+
+const FISH_UPGRADE_200_OPTIONS = [
   "Pacific Ocean Blue Marlin in Lemon Butter Sauce"
 ];
 
-const UPGRADE_FISH_225_OPTIONS = [
+const FISH_UPGRADE_225_OPTIONS = [
   "Norwegian Pink Salmon in Tequila Cream Sauce",
   "Ocean Pan-grilled Blue Marlin A la Meuniére with Capers and Italian Parsley"
 ];
 
-const MAIN_SEAFOOD_OPTIONS = [
-  "Shrimp Scampi",
-  "Calamari Rings",
-  "Lobster Tail"
+const SEAFOOD_UPGRADE_200_OPTIONS = [
+  "Grilled Butterfly Prawns in Lemon Butter Sauce"
+];
+
+const SEAFOOD_UPGRADE_235_OPTIONS = [
+  "Shrimp Tempura with Hon Mirin Sauce"
+];
+
+const SEAFOOD_UPGRADE_335_OPTIONS = [
+  "Spicy Grilled Prawn with Lemon Grass and Paprika"
 ];
 
 const MAIN_CHICKEN_OPTIONS = [
+  "Chicken Breast Fillet with Piri-piri Sauce",
+  "Chicken Cakes with Teriyaki Sauce",
   "Chicken Cordon Bleu",
-  "Roast Chicken",
-  "Chicken Teriyaki",
-  "Chicken Alfredo",
-  "Fried Chicken"
+  "Chicken Galantine with Brown Sauce",
+  "Broiled Mustard Chicken",
+  "Chicken Al’Orange",
+  "Ilonggo Chicken Inasal with Lime, Pepper, Vinegar and Annatto",
+  "Garlic Broiled Chicken",
+  "Grilled Harissa Chicken",
+  "Oven Roasted Peruvian Chicken with Aji Verde Sauce",
+  "German Style Roast Chicken",
+  "Chicken Kebab with Garlic Yoghurt Sauce"
+];
+
+const CHICKEN_UPGRADE_95_OPTIONS = [
+  "Chicken Hongkong Style"
+];
+
+const CHICKEN_UPGRADE_100_OPTIONS = [
+  "Black Summer Truffled Parmesan Roasted Chicken",
+  "Portugese Roasted Peri-peri Chicken",
+  "Honey Garlic Chicken with Chimichurri Sauce"
+];
+
+const CHICKEN_UPGRADE_110_OPTIONS = [
+  "Chicken Peking Duck Style with Hoisin Sauce"
 ];
 
 const MAIN_PASTA_OPTIONS = [
-  "Spaghetti Carbonara",
-  "Fettuccine Alfredo",
-  "Lasagna"
+  "Black Pasta Aglio E Olio",
+  "Pasta Fusilli Aglio E Olio",
+  "Pasta Batangueño with Liver Sauce",
+  "Penne Pasta Siracusana",
+  "Puttanesca with Black Olive, Capers and Bacon",
+  "Penne Pasta with Wild Mushroom Sauce",
+  "Fusilli Pesto with Almond Chips",
+  "Pasta Vongole",
+  "Pasta Alfredo",
+  "Fresh Tomato Pasta",
+  "Tuna Pasta",
+  "Pasta Fettucine Pomodoro with Ham, Bacon and Mushroom",
+  "Filipino Style Spaghetti",
+  "Italian Style Spaghetti",
+  "Pasta Fettuccine with Wild Mushroom Sauce",
+  "Juan Carlo Wellness Pasta",
+  "Pasta Marinara",
+  "Pasta Carbonara",
+  "Pasta Anchovy with Longganisa Royale"
+];
+
+const PASTA_UPGRADE_150_OPTIONS = [
+  "Black Pasta Gamberini in Pesto Sauce with Chili Flakes, Pine Nuts and Basil"
 ];
 
 const MAIN_NOODLES_OPTIONS = [
-  "Pad Thai",
-  "Mac and Cheese"
+  "Chinese Birthday Noodles",
+  "Juan Carlo Vermicelli Special",
+  "Chinese Pancit Canton",
+  "Pancit Bihon",
+  "Lomi",
+  "Pancit Palabok"
 ];
 
-const MAIN_VEG_SIDE_DISH_OPTIONS = [
-  "Vegetable Stir Fry",
-  "Eggplant Parmesan",
-  "Quinoa Salad",
-  "Stuffed Peppers",
-  "Veggie Curry",
-  "Garlic Bread",
-  "Mashed Potatoes",
-  "Coleslaw",
-  "French Fries",
-  "Rice Pilaf"
+const MAIN_VEG_OPTIONS = [
+  "Assorted Vegetables Laced with Butter",
+  "Veggie Money Bag with Leeks",
+  "Filipino Vegetable Spring Rolls",
+  "Pinakbet",
+  "Chinese Vegetable Supreme",
+  "Mongolian Vegetables",
+  "Marble Potato with Cilantro",
+  "Lyonnaise Potato",
+  "Mashed Potato with Gravy and Bacon Bits",
+  "Country Style Potato with Bacon Cheese Dressing",
+  "Bouquet of Green Vegetable with Bechamel Sauce",
+  "Stir-fried Mixed Vegetables in Oyster Sauce"
+];
+
+const VEG_UPGRADE_50_OPTIONS = [
+  "Deep-fried Eggplant with Shrimp, Waterchestnuts and Bamboo Shoots"
+];
+
+const VEG_UPGRADE_60_OPTIONS = [
+  "Fresh Lumpiang Ubod with Brown Sauce"
+];
+
+const VEG_UPGRADE_75_OPTIONS = [
+  "Grilled Cauliflower, Broccoli, and Carrots with Thyme"
+];
+
+const VEG_UPGRADE_650_OPTIONS = [
+  "Mongolian BBQ Station"
 ];
 
 const RICE_OPTIONS = [
-  "Java Rice",
-  "Garlic Rice",
-  "Fried Rice",
-  "Brown Rice",
-  "Wild Rice"
+  "Steamed Fragrant Rice"
+];
+
+const RICE_UPGRADE_50_OPTIONS = [
+  "Moroccan Rice"
+];
+
+const RICE_UPGRADE_95_OPTIONS = [
+  "Paella de Madrid",
+  "Seafood Paella"
+];
+
+const RICE_UPGRADE_110_OPTIONS = [
+  "Jambalayan Rice",
+  "Yakimeshi Fried Rice"
 ];
 
 const DESSERT_OPTIONS = [
-  "Leche Flan",
-  "Mango Float",
-  "Chocolate Cake",
+  "Mango Surprise",
+  "S'mores Shooters",
+  "Caramel Apple Trifles",
+  "Tapioca Balls Guinumis",
+  "Cream Puff",
+  "Swan Puff",
+  "Eclair",
+  "Canonigo with Mango Balls",
+  "Blitz Torte with Cashew Nuts",
+  "Oreo Ecstasy",
+  "Strawberry Cheesecake",
+  "Blueberry Cheesecake",
+  "Mango Cheesecake",
+  "Buco Corn Jello",
+  "Buco Lychee Jello",
+  "Monkey Java Fritters",
   "Tiramisu",
-  "Fruit Salad"
+  "Caramel Custard with Cherry and Macapuno Strings",
+  "Buco Fruit Salad without Buco Shell in Barquillos",
+  "Assorted Fresh Fruits in Season",
+  "Sansrival with Pistachio Nuts",
+  "Tropical Fruit Pavlova",
+  "Peach Mango Supreme",
+  "Cracquelin Choux",
+  "Red Velvet Lychee Shooters",
+  "Piña Collada",
+  "Ube Macapuno Shooter",
+  "Banoffee Pie",
+  "Strawberry Cheesecake Shooter",
+  "Coffee Magnifico",
+  "Juan Carlo Panna Cotta with Fruit Salsa",
+  "Parisian Fruit Tartlets"
+];
+
+const DESSERT_UPGRADE_250_OPTIONS = [
+  "Galaxies Delight", 
+  "Tropical Rendezvous", 
+  "British Toffee Surprise", 
+  "Duo Classico Americano", 
+  "Duo of Sesame Panna Cotta"
+];
+
+const DESSERT_UPGRADE_300_OPTIONS = [
+  "Tang Dynasty Matcha Cake with Chocolate Mousse, Green Tea  Ganache, Raspberry and Blueberry",
+  "Yangtze River of Sweets"
+];
+
+const DESSERT_UPGRADE_350_OPTIONS = [
+  "Eruption",
+  "Aloha",
+  "La Saveur", 
+  "Trilogy of Love",
+  "Fresh Fruit Ensemble"
+];
+
+const DESSERT_UPGRADE_400_OPTIONS = [
+  "Indulgence Au Chocolat"
+];
+
+const DESSERT_UPGRADE_450_OPTIONS = [
+  "Imagination’s Delight "
 ];
 
 const DRINKS_OPTIONS = [
-  "Iced Tea",
-  "Orange Juice",
-  "Lemonade",
-  "Softdrinks",
-  "Mineral Water"
+  "Green Cucumber Lemonade",
+  "Pink Lychee Lemonade",
+  "Blue Lemonade",
+  "House Blend Iced Tea",
+  "Pandan Coolers",
+  "Passion Fruit Drink with Bursting Boba"
 ];
+
+const DRINK_UPGRADE_130_OPTIONS = [
+  "Fresh Peach Lemonade",
+  "Pineapple Ginger Sparkler",
+  "Berry Blast Mocktail"
+];
+
+const DRINK_UPGRADE_150_OPTIONS = [
+  "Fresto Citron",
+  "Wild Forest Berries",
+  "Jamaican Guzzle",
+  "Lover's Couple Sparking Cider",
+  "Tropical Paradise Punch",
+  "Minty Mojito Cooler"
+];
+
 
 const FOOD_STATIONS = [
   { name: "European Cheese & Charcuterie Grazing Table", cost: 250 },
@@ -346,27 +526,48 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     saladUpgradeSelections125: [],
     saladUpgradeSelections150: [],
     mainBeefSelections: [],
-    upgradeBeef100Selections: [],
-    upgradeBeef125Selections: [],
-    upgradeBeef500Selections: [],
-    upgradeBeef1100Selections: [],
+    beefUpgradeSelections100: [],
+    beefUpgradeSelections125: [],
+    beefUpgradeSelections500: [],
+    beefUpgradeSelections1100: [],
     mainPorkSelections: [],
-    upgradePork200Selections: [],
-    upgradePork250Selections: [],
-    upgradePork275Selections: [],
-    upgradePork15000Selections: [],
+    porkUpgradeSelections200: [],
+    porkUpgradeSelections250: [],
+    porkUpgradeSelections275: [],
+    porkUpgradeSelections15000: [],
     mainFishSelections: [],
+    fishUpgradeSelections200: [],
+    fishUpgradeSelections225: [],
     mainSeafoodSelections: [],
+    seafoodUpgradeSelections200: [],
+    seafoodUpgradeSelections235: [],
+    seafoodUpgradeSelections335: [],
     mainChickenSelections: [],
-    upgradeChicken95Selections: [],
-    upgradeChicken100Selections: [],
-    upgradeChicken110Selections: [],
+    chickenUpgradeSelections95: [],
+    chickenUpgradeSelections100: [],
+    chickenUpgradeSelections110: [],
     mainPastaSelections: [],
+    pastaUpgradeSelections150: [],
     mainNoodlesSelections: [],
-  mainVegSideDishSelections: [],
+    mainVegSelections: [],
+    vegUpgradeSelections50: [],
+    vegUpgradeSelections60: [],
+    vegUpgradeSelections75: [],
+    vegUpgradeSelections650: [],
+    mainSideDishSelections: [],
     riceSelections: [],
+    riceUpgradeSelections50: [],
+    riceUpgradeSelections95: [],
+    riceUpgradeSelections110: [],
     dessertSelections: [],
+    dessertUpgradeSelections250: [],
+    dessertUpgradeSelections300: [],
+    dessertUpgradeSelections350: [],
+    dessertUpgradeSelections400: [],
+    dessertUpgradeSelections450: [],
     drinksSelections: [],
+    drinksUpgradeSelections130: [],
+    drinksUpgradeSelections150: [],
   });
 
   const cocktailLimit = useMemo(() => {
@@ -433,53 +634,43 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   useEffect(() => {
     if (p1.serviceStyle === "Buffet") {
       const cocktailText = [
-        ...pBuffet.cocktailSelections,
-        ...pBuffet.upgradeSelections125.map(s => `${s} (+125)`),
-        ...pBuffet.upgradeSelections150.map(s => `${s} (+150)`)
+        ...(pBuffet.cocktailSelections || []),
+        ...(pBuffet.upgradeSelections125 || []).map(s => `${s} (+125)`),
+        ...(pBuffet.upgradeSelections150 || []).map(s => `${s} (+150)`)
       ].join(", ");
-      const foodStationsText = pBuffet.foodStations.map(s => {
+      const foodStationsText = (pBuffet.foodStations || []).map(s => {
         if (s.name === "Oyster Bar") {
           return `${s.name} (+++${s.cost}) - ${(pBuffet.oysterBarSelections || []).join(", ")}`;
         }
         return `${s.name} (+++${s.cost})`;
       }).join(", ");
       const appetizerText = [
-        ...pBuffet.appetizerUpgradeSelections125.map(s => `${s} (+125)`),
-        ...pBuffet.appetizerUpgradeSelections150.map(s => `${s} (+150)`)
+        ...(pBuffet.appetizerUpgradeSelections125 || []).map(s => `${s} (+125)`),
+        ...(pBuffet.appetizerUpgradeSelections150 || []).map(s => `${s} (+150)`)
       ].join(", ");
       const soupText = [
-        ...pBuffet.soupSelections,
-        ...pBuffet.upgradeSoupSelections100.map(s => `${s} (+100)`)
+        ...(pBuffet.soupSelections || []),
+        ...(pBuffet.upgradeSoupSelections100 || []).map(s => `${s} (+100)`)
       ].join(", ");
-      const breadText = pBuffet.breadSelections.join(", ");
+      const breadText = (pBuffet.breadSelections || []).join(", ");
       const saladText = [
-        ...pBuffet.saladUpgradeSelections125.map(s => `${s} (+125)`),
-        ...pBuffet.saladUpgradeSelections150.map(s => `${s} (+150)`)
+        ...(pBuffet.saladUpgradeSelections125 || []).map(s => `${s} (+125)`),
+        ...(pBuffet.saladUpgradeSelections150 || []).map(s => `${s} (+150)`)
       ].join(", ");
       const mainText = [
-        ...pBuffet.mainBeefSelections,
-        ...(pBuffet.upgradeBeef100Selections || []).map(s => `${s} (+100)`),
-        ...(pBuffet.upgradeBeef125Selections || []).map(s => `${s} (+125)`),
-        ...(pBuffet.upgradeBeef500Selections || []).map(s => `${s} (+500)`),
-        ...(pBuffet.upgradeBeef1100Selections || []).map(s => `${s} (+1100)`),
-        ...pBuffet.mainPorkSelections,
-        ...(pBuffet.upgradePork200Selections || []).map(s => `${s} (+200)`),
-        ...(pBuffet.upgradePork250Selections || []).map(s => `${s} (+250)`),
-        ...(pBuffet.upgradePork275Selections || []).map(s => `${s} (+275)`),
-        ...(pBuffet.upgradePork15000Selections || []).map(s => `${s} (+15000)`),
-        ...pBuffet.mainFishSelections,
-        ...pBuffet.mainSeafoodSelections,
-        ...pBuffet.mainChickenSelections,
-        ...(pBuffet.upgradeChicken95Selections || []).map(s => `${s} (+95)`),
-        ...(pBuffet.upgradeChicken100Selections || []).map(s => `${s} (+100)`),
-        ...(pBuffet.upgradeChicken110Selections || []).map(s => `${s} (+110)`),
-        ...pBuffet.mainPastaSelections,
-        ...pBuffet.mainNoodlesSelections,
-        ...pBuffet.mainVegSideDishSelections
+        ...(pBuffet.mainBeefSelections || []),
+        ...(pBuffet.mainPorkSelections || []),
+        ...(pBuffet.mainFishSelections || []),
+        ...(pBuffet.mainSeafoodSelections || []),
+        ...(pBuffet.mainChickenSelections || []),
+        ...(pBuffet.mainPastaSelections || []),
+        ...(pBuffet.mainNoodlesSelections || []),
+        ...(pBuffet.mainVegSelections || []),
+        ...(pBuffet.mainSideDishSelections || [])
       ].join(", ");
-      const riceText = pBuffet.riceSelections.join(", ");
-      const dessertText = pBuffet.dessertSelections.join(", ");
-      const drinksText = pBuffet.drinksSelections.join(", ");
+      const riceText = (pBuffet.riceSelections || []).join(", ");
+      const dessertText = (pBuffet.dessertSelections || []).join(", ");
+      const drinksText = (pBuffet.drinksSelections || []).join(", ");
       setP3(prev => ({
         ...prev,
         cocktailHour: cocktailText,
@@ -509,21 +700,14 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     pBuffet.saladUpgradeSelections125,
     pBuffet.saladUpgradeSelections150,
     pBuffet.mainBeefSelections,
-    pBuffet.upgradeBeef100Selections,
-    pBuffet.upgradeBeef125Selections,
-    pBuffet.upgradeBeef500Selections,
-    pBuffet.upgradeBeef1100Selections,
     pBuffet.mainPorkSelections,
-    pBuffet.upgradePork200Selections,
-    pBuffet.upgradePork250Selections,
-    pBuffet.upgradePork275Selections,
-    pBuffet.upgradePork15000Selections,
     pBuffet.mainFishSelections,
     pBuffet.mainSeafoodSelections,
     pBuffet.mainChickenSelections,
     pBuffet.mainPastaSelections,
     pBuffet.mainNoodlesSelections,
-    pBuffet.mainVegSideDishSelections,
+    pBuffet.mainVegSelections,
+    pBuffet.mainSideDishSelections,
     pBuffet.riceSelections,
     pBuffet.dessertSelections,
     pBuffet.drinksSelections
@@ -586,22 +770,45 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         saladUpgradeSelections125: existing.pageBuffet?.saladUpgradeSelections125 || [],
         saladUpgradeSelections150: existing.pageBuffet?.saladUpgradeSelections150 || [],
         mainBeefSelections: existing.pageBuffet?.mainBeefSelections || [],
+        beefUpgradeSelections100: existing.pageBuffet?.beefUpgradeSelections100 || [],
+        beefUpgradeSelections125: existing.pageBuffet?.beefUpgradeSelections125 || [],
+        beefUpgradeSelections500: existing.pageBuffet?.beefUpgradeSelections500 || [],
+        beefUpgradeSelections1100: existing.pageBuffet?.beefUpgradeSelections1100 || [],
         mainPorkSelections: existing.pageBuffet?.mainPorkSelections || [],
-        upgradePork200Selections: existing.pageBuffet?.upgradePork200Selections || [],
-        upgradePork250Selections: existing.pageBuffet?.upgradePork250Selections || [],
-        upgradePork275Selections: existing.pageBuffet?.upgradePork275Selections || [],
-        upgradePork15000Selections: existing.pageBuffet?.upgradePork15000Selections || [],
+        porkUpgradeSelections200: existing.pageBuffet?.porkUpgradeSelections200 || [],
+        porkUpgradeSelections250: existing.pageBuffet?.porkUpgradeSelections250 || [],
+        porkUpgradeSelections275: existing.pageBuffet?.porkUpgradeSelections275 || [],
+        porkUpgradeSelections15000: existing.pageBuffet?.porkUpgradeSelections15000 || [],
         mainFishSelections: existing.pageBuffet?.mainFishSelections || [],
+        fishUpgradeSelections200: existing.pageBuffet?.fishUpgradeSelections200 || [],
+        fishUpgradeSelections225: existing.pageBuffet?.fishUpgradeSelections225 || [],
         mainSeafoodSelections: existing.pageBuffet?.mainSeafoodSelections || [],
+        seafoodUpgradeSelections200: existing.pageBuffet?.seafoodUpgradeSelections200 || [],
+        seafoodUpgradeSelections235: existing.pageBuffet?.seafoodUpgradeSelections235 || [],
+        seafoodUpgradeSelections335: existing.pageBuffet?.seafoodUpgradeSelections335 || [],
         mainChickenSelections: existing.pageBuffet?.mainChickenSelections || [],
-        upgradeChicken95Selections: existing.pageBuffet?.upgradeChicken95Selections || [],
-        upgradeChicken100Selections: existing.pageBuffet?.upgradeChicken100Selections || [],
-        upgradeChicken110Selections: existing.pageBuffet?.upgradeChicken110Selections || [],
+        chickenUpgradeSelections95: existing.pageBuffet?.chickenUpgradeSelections95 || [],
+        chickenUpgradeSelections100: existing.pageBuffet?.chickenUpgradeSelections100 || [],
+        chickenUpgradeSelections110: existing.pageBuffet?.chickenUpgradeSelections110 || [],
         mainPastaSelections: existing.pageBuffet?.mainPastaSelections || [],
+        pastaUpgradeSelections150: existing.pageBuffet?.pastaUpgradeSelections150 || [],
         mainNoodlesSelections: existing.pageBuffet?.mainNoodlesSelections || [],
-        mainVegSideDishSelections: existing.pageBuffet?.mainVegSideDishSelections || [],
+        mainVegSelections: existing.pageBuffet?.mainVegSelections || [],
+        vegUpgradeSelections50: existing.pageBuffet?.vegUpgradeSelections50 || [],
+        vegUpgradeSelections60: existing.pageBuffet?.vegUpgradeSelections60 || [],
+        vegUpgradeSelections75: existing.pageBuffet?.vegUpgradeSelections75 || [],
+        vegUpgradeSelections650: existing.pageBuffet?.vegUpgradeSelections650 || [],
+        mainSideDishSelections: existing.pageBuffet?.mainSideDishSelections || [],
         riceSelections: existing.pageBuffet?.riceSelections || [],
+        riceUpgradeSelections50: existing.pageBuffet?.riceUpgradeSelections50 || [],
+        riceUpgradeSelections95: existing.pageBuffet?.riceUpgradeSelections95 || [],
+        riceUpgradeSelections110: existing.pageBuffet?.riceUpgradeSelections110 || [],
         dessertSelections: existing.pageBuffet?.dessertSelections || [],
+        dessertUpgradeSelections250: existing.pageBuffet?.dessertUpgradeSelections250 || [],
+        dessertUpgradeSelections300: existing.pageBuffet?.dessertUpgradeSelections300 || [],
+        dessertUpgradeSelections350: existing.pageBuffet?.dessertUpgradeSelections350 || [],
+        dessertUpgradeSelections400: existing.pageBuffet?.dessertUpgradeSelections400 || [],
+        dessertUpgradeSelections450: existing.pageBuffet?.dessertUpgradeSelections450 || [],
         drinksSelections: existing.pageBuffet?.drinksSelections || [],
       });
       setP3(existing.page3 || {});
@@ -820,10 +1027,10 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   useEffect(() => {
     const price = parseFloat(p3.pricePerPlate) || 0;
     const guests = parseInt(p1.totalGuests) || 0;
-    const additionalPerPax = pBuffet.foodStations.reduce((sum, s) => sum + s.cost, 0) + ((pBuffet.upgradeSoupSelections100 || []).length * 100) + ((pBuffet.appetizerUpgradeSelections125 || []).length * 125) + ((pBuffet.appetizerUpgradeSelections150 || []).length * 150) + ((pBuffet.saladUpgradeSelections125 || []).length * 125) + ((pBuffet.saladUpgradeSelections150 || []).length * 150) + ((pBuffet.upgradeBeef100Selections || []).length * 100) + ((pBuffet.upgradeBeef125Selections || []).length * 125) + ((pBuffet.upgradeBeef500Selections || []).length * 500) + ((pBuffet.upgradeBeef1100Selections || []).length * 1100) + ((pBuffet.upgradePork200Selections || []).length * 200) + ((pBuffet.upgradePork250Selections || []).length * 250) + ((pBuffet.upgradePork275Selections || []).length * 275) + ((pBuffet.upgradePork15000Selections || []).length * 15000) + ((pBuffet.upgradeChicken95Selections || []).length * 95) + ((pBuffet.upgradeChicken100Selections || []).length * 100) + ((pBuffet.upgradeChicken110Selections || []).length * 110);
+    const additionalPerPax = (pBuffet.foodStations || []).reduce((sum, s) => sum + s.cost, 0) + ((pBuffet.upgradeSoupSelections100 || []).length * 100) + ((pBuffet.appetizerUpgradeSelections125 || []).length * 125) + ((pBuffet.appetizerUpgradeSelections150 || []).length * 150) + ((pBuffet.saladUpgradeSelections125 || []).length * 125) + ((pBuffet.saladUpgradeSelections150 || []).length * 150);
     const total = (price + additionalPerPax) * guests;
     setP3((prev) => ({ ...prev, totalMenuCost: total.toString() }));
-  }, [p3.pricePerPlate, p1.totalGuests, pBuffet.foodStations, pBuffet.upgradeSoupSelections100, pBuffet.appetizerUpgradeSelections125, pBuffet.appetizerUpgradeSelections150, pBuffet.saladUpgradeSelections125, pBuffet.saladUpgradeSelections150, pBuffet.upgradeBeef100Selections, pBuffet.upgradeBeef125Selections, pBuffet.upgradeBeef500Selections, pBuffet.upgradeBeef1100Selections, pBuffet.upgradePork200Selections, pBuffet.upgradePork250Selections, pBuffet.upgradePork275Selections, pBuffet.upgradePork15000Selections, pBuffet.upgradeChicken95Selections, pBuffet.upgradeChicken100Selections, pBuffet.upgradeChicken110Selections]);
+  }, [p3.pricePerPlate, p1.totalGuests, pBuffet.foodStations, pBuffet.upgradeSoupSelections100, pBuffet.appetizerUpgradeSelections125, pBuffet.appetizerUpgradeSelections150, pBuffet.saladUpgradeSelections125, pBuffet.saladUpgradeSelections150]);
 
   // Auto-compute service charge as 10% of totalMenuCost + totalSpecialReqCost + mobilizationCharge
   useEffect(() => {
@@ -889,7 +1096,42 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     return email.includes("@gmail.com") || email.includes("@yahoo.com");
   };
 
+  const validateFields = () => {
+    const newErrors = {};
 
+    if (p1.celebratorEmail && !validateEmail(p1.celebratorEmail)) {
+      newErrors.celebratorEmail = "Email must end with @gmail.com or @yahoo.com";
+    }
+    if (p1.representativeEmail && !validateEmail(p1.representativeEmail)) {
+      newErrors.representativeEmail = "Email must end with @gmail.com or @yahoo.com";
+    }
+    if (p1.coordinatorEmail && !validateEmail(p1.coordinatorEmail)) {
+      newErrors.coordinatorEmail = "Email must end with @gmail.com or @yahoo.com";
+    }
+
+    if (p1.celebratorMobile && !/^\d{11}$/.test(p1.celebratorMobile)) {
+      newErrors.celebratorMobile = "Mobile number must be 11 digits";
+    }
+    if (p1.representativeMobile && !/^\d{11}$/.test(p1.representativeMobile)) {
+      newErrors.representativeMobile = "Mobile number must be 11 digits";
+    }
+    if (p1.coordinatorMobile && !/^\d{11}$/.test(p1.coordinatorMobile)) {
+      newErrors.coordinatorMobile = "Mobile number must be 11 digits";
+    }
+
+    if (p1.celebratorLandline && !/^\d{7}$/.test(p1.celebratorLandline)) {
+      newErrors.celebratorLandline = "Landline number must be 7 digits";
+    }
+    if (p1.representativeLandline && !/^\d{7}$/.test(p1.representativeLandline)) {
+      newErrors.representativeLandline = "Landline number must be 7 digits";
+    }
+    if (p1.coordinatorLandline && !/^\d{7}$/.test(p1.coordinatorLandline)) {
+      newErrors.coordinatorLandline = "Landline number must be 7 digits";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const validateTimeField = (value) => {
     // Allow time format (HH:MM AM/PM) or "N/A"
@@ -911,10 +1153,10 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     return time12Regex.test(value) || time24Regex.test(value) || naRegex.test(value);
   };
 
-const validatePhone = (phone) => {
-  const phoneRegex = /^[+]?[0-9\-\(\)\s]+$/;
-  return phoneRegex.test(phone);
-};
+  const validatePhone = (phone) => {
+    const phoneRegex = /^[\+]?[0-9\-\(\)\s]+$/;
+    return phoneRegex.test(phone);
+  };
 
   const isFormValid = () => {
     // Check required fields in page1 (only those with asterisks)
@@ -1083,15 +1325,15 @@ const validatePhone = (phone) => {
         newErrors.selectedPackage = "Please select a buffet package.";
       }
       const cocktailLimit = !pBuffet.selectedPackage ? 0 : (pBuffet.selectedPackage === "Buffet Package 3" ? 3 : 2);
-      const totalCocktailSelections = pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length;
+      const totalCocktailSelections = (pBuffet.cocktailSelections || []).length + (pBuffet.upgradeSelections125 || []).length + (pBuffet.upgradeSelections150 || []).length;
       if (totalCocktailSelections !== cocktailLimit) {
         newErrors.cocktailSelections = `Please select exactly ${cocktailLimit} cocktail hour options (including upgrades).`;
       }
       const soupUpgradeLimit = !pBuffet.selectedPackage ? 0 : (pBuffet.selectedPackage === "Buffet Package 1" ? 0 : (pBuffet.selectedPackage === "Buffet Package 2" ? 1 : 2));
-      if (pBuffet.upgradeSoupSelections100.length > soupUpgradeLimit) {
+      if ((pBuffet.upgradeSoupSelections100 || []).length > soupUpgradeLimit) {
         newErrors.upgradeSoupSelections100 = `Please select at most ${soupUpgradeLimit} soup upgrade options.`;
       }
-      if (pBuffet.foodStations.some(s => s.name === "Oyster Bar") && (pBuffet.oysterBarSelections || []).length !== 4) {
+      if ((pBuffet.foodStations || []).some(s => s.name === "Oyster Bar") && (pBuffet.oysterBarSelections || []).length !== 4) {
         newErrors.oysterBarSelections = "Please select exactly 4 oyster options.";
       }
     }
@@ -1242,7 +1484,387 @@ const validatePhone = (phone) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activePage]);
 
+  const renderPage1 = () => (
+    <div className="page">
+      <div className="form-row">
+        <div className="form-group">
+          <label>Contract No.</label>
+          <input type="text" value={nextNumber} readOnly />
+        </div>
+      </div>
 
+      <h4>Celebrator</h4>
+      <div className="form-row two">
+        <div className="form-group"><label>
+  Celebrator/Corporate Name 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.celebratorName} onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} onBlur={handleAutoSave} /></div>
+        <div className="form-group"><label>Email Address</label><input value={p1.celebratorEmail} onChange={(e)=>setP1({...p1, celebratorEmail:e.target.value})} className={errors.celebratorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorEmail}</div></div>
+      </div>
+      <div className="form-row three">
+        <div className="form-group"><label>Address</label><input value={p1.celebratorAddress} onChange={(e)=>setP1({...p1, celebratorAddress:convertToUppercase(e.target.value)})} /></div>
+        <div className="form-group"><label>Landline No.</label><input value={p1.celebratorLandline} onChange={(e)=>setP1({...p1, celebratorLandline:e.target.value})} className={errors.celebratorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorLandline}</div></div>
+        <div className="form-group"><label>Mobile No.</label><input value={p1.celebratorMobile} onChange={(e)=>setP1({...p1, celebratorMobile:e.target.value})} className={errors.celebratorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorMobile}</div></div>
+      </div>
+
+      <h4>Representative</h4>
+      <div className="form-row two">
+        <div className="form-group"><label>
+  Name 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.representativeName} onChange={(e)=>setP1({...p1, representativeName:convertToUppercase(e.target.value)})} /></div>
+        <div className="form-group"><label>
+  Relationship 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.representativeRelationship} onChange={(e)=>setP1({...p1, representativeRelationship:convertToUppercase(e.target.value)})} /></div>
+      </div>
+      <div className="form-row three">
+        <div className="form-group"><label>
+  Email Address 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.representativeEmail} onChange={(e)=>setP1({...p1, representativeEmail:e.target.value})} className={errors.representativeEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeEmail}</div></div>
+        <div className="form-group"><label>
+  Address 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.representativeAddress} onChange={(e)=>setP1({...p1, representativeAddress:convertToUppercase(e.target.value)})} /></div>
+        <div className="form-group"><label>Landline No.</label><input value={p1.representativeLandline} onChange={(e)=>setP1({...p1, representativeLandline:e.target.value})} className={errors.representativeLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeLandline}</div></div>
+        </div>
+      <div className="form-row two">
+        <div className="form-group"><label>
+  Mobile No. 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.representativeMobile} onChange={(e)=>setP1({...p1, representativeMobile:e.target.value})} className={errors.representativeMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeMobile}</div></div>
+      </div>
+
+      <h4>Coordinator </h4>
+      <div className="form-row three">
+        <div className="form-group"><label>
+  Coordinator Name 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.coordinatorName} onChange={(e)=>setP1({...p1, coordinatorName:convertToUppercase(e.target.value)})} /></div>
+        <div className="form-group"><label>
+  Mobile No. 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.coordinatorMobile} onChange={(e)=>setP1({...p1, coordinatorMobile:e.target.value})} className={errors.coordinatorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorMobile}</div></div>
+        <div className="form-group"><label>Landline No.</label><input value={p1.coordinatorLandline} onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} className={errors.coordinatorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorLandline}</div></div>
+      </div>
+      <div className="form-row two">
+        <div className="form-group"><label>
+  Email Address 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.coordinatorEmail} onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} className={errors.coordinatorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorEmail}</div></div>
+        <div className="form-group"><label>
+  Address 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.coordinatorAddress} onChange={(e)=>setP1({...p1, coordinatorAddress:convertToUppercase(e.target.value)})} /></div>
+      </div>
+      
+      <h4>Event Details</h4>
+      <div className="form-row three">
+        <div className="form-group"><label>
+  Date of Event
+  <span className="required-asterisk">*</span>
+</label><input type="date" value={p1.eventDate} onChange={(e)=>setP1({...p1, eventDate:e.target.value})} onBlur={handleAutoSave} className={errors.eventDate ? 'invalid-input' : ''} /><div className="validation-error">{errors.eventDate}</div></div>
+        <div className="form-group">
+          <label>
+  Occasion
+  <span className="required-asterisk">*</span>
+</label>
+          <select value={p1.occasion} onChange={(e)=>setP1({...p1, occasion:e.target.value})}>
+            <option value="">Select Occasion</option>
+            <option value="BIRTHDAY">Birthday</option>
+            <option value="DEBUT">Debut</option>
+            <option value="SPECIAL OCCASION">Special Occasion</option>
+            <option value="CORPORATE">Corporate</option>
+            <option value="WEDDINGS">Weddings</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label>
+  Service Style
+  <span className="required-asterisk">*</span>
+</label>
+          <select value={p1.serviceStyle} onChange={(e)=>setP1({...p1, serviceStyle:e.target.value})}>
+            <option value="">Select Service Style</option>
+            <option value="Buffet">Buffet</option>
+            <option value="Signature Plated">Signature Plated</option>
+          </select>
+        </div>
+      </div>
+    <div className="form-row four">
+      <div className="form-group">
+        <label>
+  Venue
+  <span className="required-asterisk">*</span>
+</label>
+        <select
+          value={p1.venue}
+          onChange={(e) => {
+            const venue = e.target.value;
+            const venueData = VENUES[venue] || { address: "", halls: {} };
+            setP1((prev) => ({
+              ...prev,
+              venue,
+              address: venueData.address,
+              hall: "",
+            }));
+            setAvailableHalls(Object.keys(venueData.halls));
+            setMaxPax(0);
+          }}
+        >
+          <option value="">Select Venue</option>
+          {Object.keys(VENUES).map((venue) => (
+            <option key={venue} value={venue}>
+              {venue}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="form-group">
+        <label>
+  Hall
+  <span className="required-asterisk">*</span>
+</label>
+        {p1.venue === "OTHERS" ? (
+          <input
+            value={p1.hall}
+            onChange={(e) => setP1({ ...p1, hall: e.target.value.toUpperCase() })}
+          />
+        ) : (
+          <select
+            value={p1.hall}
+            onChange={(e) => {
+              const hall = e.target.value;
+              setP1((prev) => ({ ...prev, hall }));
+              if (p1.venue && VENUES[p1.venue]) {
+                const pax = VENUES[p1.venue].halls[hall] || 0;
+                setMaxPax(pax);
+                // Remove alert and rely on error message display instead
+                // const totalGuestsNum = parseInt(p1.totalGuests) || 0;
+                // if (totalGuestsNum > pax) {
+                //   alert(`Warning: The selected hall cannot accommodate the total number of guests (${totalGuestsNum}). Maximum pax is ${pax}.`);
+                // }
+              }
+            }}
+          >
+            <option value="">Select Hall</option>
+            {availableHalls.map((hall) => (
+              <option key={hall} value={hall}>
+                {hall} ({VENUES[p1.venue].halls[hall]} pax)
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+      <div className="form-group"><label>
+  Address
+  <span className="required-asterisk">*</span>
+</label><input value={p1.address} onChange={(e)=>setP1({...p1, address:convertToUppercase(e.target.value)})} /></div>
+      <div className="form-group">
+        <label>
+  Arrival of Guests
+  <span className="required-asterisk">*</span>
+</label>
+        <input
+          value={p1.arrivalOfGuests}
+          onChange={(e) => setP1({...p1, arrivalOfGuests: validateTimeField(e.target.value)})}
+          placeholder="HH:MM AM/PM or N/A"
+          className={!isTimeFieldValid(p1.arrivalOfGuests) ? "invalid-input" : ""}
+        />
+        {!isTimeFieldValid(p1.arrivalOfGuests) && (
+          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
+        )}
+      </div>
+    </div>
+    <div className="form-row three">
+      <div className="form-group">
+        <label>
+  Ingress Time 
+  <span className="required-asterisk">*</span>
+</label>
+        <input
+          value={p1.ingressTime}
+          onChange={(e) => setP1({ ...p1, ingressTime: validateTimeField(e.target.value) })}
+          placeholder="HH:MM AM/PM or N/A"
+          className={!isTimeFieldValid(p1.ingressTime) ? "invalid-input" : ""}
+        />
+        {!isTimeFieldValid(p1.ingressTime) && (
+          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
+        )}
+      </div>
+      <div className="form-group">
+        <label>
+  Cocktail Time 
+  <span className="required-asterisk">*</span>
+</label>
+        <input
+          value={p1.cocktailTime}
+          readOnly
+          placeholder="HH:MM AM/PM or N/A"
+        />
+      </div>
+      <div className="form-group">
+        <label>
+  Serving Time 
+  <span className="required-asterisk">*</span>
+</label>
+        <input
+          value={p1.servingTime}
+          onChange={(e) => setP1({ ...p1, servingTime: validateTimeField(e.target.value) })}
+          placeholder="HH:MM AM/PM or N/A"
+          className={!isTimeFieldValid(p1.servingTime) ? "invalid-input" : ""}
+        />
+        {!isTimeFieldValid(p1.servingTime) && (
+          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
+        )}
+      </div>
+    </div>
+      <div className="form-row three">
+        <div className="form-group"><label>
+  VIP 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.totalVIP} onChange={(e) => {
+          const vipValue = e.target.value;
+          setP1((prev) => {
+            const newTotalVIP = vipValue;
+            const newTotalRegular = prev.totalRegular;
+            let newTotalGuests = prev.totalGuests;
+            if (newTotalVIP && newTotalRegular) {
+              const vipNum = parseInt(newTotalVIP) || 0;
+              const regularNum = parseInt(newTotalRegular) || 0;
+              newTotalGuests = (vipNum + regularNum).toString();
+            }
+            return { ...prev, totalVIP: newTotalVIP, totalGuests: newTotalGuests };
+          });
+        }} /></div>
+        <div className="form-group"><label>
+  Regular 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.totalRegular} onChange={(e) => {
+          const regularValue = e.target.value;
+          setP1((prev) => {
+            const newTotalRegular = regularValue;
+            const newTotalVIP = prev.totalVIP;
+            let newTotalGuests = prev.totalGuests;
+            if (newTotalVIP && newTotalRegular) {
+              const vipNum = parseInt(newTotalVIP) || 0;
+              const regularNum = parseInt(newTotalRegular) || 0;
+              newTotalGuests = (vipNum + regularNum).toString();
+            }
+            return { ...prev, totalRegular: newTotalRegular, totalGuests: newTotalGuests };
+          });
+        }} /></div>
+        <div className="form-group">
+          <label>
+  Total No. of Guests 
+  <span className="required-asterisk">*</span>
+</label>
+          <input value={p1.totalGuests} readOnly className={errors.totalGuests ? 'invalid-input' : ''} />
+          {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
+        </div>
+      </div>
+      <div className="form-row four">
+        <div className="form-group"><label>Kiddie Meal Plated</label><input value={p1.kiddiePlated} onChange={(e)=>setP1({...p1, kiddiePlated:e.target.value})} /></div>
+        <div className="form-group"><label>Kiddie Meal Packed</label><input value={p1.kiddiePacked} onChange={(e)=>setP1({...p1, kiddiePacked:e.target.value})} /></div>
+        <div className="form-group"><label>Crew Meal Plated</label><input value={p1.crewPlated} onChange={(e)=>setP1({...p1, crewPlated:e.target.value})} /></div>
+        <div className="form-group"><label>Crew Meal Packed</label><input value={p1.crewPacked} onChange={(e)=>setP1({...p1, crewPacked:e.target.value})} /></div>
+      </div>
+
+      <h4>Set Up</h4>
+      <div className="form-row two">
+        <div className="form-group"><label>
+  Theme Set-up 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.themeSetup} onChange={(e)=>setP1({...p1, themeSetup:convertToUppercase(e.target.value)})} /></div>
+        <div className="form-group"><label>
+  Color Motif 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.colorMotif} onChange={(e)=>setP1({...p1, colorMotif:convertToUppercase(e.target.value)})} /></div>
+      </div>
+      <div className="form-row four">
+        <div className="form-group">
+          <label>
+  VIP Table Type 
+  <span className="required-asterisk">*</span>
+</label>
+          <select value={p1.vipTableType} onChange={(e)=>setP1({...p1, vipTableType:e.target.value})}>
+            <option value="">Select Type</option>
+            <option value="Round Table">Round Table</option>
+            <option value="Rectangle Table">Rectangle Table</option>
+            <option value="Big Round Table">Big Round Table</option>
+            <option value="Long Rectangle Table">Long Rectangle Table</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label>
+  VIP Seats per Table 
+  <span className="required-asterisk">*</span>
+</label>
+          <input value={p1.vipTableSeats ? `${p1.vipTableSeats} Seater` : ''} readOnly />
+        </div>
+        <div className="form-group">
+          <label>
+  VIP Table Quantity 
+  <span className="required-asterisk">*</span>
+</label>
+          <input type="number" value={p1.vipTableQuantity} onChange={(e)=>setP1({...p1, vipTableQuantity:e.target.value})} />
+        </div>
+        <div className="form-group">
+          <label>
+  Regular Table Type 
+  <span className="required-asterisk">*</span>
+</label>
+          <select value={p1.regularTableType} onChange={(e)=>setP1({...p1, regularTableType:e.target.value})}>
+            <option value="">Select Type</option>
+            <option value="Round Table">Round Table</option>
+            <option value="Rectangle Table">Rectangle Table</option>
+            <option value="Big Round Table">Big Round Table</option>
+            <option value="Long Rectangle Table">Long Rectangle Table</option>
+          </select>
+        </div>
+      </div>
+      <div className="form-row two">
+        <div className="form-group">
+          <label>
+  Regular Seats per Table 
+  <span className="required-asterisk">*</span>
+</label>
+          <input value={p1.regularTableSeats ? `${p1.regularTableSeats} Seater` : ''} readOnly />
+        </div>
+        <div className="form-group">
+          <label>
+  Regular Table Quantity 
+  <span className="required-asterisk">*</span>
+</label>
+          <input type="number" value={p1.regularTableQuantity} onChange={(e)=>setP1({...p1, regularTableQuantity:e.target.value})} />
+        </div>
+      </div>
+
+      <div className="form-row three">
+        <div className="form-group"><label>
+  VIP Underliner 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.vipUnderliner} onChange={(e)=>setP1({...p1, vipUnderliner:e.target.value})} /></div>
+        <div className="form-group"><label>VIP Topper</label><input value={p1.vipTopper} onChange={(e)=>setP1({...p1, vipTopper:e.target.value})} /></div>
+        <div className="form-group"><label>
+  VIP Napkin 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.vipNapkin} onChange={(e)=>setP1({...p1, vipNapkin:e.target.value})} /></div>
+      </div>
+      <div className="form-row three">
+        <div className="form-group"><label>
+  Guest Underliner 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.guestUnderliner} onChange={(e)=>setP1({...p1, guestUnderliner:e.target.value})} /></div>
+        <div className="form-group"><label>Guest Topper</label><input value={p1.guestTopper} onChange={(e)=>setP1({...p1, guestTopper:e.target.value})} /></div>
+        <div className="form-group"><label>
+  Guest Napkin 
+  <span className="required-asterisk">*</span>
+</label><input value={p1.guestNapkin} onChange={(e)=>setP1({...p1, guestNapkin:e.target.value})} /></div>
+      </div>
+      <div className="form-group"><label>Remarks</label><textarea value={p1.setupRemarks} onChange={(e)=>setP1({...p1, setupRemarks:e.target.value})} /></div>
+    </div>
+  );
 
   const renderPage2 = () => (
     <div className="page">
@@ -1345,7 +1967,7 @@ const validatePhone = (phone) => {
             "1 Beef or Pork",
             "1 Fish or Seafood",
             "1 Chicken",
-            "1 Pasta or Noodles or Vegetables/Side Dish"
+            "1 Pasta or Noodles or Vegetables or Side Dish"
           ]
         },
         "1 Rice",
@@ -1374,7 +1996,7 @@ const validatePhone = (phone) => {
             "1 Fish or Seafood",
             "1 Chicken",
             "1 Pasta or Noodles",
-            "1 Vegetables/Side Dish"
+            "1 Vegetables or Side Dish"
           ]
         },
         "1 Rice",
@@ -1404,7 +2026,7 @@ const validatePhone = (phone) => {
             "1 Fish or Seafood",
             "1 Chicken",
             "1 Pasta or Noodles",
-            "1 Vegetables/Side Dish"
+            "1 Vegetables or Side Dish"
           ]
         },
         "1 Rice",
@@ -1555,31 +2177,34 @@ const validatePhone = (phone) => {
   const renderPage4 = () => {
     if (p1.serviceStyle !== "Buffet") return null;
 
-  const totalCocktailSelections = pBuffet.cocktailSelections.length + pBuffet.upgradeSelections125.length + pBuffet.upgradeSelections150.length;
+  const totalCocktailSelections = (pBuffet.cocktailSelections || []).length + (pBuffet.upgradeSelections125 || []).length + (pBuffet.upgradeSelections150 || []).length;
 
   const handleCocktailChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.cocktailSelections.includes(option)
-        ? prev.cocktailSelections.filter(s => s !== option)
-        : totalCocktailSelections < cocktailLimit ? [...prev.cocktailSelections, option] : prev.cocktailSelections;
+      const currentSelections = prev.cocktailSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : totalCocktailSelections < cocktailLimit ? [...currentSelections, option] : currentSelections;
       return { ...prev, cocktailSelections: selections };
     });
   };
 
   const handleUpgrade125Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeSelections125.includes(option)
-        ? prev.upgradeSelections125.filter(s => s !== option)
-        : totalCocktailSelections < cocktailLimit ? [...prev.upgradeSelections125, option] : prev.upgradeSelections125;
+      const currentSelections = prev.upgradeSelections125 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : totalCocktailSelections < cocktailLimit ? [...currentSelections, option] : currentSelections;
       return { ...prev, upgradeSelections125: selections };
     });
   };
 
   const handleUpgrade150Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeSelections150.includes(option)
-        ? prev.upgradeSelections150.filter(s => s !== option)
-        : totalCocktailSelections < cocktailLimit ? [...prev.upgradeSelections150, option] : prev.upgradeSelections150;
+      const currentSelections = prev.upgradeSelections150 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : totalCocktailSelections < cocktailLimit ? [...currentSelections, option] : currentSelections;
       return { ...prev, upgradeSelections150: selections };
     });
   };
@@ -1599,283 +2224,498 @@ const validatePhone = (phone) => {
 
   const handleSoupChange = (option) => {
     setPBuffet(prev => {
-      const totalSoup = prev.soupSelections.length + prev.upgradeSoupSelections100.length;
+      const currentSoup = prev.soupSelections || [];
+      const currentUpgrade = prev.upgradeSoupSelections100 || [];
+      const totalSoup = currentSoup.length + currentUpgrade.length;
       const limit = 1 + soupUpgradeLimit;
-      const selections = prev.soupSelections.includes(option)
-        ? prev.soupSelections.filter(s => s !== option)
-        : totalSoup < limit ? [...prev.soupSelections, option] : prev.soupSelections;
+      const selections = currentSoup.includes(option)
+        ? currentSoup.filter(s => s !== option)
+        : totalSoup < limit ? [...currentSoup, option] : currentSoup;
       return { ...prev, soupSelections: selections };
     });
   };
 
   const handleUpgradeSoupChange = (option) => {
     setPBuffet(prev => {
-      const totalSoup = prev.soupSelections.length + prev.upgradeSoupSelections100.length;
+      const currentSoup = prev.soupSelections || [];
+      const currentUpgrade = prev.upgradeSoupSelections100 || [];
+      const totalSoup = currentSoup.length + currentUpgrade.length;
       const limit = 1 + soupUpgradeLimit;
-      const selections = prev.upgradeSoupSelections100.includes(option)
-        ? prev.upgradeSoupSelections100.filter(s => s !== option)
-        : totalSoup < limit ? [...prev.upgradeSoupSelections100, option] : prev.upgradeSoupSelections100;
+      const selections = currentUpgrade.includes(option)
+        ? currentUpgrade.filter(s => s !== option)
+        : totalSoup < limit ? [...currentUpgrade, option] : currentUpgrade;
       return { ...prev, upgradeSoupSelections100: selections };
     });
   };
 
   const handleMainBeefChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.mainBeefSelections.includes(option)
-        ? prev.mainBeefSelections.filter(s => s !== option)
-        : [...prev.mainBeefSelections, option];
+      const currentSelections = prev.mainBeefSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, mainBeefSelections: selections };
     });
   };
 
-  const handleUpgradeBeef100Change = (option) => {
+  const handleBeefUpgrade100Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeBeef100Selections.includes(option)
-        ? prev.upgradeBeef100Selections.filter(s => s !== option)
-        : [...prev.upgradeBeef100Selections, option];
-      return { ...prev, upgradeBeef100Selections: selections };
+      const currentSelections = prev.beefUpgradeSelections100 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, beefUpgradeSelections100: selections };
     });
   };
-
-  const handleUpgradeBeef125Change = (option) => {
+  
+  const handleBeefUpgrade125Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeBeef125Selections.includes(option)
-        ? prev.upgradeBeef125Selections.filter(s => s !== option)
-        : [...prev.upgradeBeef125Selections, option];
-      return { ...prev, upgradeBeef125Selections: selections };
+      const currentSelections = prev.beefUpgradeSelections125 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, beefUpgradeSelections125: selections };
     });
   };
-
-  const handleUpgradeBeef500Change = (option) => {
+  
+  const handleBeefUpgrade500Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeBeef500Selections.includes(option)
-        ? prev.upgradeBeef500Selections.filter(s => s !== option)
-        : [...prev.upgradeBeef500Selections, option];
-      return { ...prev, upgradeBeef500Selections: selections };
+      const currentSelections = prev.beefUpgradeSelections500 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, beefUpgradeSelections500: selections };
     });
   };
-
-  const handleUpgradeBeef1100Change = (option) => {
+  
+  const handleBeefUpgrade1100Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeBeef1100Selections.includes(option)
-        ? prev.upgradeBeef1100Selections.filter(s => s !== option)
-        : [...prev.upgradeBeef1100Selections, option];
-      return { ...prev, upgradeBeef1100Selections: selections };
+      const currentSelections = prev.beefUpgradeSelections1100 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, beefUpgradeSelections1100: selections };
     });
   };
 
   const handleMainPorkChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.mainPorkSelections.includes(option)
-        ? prev.mainPorkSelections.filter(s => s !== option)
-        : [...prev.mainPorkSelections, option];
+      const currentSelections = prev.mainPorkSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, mainPorkSelections: selections };
     });
   };
 
-  const handleUpgradePork200Change = (option) => {
+  const handlePorkUpgrade200Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradePork200Selections.includes(option)
-        ? prev.upgradePork200Selections.filter(s => s !== option)
-        : [...prev.upgradePork200Selections, option];
-      return { ...prev, upgradePork200Selections: selections };
+      const currentSelections = prev.porkUpgradeSelections200 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, porkUpgradeSelections200: selections };
     });
   };
-
-  const handleUpgradePork250Change = (option) => {
+  
+  const handlePorkUpgrade250Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradePork250Selections.includes(option)
-        ? prev.upgradePork250Selections.filter(s => s !== option)
-        : [...prev.upgradePork250Selections, option];
-      return { ...prev, upgradePork250Selections: selections };
+      const currentSelections = prev.porkUpgradeSelections250 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, porkUpgradeSelections250: selections };
     });
   };
-
-  const handleUpgradePork275Change = (option) => {
+  
+  const handlePorkUpgrade275Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradePork275Selections.includes(option)
-        ? prev.upgradePork275Selections.filter(s => s !== option)
-        : [...prev.upgradePork275Selections, option];
-      return { ...prev, upgradePork275Selections: selections };
+      const currentSelections = prev.porkUpgradeSelections275 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, porkUpgradeSelections275: selections };
     });
   };
-
-  const handleUpgradePork15000Change = (option) => {
+  
+  const handlePorkUpgrade15000Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradePork15000Selections.includes(option)
-        ? prev.upgradePork15000Selections.filter(s => s !== option)
-        : [...prev.upgradePork15000Selections, option];
-      return { ...prev, upgradePork15000Selections: selections };
+      const currentSelections = prev.porkUpgradeSelections15000 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, porkUpgradeSelections15000: selections };
     });
   };
 
   const handleMainFishChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.mainFishSelections.includes(option)
-        ? prev.mainFishSelections.filter(s => s !== option)
-        : [...prev.mainFishSelections, option];
+      const currentSelections = prev.mainFishSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, mainFishSelections: selections };
     });
   };
 
-  const handleUpgradeFish200Change = (option) => {
+  const handleFishUpgrade200Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeFish200Selections.includes(option)
-        ? prev.upgradeFish200Selections.filter(s => s !== option)
-        : [...prev.upgradeFish200Selections, option];
-      return { ...prev, upgradeFish200Selections: selections };
+      const currentSelections = prev.fishUpgradeSelections200 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, fishUpgradeSelections200: selections };
     });
   };
-
-  const handleUpgradeFish225Change = (option) => {
+  
+  const handleFishUpgrade225Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeFish225Selections.includes(option)
-        ? prev.upgradeFish225Selections.filter(s => s !== option)
-        : [...prev.upgradeFish225Selections, option];
-      return { ...prev, upgradeFish225Selections: selections };
+      const currentSelections = prev.fishUpgradeSelections225 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, fishUpgradeSelections225: selections };
     });
   };
 
   const handleMainSeafoodChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.mainSeafoodSelections.includes(option)
-        ? prev.mainSeafoodSelections.filter(s => s !== option)
-        : [...prev.mainSeafoodSelections, option];
+      const currentSelections = prev.mainSeafoodSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, mainSeafoodSelections: selections };
     });
   };
 
+  const handleSeafoodUpgrade200Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.seafoodUpgradeSelections200 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, seafoodUpgradeSelections200: selections };
+    });
+  };
+  
+  const handleSeafoodUpgrade235Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.seafoodUpgradeSelections235 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, seafoodUpgradeSelections235: selections };
+    });
+  };
+  
+  const handleSeafoodUpgrade335Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.seafoodUpgradeSelections335 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, seafoodUpgradeSelections335: selections };
+    });
+  };
+  
+
   const handleMainChickenChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.mainChickenSelections.includes(option)
-        ? prev.mainChickenSelections.filter(s => s !== option)
-        : [...prev.mainChickenSelections, option];
+      const currentSelections = prev.mainChickenSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, mainChickenSelections: selections };
     });
   };
 
-  const handleUpgradeChicken95Change = (option) => {
+  const handleChickenUpgrade95Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeChicken95Selections.includes(option)
-        ? prev.upgradeChicken95Selections.filter(s => s !== option)
-        : [...prev.upgradeChicken95Selections, option];
-      return { ...prev, upgradeChicken95Selections: selections };
+      const currentSelections = prev.chickenUpgradeSelections95 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, chickenUpgradeSelections95: selections };
     });
   };
-
-  const handleUpgradeChicken100Change = (option) => {
+  
+  const handleChickenUpgrade100Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeChicken100Selections.includes(option)
-        ? prev.upgradeChicken100Selections.filter(s => s !== option)
-        : [...prev.upgradeChicken100Selections, option];
-      return { ...prev, upgradeChicken100Selections: selections };
+      const currentSelections = prev.chickenUpgradeSelections100 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, chickenUpgradeSelections100: selections };
     });
   };
-
-  const handleUpgradeChicken110Change = (option) => {
+  
+  const handleChickenUpgrade110Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.upgradeChicken110Selections.includes(option)
-        ? prev.upgradeChicken110Selections.filter(s => s !== option)
-        : [...prev.upgradeChicken110Selections, option];
-      return { ...prev, upgradeChicken110Selections: selections };
+      const currentSelections = prev.chickenUpgradeSelections110 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, chickenUpgradeSelections110: selections };
     });
   };
+  
 
   const handleMainPastaChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.mainPastaSelections.includes(option)
-        ? prev.mainPastaSelections.filter(s => s !== option)
-        : [...prev.mainPastaSelections, option];
+      const currentSelections = prev.mainPastaSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, mainPastaSelections: selections };
+    });
+  };
+
+  const handlePastaUpgrade150Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.pastaUpgradeSelections150 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, pastaUpgradeSelections150: selections };
     });
   };
 
   const handleMainNoodlesChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.mainNoodlesSelections.includes(option)
-        ? prev.mainNoodlesSelections.filter(s => s !== option)
-        : [...prev.mainNoodlesSelections, option];
+      const currentSelections = prev.mainNoodlesSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, mainNoodlesSelections: selections };
     });
   };
 
-  const handleMainVegSideDishChange = (option) => {
+  const handleMainVegChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.mainVegSideDishSelections.includes(option)
-        ? prev.mainVegSideDishSelections.filter(s => s !== option)
-        : [...prev.mainVegSideDishSelections, option];
-      return { ...prev, mainVegSideDishSelections: selections };
+      const currentSelections = prev.mainVegSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, mainVegSelections: selections };
+    });
+  };
+
+  const handleVegUpgrade50Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.vegUpgradeSelections50 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, vegUpgradeSelections50: selections };
+    });
+  };
+  
+  const handleVegUpgrade60Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.vegUpgradeSelections60 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, vegUpgradeSelections60: selections };
+    });
+  };
+  
+  const handleVegUpgrade75Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.vegUpgradeSelections75 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, vegUpgradeSelections75: selections };
+    });
+  };
+  
+  const handleVegUpgrade650Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.vegUpgradeSelections650 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, vegUpgradeSelections650: selections };
     });
   };
 
   const handleRiceChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.riceSelections.includes(option)
-        ? prev.riceSelections.filter(s => s !== option)
-        : prev.riceSelections.length < 1 ? [option] : prev.riceSelections;
+      const currentSelections = prev.riceSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : currentSelections.length < 1 ? [option] : currentSelections;
       return { ...prev, riceSelections: selections };
+    });
+  };
+
+  const handleRiceUpgrade50Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.riceUpgradeSelections50 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, riceUpgradeSelections50: selections };
+    });
+  };
+  
+  const handleRiceUpgrade95Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.riceUpgradeSelections95 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, riceUpgradeSelections95: selections };
+    });
+  };
+  
+  const handleRiceUpgrade110Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.riceUpgradeSelections110 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, riceUpgradeSelections110: selections };
     });
   };
 
   const handleDessertChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.dessertSelections.includes(option)
-        ? prev.dessertSelections.filter(s => s !== option)
-        : prev.dessertSelections.length < 2 ? [...prev.dessertSelections, option] : prev.dessertSelections;
+      const currentSelections = prev.dessertSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : currentSelections.length < 2 ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertSelections: selections };
+    });
+  };
+
+  const handleDessertUpgrade250Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.dessertUpgradeSelections250 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, dessertUpgradeSelections250: selections };
+    });
+  };
+  
+  const handleDessertUpgrade300Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.dessertUpgradeSelections300 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, dessertUpgradeSelections300: selections };
+    });
+  };
+  
+  const handleDessertUpgrade350Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.dessertUpgradeSelections350 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, dessertUpgradeSelections350: selections };
+    });
+  };
+  
+  const handleDessertUpgrade400Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.dessertUpgradeSelections400 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, dessertUpgradeSelections400: selections };
+    });
+  };
+  
+  const handleDessertUpgrade450Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.dessertUpgradeSelections450 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, dessertUpgradeSelections450: selections };
     });
   };
 
   const handleDrinksChange = (option) => {
     setPBuffet(prev => {
-      const selections = prev.drinksSelections.includes(option)
-        ? prev.drinksSelections.filter(s => s !== option)
-        : prev.drinksSelections.length < 2 ? [...prev.drinksSelections, option] : prev.drinksSelections;
+      const currentSelections = prev.drinksSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : currentSelections.length < 2 ? [...currentSelections, option] : currentSelections;
       return { ...prev, drinksSelections: selections };
+    });
+  };
+
+  const handleDrinksUpgrade130Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.drinksUpgradeSelections130 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, drinksUpgradeSelections130: selections };
+    });
+  };
+  
+  const handleDrinksUpgrade150Change = (option) => {
+    setPBuffet(prev => {
+      const currentSelections = prev.drinksUpgradeSelections150 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
+      return { ...prev, drinksUpgradeSelections150: selections };
     });
   };
 
   const handleOysterChange = (option) => {
     setPBuffet(prev => {
-      const selections = (prev.oysterBarSelections || []).includes(option)
-        ? (prev.oysterBarSelections || []).filter(s => s !== option)
-        : (prev.oysterBarSelections || []).length < 4 ? [...(prev.oysterBarSelections || []), option] : (prev.oysterBarSelections || []);
+      const currentSelections = prev.oysterBarSelections || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : currentSelections.length < 4 ? [...currentSelections, option] : currentSelections;
       return { ...prev, oysterBarSelections: selections };
     });
   };
 
   const handleAppetizer125Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.appetizerUpgradeSelections125.includes(option)
-        ? prev.appetizerUpgradeSelections125.filter(s => s !== option)
-        : [...prev.appetizerUpgradeSelections125, option];
+      const currentSelections = prev.appetizerUpgradeSelections125 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, appetizerUpgradeSelections125: selections };
     });
   };
 
   const handleAppetizer150Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.appetizerUpgradeSelections150.includes(option)
-        ? prev.appetizerUpgradeSelections150.filter(s => s !== option)
-        : [...prev.appetizerUpgradeSelections150, option];
+      const currentSelections = prev.appetizerUpgradeSelections150 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, appetizerUpgradeSelections150: selections };
     });
   };
 
   const handleSalad125Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.saladUpgradeSelections125.includes(option)
-        ? prev.saladUpgradeSelections125.filter(s => s !== option)
-        : [...prev.saladUpgradeSelections125, option];
+      const currentSelections = prev.saladUpgradeSelections125 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, saladUpgradeSelections125: selections };
     });
   };
 
   const handleSalad150Change = (option) => {
     setPBuffet(prev => {
-      const selections = prev.saladUpgradeSelections150.includes(option)
-        ? prev.saladUpgradeSelections150.filter(s => s !== option)
-        : [...prev.saladUpgradeSelections150, option];
+      const currentSelections = prev.saladUpgradeSelections150 || [];
+      const selections = currentSelections.includes(option)
+        ? currentSelections.filter(s => s !== option)
+        : [...currentSelections, option];
       return { ...prev, saladUpgradeSelections150: selections };
     });
   };
@@ -1895,20 +2735,20 @@ const validatePhone = (phone) => {
               "Chicken Kebabs Skewers",
               "Baked Mussel Nicoise",
               "Chicken Express in Lemon Grass Skewers with Spicy Cream Sauce",
-            ].map(option => (       
+            ].map(option => (
               <label key={option} className="menu-item">
                 <input
                   type="checkbox"
-                  checked={pBuffet.cocktailSelections.includes(option)}
+                  checked={(pBuffet.cocktailSelections || []).includes(option)}
                   onChange={() => handleCocktailChange(option)}
-                  disabled={!pBuffet.cocktailSelections.includes(option) && totalCocktailSelections >= cocktailLimit}
+                  disabled={!(pBuffet.cocktailSelections || []).includes(option) && totalCocktailSelections >= cocktailLimit}
                 />
                 <span>{option}</span>
               </label>
             ))}
           </div>
-          <div className="upgrade-section">
-          <h5>Upgrade Options (++125 per pax)</h5>
+           <div className="upgrade-section">
+          <h5>Upgrade Options +125 per pax</h5>
           <div className="upgrade-grid">
             {[
               "Tuna Tartare in Savory Cone",
@@ -1917,9 +2757,9 @@ const validatePhone = (phone) => {
               <label key={option} className="upgrade-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.upgradeSelections125.includes(option)}
+                    checked={(pBuffet.upgradeSelections125 || []).includes(option)}
                     onChange={() => handleUpgrade125Change(option)}
-                    disabled={!pBuffet.upgradeSelections125.includes(option) && totalCocktailSelections >= cocktailLimit}
+                    disabled={!(pBuffet.upgradeSelections125 || []).includes(option) && totalCocktailSelections >= cocktailLimit}
                   />
                 <span>{option}</span>
               </label>
@@ -1927,7 +2767,7 @@ const validatePhone = (phone) => {
           </div>
         </div>
         <div className="upgrade-section">
-          <h5>Upgrade Options (++150 per pax)</h5>
+          <h5>Upgrade Options +150 per pax</h5>
           <div className="upgrade-grid">
             {[
               "Shrimp Tapas with Mango Shooters",
@@ -1940,9 +2780,9 @@ const validatePhone = (phone) => {
               <label key={option} className="upgrade-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.upgradeSelections150.includes(option)}
+                    checked={(pBuffet.upgradeSelections150 || []).includes(option)}
                     onChange={() => handleUpgrade150Change(option)}
-                    disabled={!pBuffet.upgradeSelections150.includes(option) && totalCocktailSelections >= cocktailLimit}
+                    disabled={!(pBuffet.upgradeSelections150 || []).includes(option) && totalCocktailSelections >= cocktailLimit}
                   />
                 <span>{option}</span>
               </label>
@@ -1962,7 +2802,7 @@ const validatePhone = (phone) => {
                   <label key={station.name} className="menu-item">
                     <input
                       type="checkbox"
-                      checked={pBuffet.foodStations.some(s => s.name === station.name)}
+                      checked={(pBuffet.foodStations || []).some(s => s.name === station.name)}
                       onChange={() => handleFoodStationChange(station)}
                     />
                     {station.name}
@@ -1973,7 +2813,7 @@ const validatePhone = (phone) => {
           ))}
         </div>
 
-        {pBuffet.foodStations.some(s => s.name === "Oyster Bar") && pBuffet.oysterBarSelections && (
+        {pBuffet.foodStations.some(s => s.name === "Oyster Bar") && (
           <div className="menu-section">
             <h5>Oyster Bar Choices (Select 4)</h5>
             <div className="menu-grid">
@@ -1981,28 +2821,28 @@ const validatePhone = (phone) => {
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.oysterBarSelections.includes(option)}
+                    checked={(pBuffet.oysterBarSelections || []).includes(option)}
                     onChange={() => handleOysterChange(option)}
-                    disabled={!pBuffet.oysterBarSelections.includes(option) && pBuffet.oysterBarSelections.length >= 4}
+                    disabled={!(pBuffet.oysterBarSelections || []).includes(option) && (pBuffet.oysterBarSelections || []).length >= 4}
                   />
                   {option}
                 </label>
               ))}
             </div>
-            <p>Oyster Selections: {pBuffet.oysterBarSelections.length}/4</p>
+            <p>Oyster Selections: {(pBuffet.oysterBarSelections || []).length}/4</p>
           </div>
         )}
 
         <div className="menu-section">
           <h5>Appetizer (Optional)</h5>
           <div className="menu-category">
-            <h6>++125 per pax</h6>
+            <h5>+125 per pax</h5>
             <div className="menu-grid">
               {APPETIZER_UPGRADE_125_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.appetizerUpgradeSelections125.includes(option)}
+                    checked={(pBuffet.appetizerUpgradeSelections125 || []).includes(option)}
                     onChange={() => handleAppetizer125Change(option)}
                   />
                   {option}
@@ -2011,13 +2851,13 @@ const validatePhone = (phone) => {
             </div>
           </div>
           <div className="menu-category">
-            <h6>++150 per pax</h6>
+            <h5>+150 per pax</h5>
             <div className="menu-grid">
               {APPETIZER_UPGRADE_150_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.appetizerUpgradeSelections150.includes(option)}
+                    checked={(pBuffet.appetizerUpgradeSelections150 || []).includes(option)}
                     onChange={() => handleAppetizer150Change(option)}
                   />
                   {option}
@@ -2034,43 +2874,44 @@ const validatePhone = (phone) => {
               <label key={option} className="menu-item">
                 <input
                   type="checkbox"
-                  checked={pBuffet.soupSelections.includes(option)}
+                  checked={(pBuffet.soupSelections || []).includes(option)}
                   onChange={() => handleSoupChange(option)}
-                  disabled={!pBuffet.soupSelections.includes(option) && (pBuffet.soupSelections.length + pBuffet.upgradeSoupSelections100.length) >= (1 + soupUpgradeLimit)}
+                  disabled={!(pBuffet.soupSelections || []).includes(option) && ((pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length) >= (1 + soupUpgradeLimit)}
                 />
                 {option}
               </label>
             ))}
           </div>
           <div className="upgrade-section">
-          <h5>Upgrade Soup Options (++100 per pax)</h5>
+          <h5>Upgrade Options +100 per pax</h5>
           <div className="upgrade-grid">
             {UPGRADE_SOUP_OPTIONS.map(option => (
               <label key={option} className="upgrade-item">
                 <input
                   type="checkbox"
-                  checked={pBuffet.upgradeSoupSelections100.includes(option)}
+                  checked={(pBuffet.upgradeSoupSelections100 || []).includes(option)}
                   onChange={() => handleUpgradeSoupChange(option)}
-                  disabled={!pBuffet.upgradeSoupSelections100.includes(option) && (pBuffet.soupSelections.length + pBuffet.upgradeSoupSelections100.length) >= (1 + soupUpgradeLimit)}
+                  disabled={!(pBuffet.upgradeSoupSelections100 || []).includes(option) && ((pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length) >= (1 + soupUpgradeLimit)}
                 />
                 <span>{option}</span>
               </label>
             ))}
           </div>
         </div>
-        <p>Soup Selections: {pBuffet.soupSelections.length + pBuffet.upgradeSoupSelections100.length}/{1 + soupUpgradeLimit}</p>
+        <p>Soup Selections: {(pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length}/{1 + soupUpgradeLimit}</p>
         </div>
+
         
         <div className="menu-section">
           <h5>Salad (Optional)</h5>
           <div className="menu-category">
-            <h6>++125 per pax</h6>
+            <h5>+125 per pax</h5>
             <div className="menu-grid">
               {SALAD_UPGRADE_125_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.saladUpgradeSelections125.includes(option)}
+                    checked={(pBuffet.saladUpgradeSelections125 || []).includes(option)}
                     onChange={() => handleSalad125Change(option)}
                   />
                   {option}
@@ -2079,13 +2920,13 @@ const validatePhone = (phone) => {
             </div>
           </div>
           <div className="menu-category">
-            <h6>++150 per pax</h6>
+            <h5>++150 per pax</h5>
             <div className="menu-grid">
               {SALAD_UPGRADE_150_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.saladUpgradeSelections150.includes(option)}
+                    checked={(pBuffet.saladUpgradeSelections150 || []).includes(option)}
                     onChange={() => handleSalad150Change(option)}
                   />
                   {option}
@@ -2104,75 +2945,83 @@ const validatePhone = (phone) => {
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.mainBeefSelections.includes(option)}
+                    checked={(pBuffet.mainBeefSelections || []).includes(option)}
                     onChange={() => handleMainBeefChange(option)}
                   />
                   {option}
                 </label>
               ))}
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++100 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_BEEF_100_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradeBeef100Selections || []).includes(option)}
-                      onChange={() => handleUpgradeBeef100Change(option)}
+            <div className="menu-category">
+            <h5>+100 per pax</h5>
+            <div className="menu-grid">
+            {BEEF_UPGRADE_100_OPTIONS.map(option => (
+              <div key={option}>
+                <input
+                  type="checkbox"
+                    id={`beef-upgrade-100-${option}`}
+                    checked={(pBuffet.beefUpgradeSelections100 || []).includes(option)}
+                    onChange={() => handleBeefUpgrade100Change(option)}
                     />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+                    <label htmlFor={`beef-upgrade-100-${option}`}>{option}</label>
+                  </div>
+              ))}
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++125 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_BEEF_125_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradeBeef125Selections || []).includes(option)}
-                      onChange={() => handleUpgradeBeef125Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++500 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_BEEF_500_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradeBeef500Selections || []).includes(option)}
-                      onChange={() => handleUpgradeBeef500Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+            <div className="menu-category">
+            <h5>+125 per pax</h5>
+            <div className="menu-grid">
+            {BEEF_UPGRADE_125_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`beef-upgrade-125-${option}`}
+      checked={(pBuffet.beefUpgradeSelections125 || []).includes(option)}
+      onChange={() => handleBeefUpgrade125Change(option)}
+    />
+    <label htmlFor={`beef-upgrade-125-${option}`}>{option}</label>
+  </div>
+))}
+
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++1100 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_BEEF_1100_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradeBeef1100Selections || []).includes(option)}
-                      onChange={() => handleUpgradeBeef1100Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+500 per pax</h5>
+            <div className="menu-grid">
+            {BEEF_UPGRADE_500_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`beef-upgrade-500-${option}`}
+      checked={(pBuffet.beefUpgradeSelections500 || []).includes(option)}
+      onChange={() => handleBeefUpgrade500Change(option)}
+    />
+    <label htmlFor={`beef-upgrade-500-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+1100 per pax</h5>
+            <div className="menu-grid">
+            {BEEF_UPGRADE_1100_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`beef-upgrade-1100-${option}`}
+      checked={(pBuffet.beefUpgradeSelections1100 || []).includes(option)}
+      onChange={() => handleBeefUpgrade1100Change(option)}
+    />
+    <label htmlFor={`beef-upgrade-1100-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
           </div>
-          <hr />
+          
+
           <div className="menu-category">
             <h6>Pork</h6>
             <div className="menu-grid">
@@ -2180,75 +3029,84 @@ const validatePhone = (phone) => {
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.mainPorkSelections.includes(option)}
+                    checked={(pBuffet.mainPorkSelections || []).includes(option)}
                     onChange={() => handleMainPorkChange(option)}
                   />
                   {option}
                 </label>
               ))}
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++200 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_PORK_200_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradePork200Selections || []).includes(option)}
-                      onChange={() => handleUpgradePork200Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+            <div className="menu-category">
+            <h5>+200 per pax</h5>
+            <div className="menu-grid">
+            {PORK_UPGRADE_200_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`pork-upgrade-200-${option}`}
+      checked={(pBuffet.porkUpgradeSelections200 || []).includes(option)}
+      onChange={() => handlePorkUpgrade200Change(option)}
+    />
+    <label htmlFor={`pork-upgrade-200-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++250 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_PORK_250_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradePork250Selections || []).includes(option)}
-                      onChange={() => handleUpgradePork250Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+
+            <div className="menu-category">
+            <h5>+250 per pax</h5>
+            <div className="menu-grid">
+            {PORK_UPGRADE_250_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`pork-upgrade-250-${option}`}
+      checked={(pBuffet.porkUpgradeSelections250 || []).includes(option)}
+      onChange={() => handlePorkUpgrade250Change(option)}
+    />
+    <label htmlFor={`pork-upgrade-250-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++275 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_PORK_275_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradePork275Selections || []).includes(option)}
-                      onChange={() => handleUpgradePork275Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+
+            <div className="menu-category">
+            <h5>+275 per pax</h5>
+            <div className="menu-grid">
+            {PORK_UPGRADE_275_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`pork-upgrade-275-${option}`}
+      checked={(pBuffet.porkUpgradeSelections275 || []).includes(option)}
+      onChange={() => handlePorkUpgrade275Change(option)}
+    />
+    <label htmlFor={`pork-upgrade-275-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++15000 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_PORK_15000_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradePork15000Selections || []).includes(option)}
-                      onChange={() => handleUpgradePork15000Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+
+            <div className="menu-category">
+            <h5>+15000 (good for 60-70 pax)</h5>
+            <div className="menu-grid">
+            {PORK_UPGRADE_15000_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`pork-upgrade-15000-${option}`}
+      checked={(pBuffet.porkUpgradeSelections15000 || []).includes(option)}
+      onChange={() => handlePorkUpgrade15000Change(option)}
+    />
+    <label htmlFor={`pork-upgrade-15000-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
           </div>
-          <hr />
+          
+          
+
           <div className="menu-category">
             <h6>Fish</h6>
             <div className="menu-grid">
@@ -2256,45 +3114,50 @@ const validatePhone = (phone) => {
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.mainFishSelections.includes(option)}
+                    checked={(pBuffet.mainFishSelections || []).includes(option)}
                     onChange={() => handleMainFishChange(option)}
                   />
                   {option}
                 </label>
               ))}
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++200 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_FISH_200_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradeFish200Selections || []).includes(option)}
-                      onChange={() => handleUpgradeFish200Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+            <div className="menu-category">
+            <h5>+200 per pax</h5>
+            <div className="menu-grid">
+            {FISH_UPGRADE_200_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`fish-upgrade-200-${option}`}
+      checked={(pBuffet.fishUpgradeSelections200 || []).includes(option)}
+      onChange={() => handleFishUpgrade200Change(option)}
+    />
+    <label htmlFor={`fish-upgrade-200-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++225 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_FISH_225_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradeFish225Selections || []).includes(option)}
-                      onChange={() => handleUpgradeFish225Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+
+            <div className="menu-category">
+            <h5>+225 per pax</h5>
+            <div className="menu-grid">
+            {FISH_UPGRADE_225_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`fish-upgrade-225-${option}`}
+      checked={(pBuffet.fishUpgradeSelections225 || []).includes(option)}
+      onChange={() => handleFishUpgrade225Change(option)}
+    />
+    <label htmlFor={`fish-upgrade-225-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
           </div>
-          <hr />
+
+          
+
           <div className="menu-category">
             <h6>Seafood</h6>
             <div className="menu-grid">
@@ -2302,15 +3165,67 @@ const validatePhone = (phone) => {
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.mainSeafoodSelections.includes(option)}
+                    checked={(pBuffet.mainSeafoodSelections || []).includes(option)}
                     onChange={() => handleMainSeafoodChange(option)}
                   />
                   {option}
                 </label>
               ))}
             </div>
+            <div className="menu-category">
+            <h5>+200 per pax</h5>
+            <div className="menu-grid">
+            {SEAFOOD_UPGRADE_200_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`seafood-upgrade-200-${option}`}
+      checked={(pBuffet.seafoodUpgradeSelections200 || []).includes(option)}
+      onChange={() => handleSeafoodUpgrade200Change(option)}
+    />
+    <label htmlFor={`seafood-upgrade-200-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+235 per pax</h5>
+            <div className="menu-grid">
+            {SEAFOOD_UPGRADE_235_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`seafood-upgrade-235-${option}`}
+      checked={(pBuffet.seafoodUpgradeSelections235 || []).includes(option)}
+      onChange={() => handleSeafoodUpgrade235Change(option)}
+    />
+    <label htmlFor={`seafood-upgrade-235-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+335 per pax</h5>
+            <div className="menu-grid">
+            {SEAFOOD_UPGRADE_335_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`seafood-upgrade-335-${option}`}
+      checked={(pBuffet.seafoodUpgradeSelections335 || []).includes(option)}
+      onChange={() => handleSeafoodUpgrade335Change(option)}
+    />
+    <label htmlFor={`seafood-upgrade-335-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
           </div>
-          <hr />
+
+          
+
           <div className="menu-category">
             <h6>Chicken</h6>
             <div className="menu-grid">
@@ -2318,60 +3233,65 @@ const validatePhone = (phone) => {
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.mainChickenSelections.includes(option)}
+                    checked={(pBuffet.mainChickenSelections || []).includes(option)}
                     onChange={() => handleMainChickenChange(option)}
                   />
                   {option}
                 </label>
               ))}
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++95 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_CHICKEN_95_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradeChicken95Selections || []).includes(option)}
-                      onChange={() => handleUpgradeChicken95Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+            <div className="menu-category">
+            <h5>+95 per pax</h5>
+            <div className="menu-grid">
+            {CHICKEN_UPGRADE_95_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`chicken-upgrade-95-${option}`}
+      checked={(pBuffet.chickenUpgradeSelections95 || []).includes(option)}
+      onChange={() => handleChickenUpgrade95Change(option)}
+    />
+    <label htmlFor={`chicken-upgrade-95-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++100 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_CHICKEN_100_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradeChicken100Selections || []).includes(option)}
-                      onChange={() => handleUpgradeChicken100Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+
+            <div className="menu-category">
+            <h5>+100 per pax</h5>
+            <div className="menu-grid">
+            {CHICKEN_UPGRADE_100_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`chicken-upgrade-100-${option}`}
+      checked={(pBuffet.chickenUpgradeSelections100 || []).includes(option)}
+      onChange={() => handleChickenUpgrade100Change(option)}
+    />
+    <label htmlFor={`chicken-upgrade-100-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
-            <div className="upgrade-section">
-              <h6>Upgrade Options (++110 per pax)</h6>
-              <div className="upgrade-grid">
-                {UPGRADE_CHICKEN_110_OPTIONS.map(option => (
-                  <label key={option} className="upgrade-item">
-                    <input
-                      type="checkbox"
-                      checked={(pBuffet.upgradeChicken110Selections || []).includes(option)}
-                      onChange={() => handleUpgradeChicken110Change(option)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+
+            <div className="menu-category">
+            <h5>+110 per pax</h5>
+            <div className="menu-grid">
+            {CHICKEN_UPGRADE_110_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`chicken-upgrade-110-${option}`}
+      checked={(pBuffet.chickenUpgradeSelections110 || []).includes(option)}
+      onChange={() => handleChickenUpgrade110Change(option)}
+    />
+    <label htmlFor={`chicken-upgrade-110-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
             </div>
           </div>
-          <hr />
+
           <div className="menu-category">
             <h6>Pasta</h6>
             <div className="menu-grid">
@@ -2379,15 +3299,31 @@ const validatePhone = (phone) => {
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.mainPastaSelections.includes(option)}
+                    checked={(pBuffet.mainPastaSelections || []).includes(option)}
                     onChange={() => handleMainPastaChange(option)}
                   />
                   {option}
                 </label>
               ))}
             </div>
+            <div className="menu-category">
+            <h5>+150 per pax</h5>
+            <div className="menu-grid">
+            {PASTA_UPGRADE_150_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`pasta-upgrade-150-${option}`}
+      checked={(pBuffet.pastaUpgradeSelections150 || []).includes(option)}
+      onChange={() => handlePastaUpgrade150Change(option)}
+    />
+    <label htmlFor={`pasta-upgrade-150-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
           </div>
-          <hr />
+
           <div className="menu-category">
             <h6>Noodles</h6>
             <div className="menu-grid">
@@ -2395,7 +3331,7 @@ const validatePhone = (phone) => {
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.mainNoodlesSelections.includes(option)}
+                    checked={(pBuffet.mainNoodlesSelections || []).includes(option)}
                     onChange={() => handleMainNoodlesChange(option)}
                   />
                   {option}
@@ -2403,23 +3339,88 @@ const validatePhone = (phone) => {
               ))}
             </div>
           </div>
-          <hr />
+
           <div className="menu-category">
-            <h6>Vegetables/Side Dish</h6>
+            <h6>Vegetables</h6>
             <div className="menu-grid">
-              {MAIN_VEG_SIDE_DISH_OPTIONS.map(option => (
+              {MAIN_VEG_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
                   <input
                     type="checkbox"
-                    checked={pBuffet.mainVegSideDishSelections.includes(option)}
-                    onChange={() => handleMainVegSideDishChange(option)}
+                    checked={(pBuffet.mainVegSelections || []).includes(option)}
+                    onChange={() => handleMainVegChange(option)}
                   />
                   {option}
                 </label>
               ))}
             </div>
           </div>
-          <hr />
+          <div className="menu-category">
+            <h5>+50 per pax</h5>
+            <div className="menu-grid">
+            {VEG_UPGRADE_50_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`veg-upgrade-50-${option}`}
+      checked={(pBuffet.vegUpgradeSelections50 || []).includes(option)}
+      onChange={() => handleVegUpgrade50Change(option)}
+    />
+    <label htmlFor={`veg-upgrade-50-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+60 per pax</h5>
+            <div className="menu-grid">
+            {VEG_UPGRADE_60_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`veg-upgrade-60-${option}`}
+      checked={(pBuffet.vegUpgradeSelections60 || []).includes(option)}
+      onChange={() => handleVegUpgrade60Change(option)}
+    />
+    <label htmlFor={`veg-upgrade-60-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+75 per pax</h5>
+            <div className="menu-grid">
+            {VEG_UPGRADE_75_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`veg-upgrade-75-${option}`}
+      checked={(pBuffet.vegUpgradeSelections75 || []).includes(option)}
+      onChange={() => handleVegUpgrade75Change(option)}
+    />
+    <label htmlFor={`veg-upgrade-75-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+            <div className="menu-category">
+            <h5>+650 per pax</h5>
+            <div className="menu-grid">
+            {VEG_UPGRADE_650_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`veg-upgrade-650-${option}`}
+      checked={(pBuffet.vegUpgradeSelections650 || []).includes(option)}
+      onChange={() => handleVegUpgrade650Change(option)}
+    />
+    <label htmlFor={`veg-upgrade-650-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
         </div>
 
         <div className="menu-section">
@@ -2429,15 +3430,68 @@ const validatePhone = (phone) => {
               <label key={option} className="menu-item">
                 <input
                   type="checkbox"
-                  checked={pBuffet.riceSelections.includes(option)}
+                  checked={(pBuffet.riceSelections || []).includes(option)}
                   onChange={() => handleRiceChange(option)}
-                  disabled={!pBuffet.riceSelections.includes(option) && pBuffet.riceSelections.length >= 1}
+                  disabled={!(pBuffet.riceSelections || []).includes(option) && (pBuffet.riceSelections || []).length >= 1}
                 />
                 {option}
               </label>
             ))}
           </div>
+          <div className="menu-category">
+            <h5>+50 per pax</h5>
+            <div className="menu-grid">
+            {RICE_UPGRADE_50_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`rice-upgrade-50-${option}`}
+      checked={(pBuffet.riceUpgradeSelections50 || []).includes(option)}
+      onChange={() => handleRiceUpgrade50Change(option)}
+    />
+    <label htmlFor={`rice-upgrade-50-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+
+            <div className="menu-category">
+            <h5>+95 per pax</h5>
+            <div className="menu-grid">
+            {RICE_UPGRADE_95_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`rice-upgrade-95-${option}`}
+      checked={(pBuffet.riceUpgradeSelections95 || []).includes(option)}
+      onChange={() => handleRiceUpgrade95Change(option)}
+    />
+    <label htmlFor={`rice-upgrade-95-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+110 per pax</h5>
+            <div className="menu-grid">
+            {RICE_UPGRADE_110_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`rice-upgrade-110-${option}`}
+      checked={(pBuffet.riceUpgradeSelections110 || []).includes(option)}
+      onChange={() => handleRiceUpgrade110Change(option)}
+    />
+    <label htmlFor={`rice-upgrade-110-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
         </div>
+
+        
 
         <div className="menu-section">
           <h5>Dessert</h5>
@@ -2446,14 +3500,98 @@ const validatePhone = (phone) => {
               <label key={option} className="menu-item">
                 <input
                   type="checkbox"
-                  checked={pBuffet.dessertSelections.includes(option)}
+                  checked={(pBuffet.dessertSelections || []).includes(option)}
                   onChange={() => handleDessertChange(option)}
-                  disabled={!pBuffet.dessertSelections.includes(option) && pBuffet.dessertSelections.length >= 2}
+                  disabled={!(pBuffet.dessertSelections || []).includes(option) && (pBuffet.dessertSelections || []).length >= 2}
                 />
                 {option}
               </label>
             ))}
           </div>
+          <div className="menu-category">
+            <h5>+250 per pax</h5>
+            <div className="menu-grid">
+            {DESSERT_UPGRADE_250_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`dessert-upgrade-250-${option}`}
+      checked={(pBuffet.dessertUpgradeSelections250 || []).includes(option)}
+      onChange={() => handleDessertUpgrade250Change(option)}
+    />
+    <label htmlFor={`dessert-upgrade-250-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+300 per pax</h5>
+            <div className="menu-grid">
+            {DESSERT_UPGRADE_300_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`dessert-upgrade-300-${option}`}
+      checked={(pBuffet.dessertUpgradeSelections300 || []).includes(option)}
+      onChange={() => handleDessertUpgrade300Change(option)}
+    />
+    <label htmlFor={`dessert-upgrade-300-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+350 per pax</h5>
+            <div className="menu-grid">
+            {DESSERT_UPGRADE_350_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`dessert-upgrade-350-${option}`}
+      checked={(pBuffet.dessertUpgradeSelections350 || []).includes(option)}
+      onChange={() => handleDessertUpgrade350Change(option)}
+    />
+    <label htmlFor={`dessert-upgrade-350-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+400 per pax</h5>
+            <div className="menu-grid">
+            {DESSERT_UPGRADE_400_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`dessert-upgrade-400-${option}`}
+      checked={(pBuffet.dessertUpgradeSelections400 || []).includes(option)}
+      onChange={() => handleDessertUpgrade400Change(option)}
+    />
+    <label htmlFor={`dessert-upgrade-400-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+450 per pax</h5>
+            <div className="menu-grid">
+            {DESSERT_UPGRADE_450_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`dessert-upgrade-450-${option}`}
+      checked={(pBuffet.dessertUpgradeSelections450 || []).includes(option)}
+      onChange={() => handleDessertUpgrade450Change(option)}
+    />
+    <label htmlFor={`dessert-upgrade-450-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
         </div>
 
         <div className="menu-section">
@@ -2463,14 +3601,47 @@ const validatePhone = (phone) => {
               <label key={option} className="menu-item">
                 <input
                   type="checkbox"
-                  checked={pBuffet.drinksSelections.includes(option)}
+                  checked={(pBuffet.drinksSelections || []).includes(option)}
                   onChange={() => handleDrinksChange(option)}
-                  disabled={!pBuffet.drinksSelections.includes(option) && pBuffet.drinksSelections.length >= 2}
+                  disabled={!(pBuffet.drinksSelections || []).includes(option) && (pBuffet.drinksSelections || []).length >= 2}
                 />
                 {option}
               </label>
             ))}
           </div>
+          <div className="menu-category">
+            <h5>+130 per pax</h5>
+            <div className="menu-grid">
+            {DRINK_UPGRADE_130_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`drinks-upgrade-130-${option}`}
+      checked={(pBuffet.drinksUpgradeSelections130 || []).includes(option)}
+      onChange={() => handleDrinksUpgrade130Change(option)}
+    />
+    <label htmlFor={`drinks-upgrade-130-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
+
+            <div className="menu-category">
+            <h5>+150 per pax</h5>
+            <div className="menu-grid">
+            {DRINK_UPGRADE_150_OPTIONS.map(option => (
+  <div key={option}>
+    <input
+      type="checkbox"
+      id={`drinks-upgrade-150-${option}`}
+      checked={(pBuffet.drinksUpgradeSelections150 || []).includes(option)}
+      onChange={() => handleDrinksUpgrade150Change(option)}
+    />
+    <label htmlFor={`drinks-upgrade-150-${option}`}>{option}</label>
+  </div>
+))}
+           </div>
+            </div>
         </div>
 
       </div>
@@ -2679,20 +3850,7 @@ const validatePhone = (phone) => {
           e.preventDefault(); 
         } 
       }}>
-  {activePage === 1 && (
-    <Page1Celebrator
-      p1={p1}
-      setP1={setP1}
-      errors={errors}
-      nextNumber={nextNumber}
-      availableHalls={availableHalls}
-      maxPax={maxPax}
-      convertToUppercase={convertToUppercase}
-      validateTimeField={validateTimeField}
-      isTimeFieldValid={isTimeFieldValid}
-      handleAutoSave={handleAutoSave}
-    />
-  )}
+        {activePage === 1 && renderPage1()}
         {activePage === 2 && renderPage2()}
         {activePage === 3 && (totalPages === 3 ? renderPage5() : renderPage3())}
         {activePage === 4 && (totalPages === 5 ? renderPage4() : renderPage5())}
@@ -2732,5 +3890,3 @@ const validatePhone = (phone) => {
 }
 
 export default ContractForm;
-
-
