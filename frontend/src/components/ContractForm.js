@@ -583,6 +583,120 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     return 0;
   }, [pBuffet.selectedPackage]);
 
+  // Menu selection limits based on package
+  const menuLimits = useMemo(() => {
+    const pkg = pBuffet.selectedPackage;
+    if (!pkg) return {};
+    
+    if (pkg === "Buffet Package 1") {
+      return {
+        foodStations: 1,
+        appetizer: 1,
+        salad: 1,
+        beefPorkCombined: 1, // Beef OR Pork
+        fishSeafoodCombined: 1, // Fish OR Seafood
+        chicken: 1,
+        pastaNoodlesVegCombined: 1, // Pasta OR Noodles OR Vegetables
+        dessert: 2,
+        drinks: 2
+      };
+    } else if (pkg === "Buffet Package 2") {
+      return {
+        foodStations: 1,
+        appetizer: 1,
+        salad: 1,
+        beefPorkCombined: 1, // Beef OR Pork
+        fishSeafoodCombined: 1, // Fish OR Seafood
+        chicken: 1,
+        pastaNoodlesCombined: 1, // Pasta OR Noodles
+        vegetables: 1, // Separate
+        dessert: 2,
+        drinks: 2
+      };
+    } else if (pkg === "Buffet Package 3") {
+      return {
+        foodStations: 1,
+        appetizer: 1,
+        salad: 1,
+        beef: 1, // Separate
+        pork: 1, // Separate
+        fishSeafoodCombined: 1, // Fish OR Seafood
+        chicken: 1,
+        pastaNoodlesCombined: 1, // Pasta OR Noodles
+        vegetables: 1, // Separate
+        dessert: 2,
+        drinks: 2
+      };
+    }
+    return {};
+  }, [pBuffet.selectedPackage]);
+
+  // Helper functions to count current selections
+  const getCurrentSelectionCounts = useMemo(() => {
+    const beefCount = (pBuffet.mainBeefSelections || []).length + 
+                      (pBuffet.beefUpgradeSelections100 || []).length +
+                      (pBuffet.beefUpgradeSelections125 || []).length +
+                      (pBuffet.beefUpgradeSelections500 || []).length +
+                      (pBuffet.beefUpgradeSelections1100 || []).length;
+    
+    const porkCount = (pBuffet.mainPorkSelections || []).length +
+                      (pBuffet.porkUpgradeSelections200 || []).length +
+                      (pBuffet.porkUpgradeSelections250 || []).length +
+                      (pBuffet.porkUpgradeSelections275 || []).length +
+                      (pBuffet.porkUpgradeSelections15000 || []).length;
+    
+    const fishCount = (pBuffet.mainFishSelections || []).length +
+                      (pBuffet.fishUpgradeSelections200 || []).length +
+                      (pBuffet.fishUpgradeSelections225 || []).length;
+    
+    const seafoodCount = (pBuffet.mainSeafoodSelections || []).length +
+                         (pBuffet.seafoodUpgradeSelections200 || []).length +
+                         (pBuffet.seafoodUpgradeSelections235 || []).length +
+                         (pBuffet.seafoodUpgradeSelections335 || []).length;
+    
+    const chickenCount = (pBuffet.mainChickenSelections || []).length +
+                         (pBuffet.chickenUpgradeSelections95 || []).length +
+                         (pBuffet.chickenUpgradeSelections100 || []).length +
+                         (pBuffet.chickenUpgradeSelections110 || []).length;
+    
+    const pastaCount = (pBuffet.mainPastaSelections || []).length +
+                       (pBuffet.pastaUpgradeSelections150 || []).length;
+    
+    const noodlesCount = (pBuffet.mainNoodlesSelections || []).length;
+    
+    const vegCount = (pBuffet.mainVegSelections || []).length +
+                     (pBuffet.vegUpgradeSelections50 || []).length +
+                     (pBuffet.vegUpgradeSelections60 || []).length +
+                     (pBuffet.vegUpgradeSelections75 || []).length +
+                     (pBuffet.vegUpgradeSelections650 || []).length;
+    
+    const foodStationsCount = (pBuffet.foodStations || []).length;
+    
+    const appetizerCount = (pBuffet.appetizerUpgradeSelections125 || []).length +
+                           (pBuffet.appetizerUpgradeSelections150 || []).length;
+    
+    const saladCount = (pBuffet.saladUpgradeSelections125 || []).length +
+                       (pBuffet.saladUpgradeSelections150 || []).length;
+
+    return {
+      beef: beefCount,
+      pork: porkCount,
+      beefPork: beefCount + porkCount,
+      fish: fishCount,
+      seafood: seafoodCount,
+      fishSeafood: fishCount + seafoodCount,
+      chicken: chickenCount,
+      pasta: pastaCount,
+      noodles: noodlesCount,
+      vegetables: vegCount,
+      pastaNoodles: pastaCount + noodlesCount,
+      pastaNoodlesVeg: pastaCount + noodlesCount + vegCount,
+      foodStations: foodStationsCount,
+      appetizer: appetizerCount,
+      salad: saladCount
+    };
+  }, [pBuffet]);
+
   // Auto-set price per plate for buffet based on package and guests
   useEffect(() => {
     if (p1.serviceStyle === "Buffet" && pBuffet.selectedPackage && p1.totalGuests) {
@@ -1967,7 +2081,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             "1 Beef or Pork",
             "1 Fish or Seafood",
             "1 Chicken",
-            "1 Pasta or Noodles or Vegetables or Side Dish"
+            "1 Pasta or Noodles or Vegetables"
           ]
         },
         "1 Rice",
@@ -1996,7 +2110,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             "1 Fish or Seafood",
             "1 Chicken",
             "1 Pasta or Noodles",
-            "1 Vegetables or Side Dish"
+            "1 Vegetables"
           ]
         },
         "1 Rice",
@@ -2026,7 +2140,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             "1 Fish or Seafood",
             "1 Chicken",
             "1 Pasta or Noodles",
-            "1 Vegetables or Side Dish"
+            "1 Vegetables"
           ]
         },
         "1 Rice",
@@ -2212,11 +2326,16 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleFoodStationChange = (station) => {
     setPBuffet(prev => {
       const isSelected = prev.foodStations.some(s => s.name === station.name);
+      const currentCount = (prev.foodStations || []).length;
+      const limit = menuLimits.foodStations || 999;
+      
       let newSelections;
       if (isSelected) {
         newSelections = prev.foodStations.filter(s => s.name !== station.name);
-      } else {
+      } else if (currentCount < limit) {
         newSelections = [...prev.foodStations, station];
+      } else {
+        return prev; // Don't allow selection if limit reached
       }
       return { ...prev, foodStations: newSelections };
     });
@@ -2251,9 +2370,32 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleMainBeefChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.mainBeefSelections || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      // Calculate current counts
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        // Beef OR Pork combined limit of 1
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        // Beef separate limit of 1
+        canAdd = beefCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, mainBeefSelections: selections };
     });
   };
@@ -2261,9 +2403,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleBeefUpgrade100Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.beefUpgradeSelections100 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        canAdd = beefCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, beefUpgradeSelections100: selections };
     });
   };
@@ -2271,9 +2433,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleBeefUpgrade125Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.beefUpgradeSelections125 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        canAdd = beefCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, beefUpgradeSelections125: selections };
     });
   };
@@ -2281,9 +2463,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleBeefUpgrade500Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.beefUpgradeSelections500 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        canAdd = beefCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, beefUpgradeSelections500: selections };
     });
   };
@@ -2291,9 +2493,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleBeefUpgrade1100Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.beefUpgradeSelections1100 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        canAdd = beefCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, beefUpgradeSelections1100: selections };
     });
   };
@@ -2301,9 +2523,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleMainPorkChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.mainPorkSelections || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        canAdd = porkCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, mainPorkSelections: selections };
     });
   };
@@ -2311,9 +2553,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handlePorkUpgrade200Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.porkUpgradeSelections200 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        canAdd = porkCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, porkUpgradeSelections200: selections };
     });
   };
@@ -2321,9 +2583,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handlePorkUpgrade250Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.porkUpgradeSelections250 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        canAdd = porkCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, porkUpgradeSelections250: selections };
     });
   };
@@ -2331,9 +2613,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handlePorkUpgrade275Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.porkUpgradeSelections275 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        canAdd = porkCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, porkUpgradeSelections275: selections };
     });
   };
@@ -2341,9 +2643,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handlePorkUpgrade15000Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.porkUpgradeSelections15000 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const beefCount = (prev.mainBeefSelections || []).length + 
+                        (prev.beefUpgradeSelections100 || []).length +
+                        (prev.beefUpgradeSelections125 || []).length +
+                        (prev.beefUpgradeSelections500 || []).length +
+                        (prev.beefUpgradeSelections1100 || []).length;
+      const porkCount = (prev.mainPorkSelections || []).length +
+                        (prev.porkUpgradeSelections200 || []).length +
+                        (prev.porkUpgradeSelections250 || []).length +
+                        (prev.porkUpgradeSelections275 || []).length +
+                        (prev.porkUpgradeSelections15000 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1" || pkg === "Buffet Package 2") {
+        canAdd = (beefCount + porkCount) < 1;
+      } else if (pkg === "Buffet Package 3") {
+        canAdd = porkCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, porkUpgradeSelections15000: selections };
     });
   };
@@ -2351,9 +2673,21 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleMainFishChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.mainFishSelections || [];
+      
+      // Fish OR Seafood combined limit of 1 for all packages
+      const fishCount = (prev.mainFishSelections || []).length +
+                        (prev.fishUpgradeSelections200 || []).length +
+                        (prev.fishUpgradeSelections225 || []).length;
+      const seafoodCount = (prev.mainSeafoodSelections || []).length +
+                           (prev.seafoodUpgradeSelections200 || []).length +
+                           (prev.seafoodUpgradeSelections235 || []).length +
+                           (prev.seafoodUpgradeSelections335 || []).length;
+      
+      const canAdd = (fishCount + seafoodCount) < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, mainFishSelections: selections };
     });
   };
@@ -2361,9 +2695,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleFishUpgrade200Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.fishUpgradeSelections200 || [];
+      
+      const fishCount = (prev.mainFishSelections || []).length +
+                        (prev.fishUpgradeSelections200 || []).length +
+                        (prev.fishUpgradeSelections225 || []).length;
+      const seafoodCount = (prev.mainSeafoodSelections || []).length +
+                           (prev.seafoodUpgradeSelections200 || []).length +
+                           (prev.seafoodUpgradeSelections235 || []).length +
+                           (prev.seafoodUpgradeSelections335 || []).length;
+      
+      const canAdd = (fishCount + seafoodCount) < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, fishUpgradeSelections200: selections };
     });
   };
@@ -2371,9 +2716,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleFishUpgrade225Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.fishUpgradeSelections225 || [];
+      
+      const fishCount = (prev.mainFishSelections || []).length +
+                        (prev.fishUpgradeSelections200 || []).length +
+                        (prev.fishUpgradeSelections225 || []).length;
+      const seafoodCount = (prev.mainSeafoodSelections || []).length +
+                           (prev.seafoodUpgradeSelections200 || []).length +
+                           (prev.seafoodUpgradeSelections235 || []).length +
+                           (prev.seafoodUpgradeSelections335 || []).length;
+      
+      const canAdd = (fishCount + seafoodCount) < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, fishUpgradeSelections225: selections };
     });
   };
@@ -2381,9 +2737,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleMainSeafoodChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.mainSeafoodSelections || [];
+      
+      const fishCount = (prev.mainFishSelections || []).length +
+                        (prev.fishUpgradeSelections200 || []).length +
+                        (prev.fishUpgradeSelections225 || []).length;
+      const seafoodCount = (prev.mainSeafoodSelections || []).length +
+                           (prev.seafoodUpgradeSelections200 || []).length +
+                           (prev.seafoodUpgradeSelections235 || []).length +
+                           (prev.seafoodUpgradeSelections335 || []).length;
+      
+      const canAdd = (fishCount + seafoodCount) < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, mainSeafoodSelections: selections };
     });
   };
@@ -2391,9 +2758,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleSeafoodUpgrade200Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.seafoodUpgradeSelections200 || [];
+      
+      const fishCount = (prev.mainFishSelections || []).length +
+                        (prev.fishUpgradeSelections200 || []).length +
+                        (prev.fishUpgradeSelections225 || []).length;
+      const seafoodCount = (prev.mainSeafoodSelections || []).length +
+                           (prev.seafoodUpgradeSelections200 || []).length +
+                           (prev.seafoodUpgradeSelections235 || []).length +
+                           (prev.seafoodUpgradeSelections335 || []).length;
+      
+      const canAdd = (fishCount + seafoodCount) < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, seafoodUpgradeSelections200: selections };
     });
   };
@@ -2401,9 +2779,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleSeafoodUpgrade235Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.seafoodUpgradeSelections235 || [];
+      
+      const fishCount = (prev.mainFishSelections || []).length +
+                        (prev.fishUpgradeSelections200 || []).length +
+                        (prev.fishUpgradeSelections225 || []).length;
+      const seafoodCount = (prev.mainSeafoodSelections || []).length +
+                           (prev.seafoodUpgradeSelections200 || []).length +
+                           (prev.seafoodUpgradeSelections235 || []).length +
+                           (prev.seafoodUpgradeSelections335 || []).length;
+      
+      const canAdd = (fishCount + seafoodCount) < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, seafoodUpgradeSelections235: selections };
     });
   };
@@ -2411,9 +2800,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleSeafoodUpgrade335Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.seafoodUpgradeSelections335 || [];
+      
+      const fishCount = (prev.mainFishSelections || []).length +
+                        (prev.fishUpgradeSelections200 || []).length +
+                        (prev.fishUpgradeSelections225 || []).length;
+      const seafoodCount = (prev.mainSeafoodSelections || []).length +
+                           (prev.seafoodUpgradeSelections200 || []).length +
+                           (prev.seafoodUpgradeSelections235 || []).length +
+                           (prev.seafoodUpgradeSelections335 || []).length;
+      
+      const canAdd = (fishCount + seafoodCount) < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, seafoodUpgradeSelections335: selections };
     });
   };
@@ -2422,9 +2822,18 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleMainChickenChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.mainChickenSelections || [];
+      
+      // Chicken limit of 1 for all packages
+      const chickenCount = (prev.mainChickenSelections || []).length +
+                           (prev.chickenUpgradeSelections95 || []).length +
+                           (prev.chickenUpgradeSelections100 || []).length +
+                           (prev.chickenUpgradeSelections110 || []).length;
+      
+      const canAdd = chickenCount < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, mainChickenSelections: selections };
     });
   };
@@ -2432,9 +2841,17 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleChickenUpgrade95Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.chickenUpgradeSelections95 || [];
+      
+      const chickenCount = (prev.mainChickenSelections || []).length +
+                           (prev.chickenUpgradeSelections95 || []).length +
+                           (prev.chickenUpgradeSelections100 || []).length +
+                           (prev.chickenUpgradeSelections110 || []).length;
+      
+      const canAdd = chickenCount < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, chickenUpgradeSelections95: selections };
     });
   };
@@ -2442,9 +2859,17 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleChickenUpgrade100Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.chickenUpgradeSelections100 || [];
+      
+      const chickenCount = (prev.mainChickenSelections || []).length +
+                           (prev.chickenUpgradeSelections95 || []).length +
+                           (prev.chickenUpgradeSelections100 || []).length +
+                           (prev.chickenUpgradeSelections110 || []).length;
+      
+      const canAdd = chickenCount < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, chickenUpgradeSelections100: selections };
     });
   };
@@ -2452,9 +2877,17 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleChickenUpgrade110Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.chickenUpgradeSelections110 || [];
+      
+      const chickenCount = (prev.mainChickenSelections || []).length +
+                           (prev.chickenUpgradeSelections95 || []).length +
+                           (prev.chickenUpgradeSelections100 || []).length +
+                           (prev.chickenUpgradeSelections110 || []).length;
+      
+      const canAdd = chickenCount < 1;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, chickenUpgradeSelections110: selections };
     });
   };
@@ -2463,9 +2896,29 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleMainPastaChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.mainPastaSelections || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const pastaCount = (prev.mainPastaSelections || []).length +
+                         (prev.pastaUpgradeSelections150 || []).length;
+      const noodlesCount = (prev.mainNoodlesSelections || []).length;
+      const vegCount = (prev.mainVegSelections || []).length +
+                       (prev.vegUpgradeSelections50 || []).length +
+                       (prev.vegUpgradeSelections60 || []).length +
+                       (prev.vegUpgradeSelections75 || []).length +
+                       (prev.vegUpgradeSelections650 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1") {
+        // Pasta OR Noodles OR Vegetables combined limit of 1
+        canAdd = (pastaCount + noodlesCount + vegCount) < 1;
+      } else if (pkg === "Buffet Package 2" || pkg === "Buffet Package 3") {
+        // Pasta OR Noodles combined limit of 1 (Vegetables separate)
+        canAdd = (pastaCount + noodlesCount) < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, mainPastaSelections: selections };
     });
   };
@@ -2473,9 +2926,27 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handlePastaUpgrade150Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.pastaUpgradeSelections150 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const pastaCount = (prev.mainPastaSelections || []).length +
+                         (prev.pastaUpgradeSelections150 || []).length;
+      const noodlesCount = (prev.mainNoodlesSelections || []).length;
+      const vegCount = (prev.mainVegSelections || []).length +
+                       (prev.vegUpgradeSelections50 || []).length +
+                       (prev.vegUpgradeSelections60 || []).length +
+                       (prev.vegUpgradeSelections75 || []).length +
+                       (prev.vegUpgradeSelections650 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1") {
+        canAdd = (pastaCount + noodlesCount + vegCount) < 1;
+      } else if (pkg === "Buffet Package 2" || pkg === "Buffet Package 3") {
+        canAdd = (pastaCount + noodlesCount) < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, pastaUpgradeSelections150: selections };
     });
   };
@@ -2483,9 +2954,27 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleMainNoodlesChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.mainNoodlesSelections || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const pastaCount = (prev.mainPastaSelections || []).length +
+                         (prev.pastaUpgradeSelections150 || []).length;
+      const noodlesCount = (prev.mainNoodlesSelections || []).length;
+      const vegCount = (prev.mainVegSelections || []).length +
+                       (prev.vegUpgradeSelections50 || []).length +
+                       (prev.vegUpgradeSelections60 || []).length +
+                       (prev.vegUpgradeSelections75 || []).length +
+                       (prev.vegUpgradeSelections650 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1") {
+        canAdd = (pastaCount + noodlesCount + vegCount) < 1;
+      } else if (pkg === "Buffet Package 2" || pkg === "Buffet Package 3") {
+        canAdd = (pastaCount + noodlesCount) < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, mainNoodlesSelections: selections };
     });
   };
@@ -2493,9 +2982,28 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleMainVegChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.mainVegSelections || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const pastaCount = (prev.mainPastaSelections || []).length +
+                         (prev.pastaUpgradeSelections150 || []).length;
+      const noodlesCount = (prev.mainNoodlesSelections || []).length;
+      const vegCount = (prev.mainVegSelections || []).length +
+                       (prev.vegUpgradeSelections50 || []).length +
+                       (prev.vegUpgradeSelections60 || []).length +
+                       (prev.vegUpgradeSelections75 || []).length +
+                       (prev.vegUpgradeSelections650 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1") {
+        canAdd = (pastaCount + noodlesCount + vegCount) < 1;
+      } else if (pkg === "Buffet Package 2" || pkg === "Buffet Package 3") {
+        // Vegetables separate limit of 1
+        canAdd = vegCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, mainVegSelections: selections };
     });
   };
@@ -2503,9 +3011,27 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleVegUpgrade50Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.vegUpgradeSelections50 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const pastaCount = (prev.mainPastaSelections || []).length +
+                         (prev.pastaUpgradeSelections150 || []).length;
+      const noodlesCount = (prev.mainNoodlesSelections || []).length;
+      const vegCount = (prev.mainVegSelections || []).length +
+                       (prev.vegUpgradeSelections50 || []).length +
+                       (prev.vegUpgradeSelections60 || []).length +
+                       (prev.vegUpgradeSelections75 || []).length +
+                       (prev.vegUpgradeSelections650 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1") {
+        canAdd = (pastaCount + noodlesCount + vegCount) < 1;
+      } else if (pkg === "Buffet Package 2" || pkg === "Buffet Package 3") {
+        canAdd = vegCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, vegUpgradeSelections50: selections };
     });
   };
@@ -2513,9 +3039,27 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleVegUpgrade60Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.vegUpgradeSelections60 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const pastaCount = (prev.mainPastaSelections || []).length +
+                         (prev.pastaUpgradeSelections150 || []).length;
+      const noodlesCount = (prev.mainNoodlesSelections || []).length;
+      const vegCount = (prev.mainVegSelections || []).length +
+                       (prev.vegUpgradeSelections50 || []).length +
+                       (prev.vegUpgradeSelections60 || []).length +
+                       (prev.vegUpgradeSelections75 || []).length +
+                       (prev.vegUpgradeSelections650 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1") {
+        canAdd = (pastaCount + noodlesCount + vegCount) < 1;
+      } else if (pkg === "Buffet Package 2" || pkg === "Buffet Package 3") {
+        canAdd = vegCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, vegUpgradeSelections60: selections };
     });
   };
@@ -2523,9 +3067,27 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleVegUpgrade75Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.vegUpgradeSelections75 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const pastaCount = (prev.mainPastaSelections || []).length +
+                         (prev.pastaUpgradeSelections150 || []).length;
+      const noodlesCount = (prev.mainNoodlesSelections || []).length;
+      const vegCount = (prev.mainVegSelections || []).length +
+                       (prev.vegUpgradeSelections50 || []).length +
+                       (prev.vegUpgradeSelections60 || []).length +
+                       (prev.vegUpgradeSelections75 || []).length +
+                       (prev.vegUpgradeSelections650 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1") {
+        canAdd = (pastaCount + noodlesCount + vegCount) < 1;
+      } else if (pkg === "Buffet Package 2" || pkg === "Buffet Package 3") {
+        canAdd = vegCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, vegUpgradeSelections75: selections };
     });
   };
@@ -2533,59 +3095,118 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleVegUpgrade650Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.vegUpgradeSelections650 || [];
+      const pkg = pBuffet.selectedPackage;
+      
+      const pastaCount = (prev.mainPastaSelections || []).length +
+                         (prev.pastaUpgradeSelections150 || []).length;
+      const noodlesCount = (prev.mainNoodlesSelections || []).length;
+      const vegCount = (prev.mainVegSelections || []).length +
+                       (prev.vegUpgradeSelections50 || []).length +
+                       (prev.vegUpgradeSelections60 || []).length +
+                       (prev.vegUpgradeSelections75 || []).length +
+                       (prev.vegUpgradeSelections650 || []).length;
+      
+      let canAdd = false;
+      if (pkg === "Buffet Package 1") {
+        canAdd = (pastaCount + noodlesCount + vegCount) < 1;
+      } else if (pkg === "Buffet Package 2" || pkg === "Buffet Package 3") {
+        canAdd = vegCount < 1;
+      }
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : canAdd ? [...currentSelections, option] : currentSelections;
       return { ...prev, vegUpgradeSelections650: selections };
     });
   };
 
   const handleRiceChange = (option) => {
-    setPBuffet(prev => {
-      const currentSelections = prev.riceSelections || [];
-      const selections = currentSelections.includes(option)
-        ? currentSelections.filter(s => s !== option)
-        : currentSelections.length < 1 ? [option] : currentSelections;
-      return { ...prev, riceSelections: selections };
-    });
-  };
+  setPBuffet(prev => {
+    const currentSelections = prev.riceSelections || [];
 
-  const handleRiceUpgrade50Change = (option) => {
-    setPBuffet(prev => {
-      const currentSelections = prev.riceUpgradeSelections50 || [];
-      const selections = currentSelections.includes(option)
-        ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
-      return { ...prev, riceUpgradeSelections50: selections };
-    });
-  };
-  
-  const handleRiceUpgrade95Change = (option) => {
-    setPBuffet(prev => {
-      const currentSelections = prev.riceUpgradeSelections95 || [];
-      const selections = currentSelections.includes(option)
-        ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
-      return { ...prev, riceUpgradeSelections95: selections };
-    });
-  };
-  
-  const handleRiceUpgrade110Change = (option) => {
-    setPBuffet(prev => {
-      const currentSelections = prev.riceUpgradeSelections110 || [];
-      const selections = currentSelections.includes(option)
-        ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
-      return { ...prev, riceUpgradeSelections110: selections };
-    });
-  };
+    // Rice limit of 1 for all packages
+    const riceCount = (prev.riceSelections || []).length +
+                      (prev.riceUpgradeSelections50 || []).length +
+                      (prev.riceUpgradeSelections95 || []).length +
+                      (prev.riceUpgradeSelections110 || []).length;
+
+    const canAdd = riceCount < 1;
+
+    const selections = currentSelections.includes(option)
+      ? currentSelections.filter(s => s !== option)
+      : canAdd ? [...currentSelections, option] : currentSelections;
+    return { ...prev, riceSelections: selections };
+  });
+};
+
+const handleRiceUpgrade50Change = (option) => {
+  setPBuffet(prev => {
+    const currentSelections = prev.riceUpgradeSelections50 || [];
+    const riceCount = (prev.riceSelections || []).length + 
+                      (prev.riceUpgradeSelections50 || []).length +
+                      (prev.riceUpgradeSelections95 || []).length +
+                      (prev.riceUpgradeSelections110 || []).length;
+    
+    const canAdd = riceCount < 1;
+    
+    const selections = currentSelections.includes(option)
+      ? currentSelections.filter(s => s !== option)
+      : canAdd ? [...currentSelections, option] : currentSelections;
+    return { ...prev, riceUpgradeSelections50: selections };
+  });
+};
+
+const handleRiceUpgrade95Change = (option) => {
+  setPBuffet(prev => {
+    const currentSelections = prev.riceUpgradeSelections95 || [];
+    
+    const riceCount = (prev.riceSelections || []).length + 
+                      (prev.riceUpgradeSelections50 || []).length +
+                      (prev.riceUpgradeSelections95 || []).length +
+                      (prev.riceUpgradeSelections110 || []).length;
+    const canAdd = riceCount < 1;
+    
+    const selections = currentSelections.includes(option)
+      ? currentSelections.filter(s => s !== option)
+      : canAdd ? [...currentSelections, option] : currentSelections;
+    return { ...prev, riceUpgradeSelections95: selections };
+  });
+};
+
+const handleRiceUpgrade110Change = (option) => {
+  setPBuffet(prev => {
+    const currentSelections = prev.riceUpgradeSelections110 || [];
+    const riceCount = (prev.riceSelections || []).length + 
+                      (prev.riceUpgradeSelections50 || []).length +
+                      (prev.riceUpgradeSelections95 || []).length +
+                      (prev.riceUpgradeSelections110 || []).length;
+    const canAdd = riceCount < 1;
+    
+    const selections = currentSelections.includes(option)
+      ? currentSelections.filter(s => s !== option)
+      : canAdd ? [...currentSelections, option] : currentSelections;
+    return { ...prev, riceUpgradeSelections110: selections };
+  });
+};
 
   const handleDessertChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.dessertSelections || [];
+      const pkg = pBuffet.selectedPackage;
+      const limit = pkg === "Buffet Package 1" ? 1 : 2;
+      
+      // Calculate total dessert selections
+      const totalDessertSelections = 
+        (prev.dessertSelections || []).length +
+        (prev.dessertUpgradeSelections250 || []).length +
+        (prev.dessertUpgradeSelections300 || []).length +
+        (prev.dessertUpgradeSelections350 || []).length +
+        (prev.dessertUpgradeSelections400 || []).length +
+        (prev.dessertUpgradeSelections450 || []).length;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : currentSelections.length < 2 ? [...currentSelections, option] : currentSelections;
+        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertSelections: selections };
     });
   };
@@ -2593,9 +3214,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleDessertUpgrade250Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.dessertUpgradeSelections250 || [];
+      const pkg = pBuffet.selectedPackage;
+      const limit = pkg === "Buffet Package 1" ? 1 : 2;
+      
+      const totalDessertSelections = 
+        (prev.dessertSelections || []).length +
+        (prev.dessertUpgradeSelections250 || []).length +
+        (prev.dessertUpgradeSelections300 || []).length +
+        (prev.dessertUpgradeSelections350 || []).length +
+        (prev.dessertUpgradeSelections400 || []).length +
+        (prev.dessertUpgradeSelections450 || []).length;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections250: selections };
     });
   };
@@ -2603,9 +3235,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleDessertUpgrade300Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.dessertUpgradeSelections300 || [];
+      const pkg = pBuffet.selectedPackage;
+      const limit = pkg === "Buffet Package 1" ? 1 : 2;
+      
+      const totalDessertSelections = 
+        (prev.dessertSelections || []).length +
+        (prev.dessertUpgradeSelections250 || []).length +
+        (prev.dessertUpgradeSelections300 || []).length +
+        (prev.dessertUpgradeSelections350 || []).length +
+        (prev.dessertUpgradeSelections400 || []).length +
+        (prev.dessertUpgradeSelections450 || []).length;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections300: selections };
     });
   };
@@ -2613,9 +3256,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleDessertUpgrade350Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.dessertUpgradeSelections350 || [];
+      const pkg = pBuffet.selectedPackage;
+      const limit = pkg === "Buffet Package 1" ? 1 : 2;
+      
+      const totalDessertSelections = 
+        (prev.dessertSelections || []).length +
+        (prev.dessertUpgradeSelections250 || []).length +
+        (prev.dessertUpgradeSelections300 || []).length +
+        (prev.dessertUpgradeSelections350 || []).length +
+        (prev.dessertUpgradeSelections400 || []).length +
+        (prev.dessertUpgradeSelections450 || []).length;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections350: selections };
     });
   };
@@ -2623,9 +3277,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleDessertUpgrade400Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.dessertUpgradeSelections400 || [];
+      const pkg = pBuffet.selectedPackage;
+      const limit = pkg === "Buffet Package 1" ? 1 : 2;
+      
+      const totalDessertSelections = 
+        (prev.dessertSelections || []).length +
+        (prev.dessertUpgradeSelections250 || []).length +
+        (prev.dessertUpgradeSelections300 || []).length +
+        (prev.dessertUpgradeSelections350 || []).length +
+        (prev.dessertUpgradeSelections400 || []).length +
+        (prev.dessertUpgradeSelections450 || []).length;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections400: selections };
     });
   };
@@ -2633,9 +3298,20 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleDessertUpgrade450Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.dessertUpgradeSelections450 || [];
+      const pkg = pBuffet.selectedPackage;
+      const limit = pkg === "Buffet Package 1" ? 1 : 2;
+      
+      const totalDessertSelections = 
+        (prev.dessertSelections || []).length +
+        (prev.dessertUpgradeSelections250 || []).length +
+        (prev.dessertUpgradeSelections300 || []).length +
+        (prev.dessertUpgradeSelections350 || []).length +
+        (prev.dessertUpgradeSelections400 || []).length +
+        (prev.dessertUpgradeSelections450 || []).length;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections450: selections };
     });
   };
@@ -2643,9 +3319,16 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleDrinksChange = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.drinksSelections || [];
+      
+      // Calculate total drinks selections
+      const totalDrinksSelections = 
+        (prev.drinksSelections || []).length +
+        (prev.drinksUpgradeSelections130 || []).length +
+        (prev.drinksUpgradeSelections150 || []).length;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : currentSelections.length < 2 ? [...currentSelections, option] : currentSelections;
+        : totalDrinksSelections < 2 ? [...currentSelections, option] : currentSelections;
       return { ...prev, drinksSelections: selections };
     });
   };
@@ -2653,9 +3336,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleDrinksUpgrade130Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.drinksUpgradeSelections130 || [];
+      
+      const totalDrinksSelections = 
+        (prev.drinksSelections || []).length +
+        (prev.drinksUpgradeSelections130 || []).length +
+        (prev.drinksUpgradeSelections150 || []).length;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalDrinksSelections < 2 ? [...currentSelections, option] : currentSelections;
       return { ...prev, drinksUpgradeSelections130: selections };
     });
   };
@@ -2663,9 +3352,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleDrinksUpgrade150Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.drinksUpgradeSelections150 || [];
+      
+      const totalDrinksSelections = 
+        (prev.drinksSelections || []).length +
+        (prev.drinksUpgradeSelections130 || []).length +
+        (prev.drinksUpgradeSelections150 || []).length;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalDrinksSelections < 2 ? [...currentSelections, option] : currentSelections;
       return { ...prev, drinksUpgradeSelections150: selections };
     });
   };
@@ -2683,9 +3378,13 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleAppetizer125Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.appetizerUpgradeSelections125 || [];
+      const totalAppetizer = (prev.appetizerUpgradeSelections125 || []).length + 
+                             (prev.appetizerUpgradeSelections150 || []).length;
+      const limit = menuLimits.appetizer || 999;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalAppetizer < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, appetizerUpgradeSelections125: selections };
     });
   };
@@ -2693,9 +3392,13 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleAppetizer150Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.appetizerUpgradeSelections150 || [];
+      const totalAppetizer = (prev.appetizerUpgradeSelections125 || []).length + 
+                             (prev.appetizerUpgradeSelections150 || []).length;
+      const limit = menuLimits.appetizer || 999;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalAppetizer < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, appetizerUpgradeSelections150: selections };
     });
   };
@@ -2703,9 +3406,13 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleSalad125Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.saladUpgradeSelections125 || [];
+      const totalSalad = (prev.saladUpgradeSelections125 || []).length + 
+                         (prev.saladUpgradeSelections150 || []).length;
+      const limit = menuLimits.salad || 999;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalSalad < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, saladUpgradeSelections125: selections };
     });
   };
@@ -2713,9 +3420,13 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const handleSalad150Change = (option) => {
     setPBuffet(prev => {
       const currentSelections = prev.saladUpgradeSelections150 || [];
+      const totalSalad = (prev.saladUpgradeSelections125 || []).length + 
+                         (prev.saladUpgradeSelections150 || []).length;
+      const limit = menuLimits.salad || 999;
+      
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : [...currentSelections, option];
+        : totalSalad < limit ? [...currentSelections, option] : currentSelections;
       return { ...prev, saladUpgradeSelections150: selections };
     });
   };
@@ -2724,6 +3435,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <div className="page">
         <div className="menu-section">
           <h5>Cocktail Hour</h5>
+          <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+            Cocktail Selections: {totalCocktailSelections}/{cocktailLimit}</p>
           <div className="menu-grid">
             {[
               "Money Bag with Pork, Shrimp & Leeks",
@@ -2747,9 +3460,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               </label>
             ))}
           </div>
-           <div className="upgrade-section">
-          <h5>Upgrade Options +125 per pax</h5>
-          <div className="upgrade-grid">
+           <div className="menu-category">
+          <h6>Upgrade Options +125 per pax</h6>
+          <div className="menu-grid">
             {[
               "Tuna Tartare in Savory Cone",
               "Bacon Chives Mini Cheese Balls",
@@ -2766,9 +3479,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             ))}
           </div>
         </div>
-        <div className="upgrade-section">
-          <h5>Upgrade Options +150 per pax</h5>
-          <div className="upgrade-grid">
+        <div className="menu-category">
+          <h6>Upgrade Options +150 per pax</h6>
+          <div className="menu-grid">
             {[
               "Shrimp Tapas with Mango Shooters",
               "Blueberry Walnut Toast",
@@ -2788,15 +3501,17 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               </label>
             ))}
           </div>
-          <p>Cocktail Selections: {totalCocktailSelections}/{cocktailLimit}</p>
         </div>
         </div>
 
         <div className="menu-section">
           <h5>Food Stations (Optional)</h5>
+          <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+            Food Stations Selected: {getCurrentSelectionCounts.foodStations}/{menuLimits.foodStations || 1}
+          </p>
           {[...new Set(FOOD_STATIONS.map(s => s.cost))].sort((a,b)=>a-b).map(cost => (
             <div key={cost} className="menu-category">
-              <h6>+++{cost} per pax</h6>
+              <h6>+{cost} per pax</h6>
               <div className="menu-grid">
                 {FOOD_STATIONS.filter(s => s.cost === cost).map(station => (
                   <label key={station.name} className="menu-item">
@@ -2811,9 +3526,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               </div>
             </div>
           ))}
-        </div>
-
-        {pBuffet.foodStations.some(s => s.name === "Oyster Bar") && (
+          {pBuffet.foodStations.some(s => s.name === "Oyster Bar") && (
           <div className="menu-section">
             <h5>Oyster Bar Choices (Select 4)</h5>
             <div className="menu-grid">
@@ -2829,14 +3542,18 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                 </label>
               ))}
             </div>
-            <p>Oyster Selections: {(pBuffet.oysterBarSelections || []).length}/4</p>
+            <p style={{fontWeight: 'bold', color: '#2196F3'}}>Oyster Selections: {(pBuffet.oysterBarSelections || []).length}/4</p>
           </div>
         )}
+        </div>
 
         <div className="menu-section">
           <h5>Appetizer (Optional)</h5>
+          <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+            Appetizer Selected: {getCurrentSelectionCounts.appetizer}/{menuLimits.appetizer || 1}
+          </p>
           <div className="menu-category">
-            <h5>+125 per pax</h5>
+            <h6>+125 per pax</h6>
             <div className="menu-grid">
               {APPETIZER_UPGRADE_125_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -2851,7 +3568,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
           </div>
           <div className="menu-category">
-            <h5>+150 per pax</h5>
+            <h6>+150 per pax</h6>
             <div className="menu-grid">
               {APPETIZER_UPGRADE_150_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -2869,6 +3586,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
         <div className="menu-section">
           <h5>Soup</h5>
+          <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+          Soup Selections: {(pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length}/{1 + soupUpgradeLimit}</p>
           <div className="menu-grid">
             {SOUP_OPTIONS.map(option => (
               <label key={option} className="menu-item">
@@ -2882,9 +3601,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               </label>
             ))}
           </div>
-          <div className="upgrade-section">
-          <h5>Upgrade Options +100 per pax</h5>
-          <div className="upgrade-grid">
+          <div className="menu-category">
+          <h6>Upgrade Options +100 per pax</h6>
+          <div className="menu-grid">
             {UPGRADE_SOUP_OPTIONS.map(option => (
               <label key={option} className="upgrade-item">
                 <input
@@ -2898,14 +3617,16 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             ))}
           </div>
         </div>
-        <p>Soup Selections: {(pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length}/{1 + soupUpgradeLimit}</p>
         </div>
 
         
         <div className="menu-section">
           <h5>Salad (Optional)</h5>
+          <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+            Salad Selected: {getCurrentSelectionCounts.salad}/{menuLimits.salad || 1}
+          </p>
           <div className="menu-category">
-            <h5>+125 per pax</h5>
+            <h6>+125 per pax</h6>
             <div className="menu-grid">
               {SALAD_UPGRADE_125_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -2920,7 +3641,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
           </div>
           <div className="menu-category">
-            <h5>++150 per pax</h5>
+            <h6>++150 per pax</h6>
             <div className="menu-grid">
               {SALAD_UPGRADE_150_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -2938,8 +3659,42 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
         <div className="menu-section">
           <h5>Main Entrees</h5>
+          {pBuffet.selectedPackage === "Buffet Package 1" || pBuffet.selectedPackage === "Buffet Package 2" ? (
+            <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+              Beef OR Pork Selected: {getCurrentSelectionCounts.beefPork}/{menuLimits.beefPorkCombined || 1}
+            </p>
+          ) : pBuffet.selectedPackage === "Buffet Package 3" ? (
+            <>
+              <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+                Beef Selected: {getCurrentSelectionCounts.beef}/{menuLimits.beef || 1}
+              </p>
+              <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+                Pork Selected: {getCurrentSelectionCounts.pork}/{menuLimits.pork || 1}
+              </p>
+            </>
+          ) : null}
+          <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+            Fish OR Seafood Selected: {getCurrentSelectionCounts.fishSeafood}/{menuLimits.fishSeafoodCombined || 1}
+          </p>
+          <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+            Chicken Selected: {getCurrentSelectionCounts.chicken}/{menuLimits.chicken || 1}
+          </p>
+          {pBuffet.selectedPackage === "Buffet Package 1" ? (
+            <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+              Pasta OR Noodles OR Vegetables Selected: {getCurrentSelectionCounts.pastaNoodlesVeg}/{menuLimits.pastaNoodlesVegCombined || 1}
+            </p>
+          ) : (pBuffet.selectedPackage === "Buffet Package 2" || pBuffet.selectedPackage === "Buffet Package 3") ? (
+            <>
+              <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+                Pasta OR Noodles Selected: {getCurrentSelectionCounts.pastaNoodles}/{menuLimits.pastaNoodlesCombined || 1}
+              </p>
+              <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+                Vegetables Selected: {getCurrentSelectionCounts.vegetables}/{menuLimits.vegetables || 1}
+              </p>
+            </>
+          ) : null}
           <div className="menu-category">
-            <h6>Beef</h6>
+            <h5>Beef</h5>
             <div className="menu-grid">
               {MAIN_BEEF_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -2953,7 +3708,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               ))}
             </div>
             <div className="menu-category">
-            <h5>+100 per pax</h5>
+            <h6>+100 per pax</h6>
             <div className="menu-grid">
             {BEEF_UPGRADE_100_OPTIONS.map(option => (
               <div key={option}>
@@ -2969,7 +3724,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
             </div>
             <div className="menu-category">
-            <h5>+125 per pax</h5>
+            <h6>+125 per pax</h6>
             <div className="menu-grid">
             {BEEF_UPGRADE_125_OPTIONS.map(option => (
   <div key={option}>
@@ -2987,7 +3742,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+500 per pax</h5>
+            <h6>+500 per pax</h6>
             <div className="menu-grid">
             {BEEF_UPGRADE_500_OPTIONS.map(option => (
   <div key={option}>
@@ -3004,7 +3759,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+1100 per pax</h5>
+            <h6>+1100 per pax</h6>
             <div className="menu-grid">
             {BEEF_UPGRADE_1100_OPTIONS.map(option => (
   <div key={option}>
@@ -3023,7 +3778,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           
 
           <div className="menu-category">
-            <h6>Pork</h6>
+            <h5>Pork</h5>
             <div className="menu-grid">
               {MAIN_PORK_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -3037,7 +3792,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               ))}
             </div>
             <div className="menu-category">
-            <h5>+200 per pax</h5>
+            <h6>+200 per pax</h6>
             <div className="menu-grid">
             {PORK_UPGRADE_200_OPTIONS.map(option => (
   <div key={option}>
@@ -3054,7 +3809,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+250 per pax</h5>
+            <h6>+250 per pax</h6>
             <div className="menu-grid">
             {PORK_UPGRADE_250_OPTIONS.map(option => (
   <div key={option}>
@@ -3071,7 +3826,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+275 per pax</h5>
+            <h6>+275 per pax</h6>
             <div className="menu-grid">
             {PORK_UPGRADE_275_OPTIONS.map(option => (
   <div key={option}>
@@ -3088,7 +3843,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+15000 (good for 60-70 pax)</h5>
+            <h6>+15000 (good for 60-70 pax)</h6>
             <div className="menu-grid">
             {PORK_UPGRADE_15000_OPTIONS.map(option => (
   <div key={option}>
@@ -3108,7 +3863,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           
 
           <div className="menu-category">
-            <h6>Fish</h6>
+            <h5>Fish</h5>
             <div className="menu-grid">
               {MAIN_FISH_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -3122,7 +3877,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               ))}
             </div>
             <div className="menu-category">
-            <h5>+200 per pax</h5>
+            <h6>+200 per pax</h6>
             <div className="menu-grid">
             {FISH_UPGRADE_200_OPTIONS.map(option => (
   <div key={option}>
@@ -3139,7 +3894,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+225 per pax</h5>
+            <h6>+225 per pax</h6>
             <div className="menu-grid">
             {FISH_UPGRADE_225_OPTIONS.map(option => (
   <div key={option}>
@@ -3159,7 +3914,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           
 
           <div className="menu-category">
-            <h6>Seafood</h6>
+            <h5>Seafood</h5>
             <div className="menu-grid">
               {MAIN_SEAFOOD_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -3173,7 +3928,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               ))}
             </div>
             <div className="menu-category">
-            <h5>+200 per pax</h5>
+            <h6>+200 per pax</h6>
             <div className="menu-grid">
             {SEAFOOD_UPGRADE_200_OPTIONS.map(option => (
   <div key={option}>
@@ -3190,7 +3945,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+235 per pax</h5>
+            <h6>+235 per pax</h6>
             <div className="menu-grid">
             {SEAFOOD_UPGRADE_235_OPTIONS.map(option => (
   <div key={option}>
@@ -3207,7 +3962,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+335 per pax</h5>
+            <h6>+335 per pax</h6>
             <div className="menu-grid">
             {SEAFOOD_UPGRADE_335_OPTIONS.map(option => (
   <div key={option}>
@@ -3227,7 +3982,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           
 
           <div className="menu-category">
-            <h6>Chicken</h6>
+            <h5>Chicken</h5>
             <div className="menu-grid">
               {MAIN_CHICKEN_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -3241,7 +3996,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               ))}
             </div>
             <div className="menu-category">
-            <h5>+95 per pax</h5>
+            <h6>+95 per pax</h6>
             <div className="menu-grid">
             {CHICKEN_UPGRADE_95_OPTIONS.map(option => (
   <div key={option}>
@@ -3258,7 +4013,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+100 per pax</h5>
+            <h6>+100 per pax</h6>
             <div className="menu-grid">
             {CHICKEN_UPGRADE_100_OPTIONS.map(option => (
   <div key={option}>
@@ -3275,7 +4030,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+110 per pax</h5>
+            <h6>+110 per pax</h6>
             <div className="menu-grid">
             {CHICKEN_UPGRADE_110_OPTIONS.map(option => (
   <div key={option}>
@@ -3293,7 +4048,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           </div>
 
           <div className="menu-category">
-            <h6>Pasta</h6>
+            <h5>Pasta</h5>
             <div className="menu-grid">
               {MAIN_PASTA_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -3307,7 +4062,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
               ))}
             </div>
             <div className="menu-category">
-            <h5>+150 per pax</h5>
+            <h6>+150 per pax</h6>
             <div className="menu-grid">
             {PASTA_UPGRADE_150_OPTIONS.map(option => (
   <div key={option}>
@@ -3325,7 +4080,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           </div>
 
           <div className="menu-category">
-            <h6>Noodles</h6>
+            <h5>Noodles</h5>
             <div className="menu-grid">
               {MAIN_NOODLES_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -3341,7 +4096,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           </div>
 
           <div className="menu-category">
-            <h6>Vegetables</h6>
+            <h5>Vegetables</h5>
             <div className="menu-grid">
               {MAIN_VEG_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
@@ -3356,7 +4111,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
           </div>
           <div className="menu-category">
-            <h5>+50 per pax</h5>
+            <h6>+50 per pax</h6>
             <div className="menu-grid">
             {VEG_UPGRADE_50_OPTIONS.map(option => (
   <div key={option}>
@@ -3373,7 +4128,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+60 per pax</h5>
+            <h6>+60 per pax</h6>
             <div className="menu-grid">
             {VEG_UPGRADE_60_OPTIONS.map(option => (
   <div key={option}>
@@ -3390,7 +4145,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+75 per pax</h5>
+            <h6>+75 per pax</h6>
             <div className="menu-grid">
             {VEG_UPGRADE_75_OPTIONS.map(option => (
   <div key={option}>
@@ -3406,7 +4161,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
            </div>
             </div>
             <div className="menu-category">
-            <h5>+650 per pax</h5>
+            <h6>+650 per pax</h6>
             <div className="menu-grid">
             {VEG_UPGRADE_650_OPTIONS.map(option => (
   <div key={option}>
@@ -3424,77 +4179,81 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         </div>
 
         <div className="menu-section">
-          <h5>Rice</h5>
-          <div className="menu-grid">
-            {RICE_OPTIONS.map(option => (
-              <label key={option} className="menu-item">
-                <input
-                  type="checkbox"
-                  checked={(pBuffet.riceSelections || []).includes(option)}
-                  onChange={() => handleRiceChange(option)}
-                  disabled={!(pBuffet.riceSelections || []).includes(option) && (pBuffet.riceSelections || []).length >= 1}
-                />
-                {option}
-              </label>
-            ))}
-          </div>
-          <div className="menu-category">
-            <h5>+50 per pax</h5>
-            <div className="menu-grid">
-            {RICE_UPGRADE_50_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`rice-upgrade-50-${option}`}
-      checked={(pBuffet.riceUpgradeSelections50 || []).includes(option)}
-      onChange={() => handleRiceUpgrade50Change(option)}
-    />
-    <label htmlFor={`rice-upgrade-50-${option}`}>{option}</label>
+  <h5>Rice</h5>
+  <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+    Rice Selected: {((pBuffet.riceSelections || []).length + (pBuffet.riceUpgradeSelections50 || []).length + (pBuffet.riceUpgradeSelections95 || []).length + (pBuffet.riceUpgradeSelections110 || []).length)}/1
+  </p>
+  <div className="menu-grid">
+    {RICE_OPTIONS.map(option => (
+      <label key={option} className="menu-item">
+        <input
+          type="checkbox"
+          checked={(pBuffet.riceSelections || []).includes(option)}
+          onChange={() => handleRiceChange(option)}
+          disabled={!(pBuffet.riceSelections || []).includes(option) && (pBuffet.riceSelections || []).length >= 1}
+        />
+        {option}
+      </label>
+    ))}
+    
   </div>
-))}
-           </div>
-            </div>
-
-
-            <div className="menu-category">
-            <h5>+95 per pax</h5>
-            <div className="menu-grid">
-            {RICE_UPGRADE_95_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`rice-upgrade-95-${option}`}
-      checked={(pBuffet.riceUpgradeSelections95 || []).includes(option)}
-      onChange={() => handleRiceUpgrade95Change(option)}
-    />
-    <label htmlFor={`rice-upgrade-95-${option}`}>{option}</label>
-  </div>
-))}
-           </div>
-            </div>
-
-            <div className="menu-category">
-            <h5>+110 per pax</h5>
-            <div className="menu-grid">
-            {RICE_UPGRADE_110_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`rice-upgrade-110-${option}`}
-      checked={(pBuffet.riceUpgradeSelections110 || []).includes(option)}
-      onChange={() => handleRiceUpgrade110Change(option)}
-    />
-    <label htmlFor={`rice-upgrade-110-${option}`}>{option}</label>
-  </div>
-))}
-           </div>
-            </div>
+  <div className="menu-category">
+    <h6>+50 per pax</h6>
+    <div className="menu-grid">
+      {RICE_UPGRADE_50_OPTIONS.map(option => (
+        <div key={option}>
+          <input
+            type="checkbox"
+            id={`rice-upgrade-50-${option}`}
+            checked={(pBuffet.riceUpgradeSelections50 || []).includes(option)}
+            onChange={() => handleRiceUpgrade50Change(option)}
+          />
+          <label htmlFor={`rice-upgrade-50-${option}`}>{option}</label>
         </div>
+      ))}
+    </div>
+  </div>
 
+  <div className="menu-category">
+    <h6>+95 per pax</h6>
+    <div className="menu-grid">
+      {RICE_UPGRADE_95_OPTIONS.map(option => (
+        <div key={option}>
+          <input
+            type="checkbox"
+            id={`rice-upgrade-95-${option}`}
+            checked={(pBuffet.riceUpgradeSelections95 || []).includes(option)}
+            onChange={() => handleRiceUpgrade95Change(option)}
+          />
+          <label htmlFor={`rice-upgrade-95-${option}`}>{option}</label>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <div className="menu-category">
+    <h6>+110 per pax</h6>
+    <div className="menu-grid">
+      {RICE_UPGRADE_110_OPTIONS.map(option => (
+        <div key={option}>
+          <input
+            type="checkbox"
+            id={`rice-upgrade-110-${option}`}
+            checked={(pBuffet.riceUpgradeSelections110 || []).includes(option)}
+            onChange={() => handleRiceUpgrade110Change(option)}
+          />
+          <label htmlFor={`rice-upgrade-110-${option}`}>{option}</label>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
         
 
         <div className="menu-section">
           <h5>Dessert</h5>
+          <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+            Dessert Selections: {(pBuffet.dessertSelections || []).length}/</p>
           <div className="menu-grid">
             {DESSERT_OPTIONS.map(option => (
               <label key={option} className="menu-item">
@@ -3509,7 +4268,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             ))}
           </div>
           <div className="menu-category">
-            <h5>+250 per pax</h5>
+            <h6>+250 per pax</h6>
             <div className="menu-grid">
             {DESSERT_UPGRADE_250_OPTIONS.map(option => (
   <div key={option}>
@@ -3526,7 +4285,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+300 per pax</h5>
+            <h6>+300 per pax</h6>
             <div className="menu-grid">
             {DESSERT_UPGRADE_300_OPTIONS.map(option => (
   <div key={option}>
@@ -3543,7 +4302,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+350 per pax</h5>
+            <h6>+350 per pax</h6>
             <div className="menu-grid">
             {DESSERT_UPGRADE_350_OPTIONS.map(option => (
   <div key={option}>
@@ -3560,7 +4319,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+400 per pax</h5>
+            <h6>+400 per pax</h6>
             <div className="menu-grid">
             {DESSERT_UPGRADE_400_OPTIONS.map(option => (
   <div key={option}>
@@ -3577,7 +4336,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+450 per pax</h5>
+            <h6>+450 per pax</h6>
             <div className="menu-grid">
             {DESSERT_UPGRADE_450_OPTIONS.map(option => (
   <div key={option}>
@@ -3596,6 +4355,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
         <div className="menu-section">
           <h5>Drinks</h5>
+          <p style={{fontWeight: 'bold', color: '#2196F3'}}>
+            Drinks Selections: {(pBuffet.drinksSelections || []).length}/2</p>
           <div className="menu-grid">
             {DRINKS_OPTIONS.map(option => (
               <label key={option} className="menu-item">
@@ -3610,7 +4371,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             ))}
           </div>
           <div className="menu-category">
-            <h5>+130 per pax</h5>
+            <h6>+130 per pax</h6>
             <div className="menu-grid">
             {DRINK_UPGRADE_130_OPTIONS.map(option => (
   <div key={option}>
@@ -3627,7 +4388,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
             </div>
 
             <div className="menu-category">
-            <h5>+150 per pax</h5>
+            <h6>+150 per pax</h6>
             <div className="menu-grid">
             {DRINK_UPGRADE_150_OPTIONS.map(option => (
   <div key={option}>
