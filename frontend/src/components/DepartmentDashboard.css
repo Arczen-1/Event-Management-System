@@ -1,0 +1,135 @@
+.department-dashboard {
+  min-height: 100vh;
+  background-color: #410d1d;
+  font-family: "Aileron", sans-serif;
+}
+
+.dashboard-header {
+  background-color: white;
+  padding: 20px 40px;
+  display: block;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header-inner {
+  width: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto; /* Title leftmost, flexible middle, logout right */
+  align-items: center;
+}
+
+.dashboard-header h1 {
+  color: #410d1d;
+  font-size: 32px;
+  font-family: "Aileron Black", sans-serif;
+  margin: 0;
+}
+
+.logout-btn {
+  background-color: #410d1d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-family: "Aileron", sans-serif;
+}
+
+.logout-btn:hover {
+  background-color: #5a1a2d;
+}
+
+.dashboard-content {
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.contracts-table-container {
+  background-color: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.table-header h3 {
+  color: #410d1d;
+  font-size: 20px;
+  margin: 0;
+  font-family: "Aileron Black", sans-serif;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pager-btn {
+  background: transparent;
+  color: #410d1d;
+  border: 2px solid #410d1d;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: "Aileron", sans-serif;
+}
+
+.pager-btn:hover {
+  background-color: #410d1d;
+  color: white;
+}
+
+.page-indicator {
+  color: #410d1d;
+  font-weight: bold;
+}
+
+.contracts-table {
+  overflow-x: auto;
+}
+
+.contracts-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Aileron", sans-serif;
+}
+
+.contracts-table th {
+  background-color: #410d1d;
+  color: white;
+  padding: 15px 12px;
+  text-align: left;
+  font-weight: bold;
+  font-family: "Aileron Black", sans-serif;
+}
+
+.contracts-table td {
+  padding: 15px 12px;
+  border-bottom: 1px solid #eee;
+  color: #333;
+}
+
+.contracts-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.contracts-table tr.no-contracts td {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 30px;
+}
+
+
+
