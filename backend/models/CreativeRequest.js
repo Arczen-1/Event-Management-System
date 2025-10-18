@@ -38,6 +38,7 @@ const CreativeRequestSchema = new mongoose.Schema(
     contractName: { type: String, default: "" },
     client: { type: String, default: "" },
     contractNo: { type: String, default: "" },
+    rejectionReason: { type: String, default: "" }, // Added rejection reason support
     startDate: { type: Date },
     endDate: { type: Date },
   },

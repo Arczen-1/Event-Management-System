@@ -220,6 +220,42 @@ app.delete("/creativeRequests/:id", async (req, res) => {
   }
 });
 
+// === NEW: APPROVE CREATIVE REQUEST ===
+app.put("/creativeRequests/:id/approve", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = await CreativeRequest.findById(id);
+    if (!request) return res.status(404).json({ message: "Creative request not found" });
+
+    request.status = "Sent to Purchasing";
+    await request.save();
+
+    res.json({ message: "Creative request approved and sent to Purchasing", request });
+  } catch (error) {
+    console.error("Approve creative request error:", error);
+    res.status(500).json({ message: "Server error: " + error.message });
+  }
+});
+
+// === NEW: REJECT CREATIVE REQUEST ===
+app.put("/creativeRequests/:id/reject", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const request = await CreativeRequest.findById(id);
+    if (!request) return res.status(404).json({ message: "Creative request not found" });
+
+    request.status = "Rejected";
+    request.rejectionReason = reason || "No reason provided"; // Saves rejection reason to DB
+    await request.save();
+
+    res.json({ message: "Creative request rejected", request });
+  } catch (error) {
+    console.error("Reject creative request error:", error);
+    res.status(500).json({ message: "Server error: " + error.message });
+  }
+});
+
 // ==================== CONTRACT ROUTES FOR CREATIVE DASHBOARD ====================
 
 app.get("/contracts/creative", async (req, res) => {

@@ -2,16 +2,50 @@ import React, { useState, useEffect } from "react";
 import "./SalesManagerDashboard.css";
 
 function CreativeManagerDashboard({ onLogout }) {
+  const [contracts, setContracts] = useState([]);
+  const [selectedContract, setSelectedContract] = useState(null);
   const [creativeRequests, setCreativeRequests] = useState([]);
-  const [activeTab, setActiveTab] = useState("all"); // all, for-approval, sent-to-purchasing
+  const [activeTab, setActiveTab] = useState("all");
   const [reviewingRequest, setReviewingRequest] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
 
   useEffect(() => {
+    fetchContracts();
     fetchCreativeRequests();
   }, []);
+
+  // === FETCH CONTRACTS ===
+  const fetchContracts = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/contracts/creative");
+      const data = await res.json();
+      const raw = Array.isArray(data) ? data : data.contracts || [];
+      const mapped = raw.map((c) => ({
+        id: c._id,
+        name:
+          (c.page1 && (c.page1.contractName || c.page1.occasion)) ||
+          "Untitled Contract",
+        client:
+          (c.page1 &&
+            (c.page1.celebratorName ||
+              c.page1.client ||
+              c.page1.clientName)) ||
+          "—",
+        contractNumber: c.contractNumber || "-",
+        startDate:
+          (c.page1 && (c.page1.eventDate || c.page1.startDate)) || "",
+        endDate: (c.page1 && (c.page1.eventDate || c.page1.endDate)) || "",
+        status: c.status || "Draft",
+        raw: c,
+      }));
+      setContracts(mapped);
+    } catch (err) {
+      console.error("Error fetching contracts:", err);
+      setContracts([]);
+    }
+  };
 
   // === FETCH CREATIVE REQUESTS ===
   const fetchCreativeRequests = async () => {
@@ -60,14 +94,12 @@ function CreativeManagerDashboard({ onLogout }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to approve");
 
-      // Update local state instantly
       setCreativeRequests((prev) =>
         prev.map((r) =>
           r._id === id ? { ...r, status: "Sent to Purchasing" } : r
         )
       );
 
-      // Close modal and switch tab
       setShowReviewModal(false);
       setReviewingRequest(null);
       setActiveTab("sent-to-purchasing");
@@ -93,7 +125,6 @@ function CreativeManagerDashboard({ onLogout }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to reject");
 
-      // Update instantly
       setCreativeRequests((prev) =>
         prev.map((r) =>
           r._id === reviewingRequest._id
@@ -112,7 +143,21 @@ function CreativeManagerDashboard({ onLogout }) {
     }
   };
 
-  // === FILTER LOGIC ===
+  // === CONTRACT ROW CLICK ===
+  const onContractRowClick = async (contract) => {
+    try {
+      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedContract(data.contract || contract.raw || null);
+      } else {
+        console.error("Failed to fetch contract details:", data);
+      }
+    } catch (err) {
+      console.error("Error fetching contract details:", err);
+    }
+  };
+
   const getFilteredRequests = () => {
     switch (activeTab) {
       case "for-approval":
@@ -124,7 +169,6 @@ function CreativeManagerDashboard({ onLogout }) {
     }
   };
 
-  // === DYNAMIC COUNTS (LIVE UPDATES) ===
   const countForApproval = creativeRequests.filter(
     (r) => r.status === "For Approval"
   ).length;
@@ -148,14 +192,61 @@ function CreativeManagerDashboard({ onLogout }) {
         </div>
       </div>
 
-      {/* === MAIN CONTENT === */}
       <div className="dashboard-content">
+        {/* === CONTRACTS TABLE === */}
+        <div className="contracts-table-container">
+          <div className="table-header">
+            <h3>Contracts from Sales</h3>
+          </div>
+          <div className="contracts-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Contract Name</th>
+                  <th>Client</th>
+                  <th>Contract No.</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contracts.length === 0 ? (
+                  <tr className="no-contracts">
+                    <td colSpan="6">No contracts found</td>
+                  </tr>
+                ) : (
+                  contracts.map((c) => (
+                    <tr
+                      key={c.id}
+                      className="clickable-row"
+                      onClick={() => onContractRowClick(c)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td>{c.name}</td>
+                      <td>{c.client}</td>
+                      <td>{c.contractNumber}</td>
+                      <td>{c.startDate?.slice(0, 10) || "-"}</td>
+                      <td>{c.endDate?.slice(0, 10) || "-"}</td>
+                      <td>
+                        <span className={`status ${statusClass(c.status)}`}>
+                          {c.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* === CREATIVE REQUESTS SECTION === */}
         <div className="contracts-table-container" style={sectionStyle}>
           <div className="table-header">
             <h3>Creative Requests Management</h3>
           </div>
 
-          {/* === MENU BAR (TABS) === */}
           <div className="tabs">
             <button
               className={`tab ${activeTab === "all" ? "active" : ""}`}
@@ -179,7 +270,6 @@ function CreativeManagerDashboard({ onLogout }) {
             </button>
           </div>
 
-          {/* === CREATIVE REQUESTS TABLE === */}
           <div className="contracts-table">
             <table>
               <thead>
@@ -201,17 +291,15 @@ function CreativeManagerDashboard({ onLogout }) {
                 ) : (
                   filteredRequests.map((r, idx) => (
                     <tr key={r._id || idx}>
-                      <td>{r.requestName || ""}</td>
-                      <td>{r.contractNo || "-"}</td>
-                      <td>{r.client || ""}</td>
+                      <td>{r.requestName}</td>
+                      <td>{r.contractNo}</td>
+                      <td>{r.client}</td>
                       <td style={{ maxWidth: 240, whiteSpace: "pre-wrap" }}>
                         {r.materials
                           ?.map((m) => `${m.name} (${m.quantity})`)
-                          .join("\n") || ""}
+                          .join("\n")}
                       </td>
-                      <td>
-                        {r.dueDate ? String(r.dueDate).slice(0, 10) : ""}
-                      </td>
+                      <td>{r.dueDate?.slice(0, 10)}</td>
                       <td>
                         <span className={`status ${statusClass(r.status)}`}>
                           {r.status}
@@ -225,7 +313,6 @@ function CreativeManagerDashboard({ onLogout }) {
                           >
                             Delete
                           </button>
-
                           {r.status === "For Approval" && (
                             <button
                               className="btn-review"
@@ -246,6 +333,60 @@ function CreativeManagerDashboard({ onLogout }) {
             </table>
           </div>
         </div>
+
+        {/* === CONTRACT DETAILS MODAL === */}
+        {selectedContract && (
+          <div
+            className="modal-overlay"
+            onClick={() => setSelectedContract(null)}
+          >
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Contract Details</h3>
+                <button
+                  className="close-btn"
+                  onClick={() => setSelectedContract(null)}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <p>
+                  <strong>Contract No.:</strong>{" "}
+                  {selectedContract.contractNumber}
+                </p>
+                <p>
+                  <strong>Client:</strong>{" "}
+                  {selectedContract.page1?.client || "N/A"}
+                </p>
+                <p>
+                  <strong>Event Date:</strong>{" "}
+                  {selectedContract.page1?.eventDate || "N/A"}
+                </p>
+                <p>
+                  <strong>Theme:</strong>{" "}
+                  {selectedContract.page1?.themeSetup || "N/A"}
+                </p>
+                <p>
+                  <strong>Motif:</strong>{" "}
+                  {selectedContract.page1?.colorMotif || "N/A"}
+                </p>
+                <p>
+                  <strong>Guests:</strong>{" "}
+                  {selectedContract.page1?.totalGuests || "N/A"}
+                </p>
+              </div>
+              <div className="modal-actions">
+                <button
+                  className="btn-secondary"
+                  onClick={() => setSelectedContract(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* === REVIEW MODAL === */}
         {showReviewModal && reviewingRequest && (
@@ -323,18 +464,61 @@ function CreativeManagerDashboard({ onLogout }) {
                   ×
                 </button>
               </div>
-              <div className="modal-body">
-                <label>Reason for Rejection</label>
-                <textarea
-                  placeholder="Enter reason..."
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  rows={5}
-                />
+              <div className="modal-body" style={{ textAlign: "left" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontWeight: "600",
+                      color: "#333",
+                      fontSize: "15px",
+                    }}
+                  >
+                    Reason for Rejection
+                  </label>
+                  <textarea
+                    placeholder="Type a clear reason for rejecting this request..."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    rows={5}
+                    style={{
+                      padding: "10px",
+                      borderRadius: "8px",
+                      border: "1px solid #ccc",
+                      fontSize: "14px",
+                      resize: "none",
+                      outline: "none",
+                      transition: "border-color 0.2s ease",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "#a40802")}
+                    onBlur={(e) => (e.target.style.borderColor = "#ccc")}
+                  />
+                </div>
               </div>
-              <div className="modal-actions">
+              <div
+                className="modal-actions"
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                  marginTop: "15px",
+                }}
+              >
                 <button
                   className="btn-reject"
+                  style={{
+                    backgroundColor: "#a40802",
+                    border: "none",
+                    padding: "10px 18px",
+                    borderRadius: "6px",
+                    fontWeight: "500",
+                    fontSize: "14px",
+                  }}
                   onClick={handleRejectSubmit}
                   disabled={!rejectReason.trim()}
                 >
@@ -342,6 +526,14 @@ function CreativeManagerDashboard({ onLogout }) {
                 </button>
                 <button
                   className="btn-secondary"
+                  style={{
+                    backgroundColor: "#6c757d",
+                    border: "none",
+                    padding: "10px 18px",
+                    borderRadius: "6px",
+                    fontWeight: "500",
+                    fontSize: "14px",
+                  }}
                   onClick={() => setShowRejectModal(false)}
                 >
                   Cancel
