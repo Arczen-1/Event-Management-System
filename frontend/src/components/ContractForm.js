@@ -449,10 +449,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     totalGuests: "",
     totalVIP: "",
     totalRegular: "",
-    kiddiePlated: "",
-    kiddiePacked: "",
-    crewPlated: "",
-    crewPacked: "",
     themeSetup: "",
     colorMotif: "",
     vipTableType: "",
@@ -478,7 +474,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     chairsTiffany: "0",
     chairsCrystal: "0",
     chairsRustic: "0",
-    chairsKiddie: "0",
     premiumChairs: "0",
     totalChairs: "",
     chairsRemarks: "",
@@ -522,7 +517,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     appetizerUpgradeSelections150: [],
     soupSelections: [],
     upgradeSoupSelections100: [],
-    breadSelections: [],
     saladUpgradeSelections125: [],
     saladUpgradeSelections150: [],
     mainBeefSelections: [],
@@ -571,18 +565,15 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   });
 
   const cocktailLimit = useMemo(() => {
-    if (!pBuffet.selectedPackage) return 0;
-    return pBuffet.selectedPackage === "Buffet Package 3" ? 3 : 2;
-  }, [pBuffet.selectedPackage]);
+    // Sets the cocktail hour selection limit to 2 for all packages.
+    return 2;
+  }, []);
 
-  const soupUpgradeLimit = useMemo(() => {
+  const dessertLimit = useMemo(() => {
     if (!pBuffet.selectedPackage) return 0;
-    if (pBuffet.selectedPackage === "Buffet Package 1") return 0;
-    if (pBuffet.selectedPackage === "Buffet Package 2") return 1;
-    if (pBuffet.selectedPackage === "Buffet Package 3") return 2;
-    return 0;
+    // Buffet Package 1 has a limit of 1, all others have a limit of 2.
+    return pBuffet.selectedPackage === "Buffet Package 1" ? 1 : 2;
   }, [pBuffet.selectedPackage]);
-
   // Menu selection limits based on package
   const menuLimits = useMemo(() => {
     const pkg = pBuffet.selectedPackage;
@@ -630,6 +621,53 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     }
     return {};
   }, [pBuffet.selectedPackage]);
+
+  // Calculate the total per-person cost of all selected upgrades
+  const totalUpgradeCostPerPax = useMemo(() => {
+    if (p1.serviceStyle !== "Buffet") return 0;
+
+    // Sum up the cost of all selected per-pax upgrades
+    return (
+      (pBuffet.foodStations || []).reduce((sum, s) => sum + s.cost, 0) +
+      ((pBuffet.upgradeSelections125 || []).length * 125) +
+      ((pBuffet.upgradeSelections150 || []).length * 150) +
+      ((pBuffet.appetizerUpgradeSelections125 || []).length * 125) +
+      ((pBuffet.appetizerUpgradeSelections150 || []).length * 150) +
+      ((pBuffet.upgradeSoupSelections100 || []).length * 100) +
+      ((pBuffet.saladUpgradeSelections125 || []).length * 125) +
+      ((pBuffet.saladUpgradeSelections150 || []).length * 150) +
+      ((pBuffet.beefUpgradeSelections100 || []).length * 100) +
+      ((pBuffet.beefUpgradeSelections125 || []).length * 125) +
+      ((pBuffet.beefUpgradeSelections500 || []).length * 500) +
+      ((pBuffet.beefUpgradeSelections1100 || []).length * 1100) +
+      ((pBuffet.porkUpgradeSelections200 || []).length * 200) +
+      ((pBuffet.porkUpgradeSelections250 || []).length * 250) +
+      ((pBuffet.porkUpgradeSelections275 || []).length * 275) +
+      ((pBuffet.fishUpgradeSelections200 || []).length * 200) +
+      ((pBuffet.fishUpgradeSelections225 || []).length * 225) +
+      ((pBuffet.seafoodUpgradeSelections200 || []).length * 200) +
+      ((pBuffet.seafoodUpgradeSelections235 || []).length * 235) +
+      ((pBuffet.seafoodUpgradeSelections335 || []).length * 335) +
+      ((pBuffet.chickenUpgradeSelections95 || []).length * 95) +
+      ((pBuffet.chickenUpgradeSelections100 || []).length * 100) +
+      ((pBuffet.chickenUpgradeSelections110 || []).length * 110) +
+      ((pBuffet.pastaUpgradeSelections150 || []).length * 150) +
+      ((pBuffet.vegUpgradeSelections50 || []).length * 50) +
+      ((pBuffet.vegUpgradeSelections60 || []).length * 60) +
+      ((pBuffet.vegUpgradeSelections75 || []).length * 75) +
+      ((pBuffet.vegUpgradeSelections650 || []).length * 650) +
+      ((pBuffet.riceUpgradeSelections50 || []).length * 50) +
+      ((pBuffet.riceUpgradeSelections95 || []).length * 95) +
+      ((pBuffet.riceUpgradeSelections110 || []).length * 110) +
+      ((pBuffet.dessertUpgradeSelections250 || []).length * 250) +
+      ((pBuffet.dessertUpgradeSelections300 || []).length * 300) +
+      ((pBuffet.dessertUpgradeSelections350 || []).length * 350) +
+      ((pBuffet.dessertUpgradeSelections400 || []).length * 400) +
+      ((pBuffet.dessertUpgradeSelections450 || []).length * 450) +
+      ((pBuffet.drinksUpgradeSelections130 || []).length * 130) +
+      ((pBuffet.drinksUpgradeSelections150 || []).length * 150)
+    );
+  }, [pBuffet, p1.serviceStyle]);
 
   // Helper functions to count current selections
   const getCurrentSelectionCounts = useMemo(() => {
@@ -697,6 +735,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     };
   }, [pBuffet]);
 
+
   // Auto-set price per plate for buffet based on package and guests
   useEffect(() => {
     if (p1.serviceStyle === "Buffet" && pBuffet.selectedPackage && p1.totalGuests) {
@@ -751,47 +790,100 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         ...(pBuffet.cocktailSelections || []),
         ...(pBuffet.upgradeSelections125 || []).map(s => `${s} (+125)`),
         ...(pBuffet.upgradeSelections150 || []).map(s => `${s} (+150)`)
-      ].join(", ");
+      ].join("\n");
+
       const foodStationsText = (pBuffet.foodStations || []).map(s => {
         if (s.name === "Oyster Bar") {
           return `${s.name} (+++${s.cost}) - ${(pBuffet.oysterBarSelections || []).join(", ")}`;
         }
         return `${s.name} (+++${s.cost})`;
-      }).join(", ");
+      }).join("\n");
+
       const appetizerText = [
         ...(pBuffet.appetizerUpgradeSelections125 || []).map(s => `${s} (+125)`),
         ...(pBuffet.appetizerUpgradeSelections150 || []).map(s => `${s} (+150)`)
-      ].join(", ");
+      ].join("\n");
+
       const soupText = [
         ...(pBuffet.soupSelections || []),
         ...(pBuffet.upgradeSoupSelections100 || []).map(s => `${s} (+100)`)
-      ].join(", ");
-      const breadText = (pBuffet.breadSelections || []).join(", ");
+      ].join("\n");
+
       const saladText = [
         ...(pBuffet.saladUpgradeSelections125 || []).map(s => `${s} (+125)`),
         ...(pBuffet.saladUpgradeSelections150 || []).map(s => `${s} (+150)`)
-      ].join(", ");
+      ].join("\n");
+
       const mainText = [
+        // Beef Selections
         ...(pBuffet.mainBeefSelections || []),
+        ...(pBuffet.beefUpgradeSelections100 || []).map(s => `${s} (+100)`),
+        ...(pBuffet.beefUpgradeSelections125 || []).map(s => `${s} (+125)`),
+        ...(pBuffet.beefUpgradeSelections500 || []).map(s => `${s} (+500)`),
+        ...(pBuffet.beefUpgradeSelections1100 || []).map(s => `${s} (+1100)`),
+        // Pork Selections
         ...(pBuffet.mainPorkSelections || []),
+        ...(pBuffet.porkUpgradeSelections200 || []).map(s => `${s} (+200)`),
+        ...(pBuffet.porkUpgradeSelections250 || []).map(s => `${s} (+250)`),
+        ...(pBuffet.porkUpgradeSelections275 || []).map(s => `${s} (+275)`),
+        ...(pBuffet.porkUpgradeSelections15000 || []).map(s => `${s} (+15000)`),
+        // Fish Selections
         ...(pBuffet.mainFishSelections || []),
+        ...(pBuffet.fishUpgradeSelections200 || []).map(s => `${s} (+200)`),
+        ...(pBuffet.fishUpgradeSelections225 || []).map(s => `${s} (+225)`),
+        // Seafood Selections
         ...(pBuffet.mainSeafoodSelections || []),
+        ...(pBuffet.seafoodUpgradeSelections200 || []).map(s => `${s} (+200)`),
+        ...(pBuffet.seafoodUpgradeSelections235 || []).map(s => `${s} (+235)`),
+        ...(pBuffet.seafoodUpgradeSelections335 || []).map(s => `${s} (+335)`),
+        // Chicken Selections
         ...(pBuffet.mainChickenSelections || []),
+        ...(pBuffet.chickenUpgradeSelections95 || []).map(s => `${s} (+95)`),
+        ...(pBuffet.chickenUpgradeSelections100 || []).map(s => `${s} (+100)`),
+        ...(pBuffet.chickenUpgradeSelections110 || []).map(s => `${s} (+110)`),
+        // Pasta Selections
         ...(pBuffet.mainPastaSelections || []),
+        ...(pBuffet.pastaUpgradeSelections150 || []).map(s => `${s} (+150)`),
+        // Noodles Selections
         ...(pBuffet.mainNoodlesSelections || []),
+        // Vegetable Selections
         ...(pBuffet.mainVegSelections || []),
+        ...(pBuffet.vegUpgradeSelections50 || []).map(s => `${s} (+50)`),
+        ...(pBuffet.vegUpgradeSelections60 || []).map(s => `${s} (+60)`),
+        ...(pBuffet.vegUpgradeSelections75 || []).map(s => `${s} (+75)`),
+        ...(pBuffet.vegUpgradeSelections650 || []).map(s => `${s} (+650)`),
+        // Side Dish Selections
         ...(pBuffet.mainSideDishSelections || [])
-      ].join(", ");
-      const riceText = (pBuffet.riceSelections || []).join(", ");
-      const dessertText = (pBuffet.dessertSelections || []).join(", ");
-      const drinksText = (pBuffet.drinksSelections || []).join(", ");
+      ].join("\n");
+
+      const riceText = [
+        ...(pBuffet.riceSelections || []),
+        ...(pBuffet.riceUpgradeSelections50 || []).map(s => `${s} (+50)`),
+        ...(pBuffet.riceUpgradeSelections95 || []).map(s => `${s} (+95)`),
+        ...(pBuffet.riceUpgradeSelections110 || []).map(s => `${s} (+110)`),
+      ].join("\n");
+
+      const dessertText = [
+        ...(pBuffet.dessertSelections || []),
+        ...(pBuffet.dessertUpgradeSelections250 || []).map(s => `${s} (+250)`),
+        ...(pBuffet.dessertUpgradeSelections300 || []).map(s => `${s} (+300)`),
+        ...(pBuffet.dessertUpgradeSelections350 || []).map(s => `${s} (+350)`),
+        ...(pBuffet.dessertUpgradeSelections400 || []).map(s => `${s} (+400)`),
+        ...(pBuffet.dessertUpgradeSelections450 || []).map(s => `${s} (+450)`),
+      ].join("\n");
+
+      const drinksText = [
+        ...(pBuffet.drinksSelections || []),
+        ...(pBuffet.drinksUpgradeSelections130 || []).map(s => `${s} (+130)`),
+        ...(pBuffet.drinksUpgradeSelections150 || []).map(s => `${s} (+150)`),
+      ].join("\n");
+
       setP3(prev => ({
         ...prev,
         cocktailHour: cocktailText,
         foodStations: foodStationsText,
         appetizer: appetizerText,
         soup: soupText,
-        bread: breadText,
         salad: saladText,
         mainEntree: mainText,
         rice: riceText,
@@ -801,30 +893,23 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     }
   }, [
     p1.serviceStyle,
-    pBuffet.cocktailSelections,
-    pBuffet.upgradeSelections125,
-    pBuffet.upgradeSelections150,
-    pBuffet.foodStations,
-    pBuffet.oysterBarSelections,
-    pBuffet.appetizerUpgradeSelections125,
-    pBuffet.appetizerUpgradeSelections150,
-    pBuffet.soupSelections,
-    pBuffet.upgradeSoupSelections100,
-    pBuffet.breadSelections,
-    pBuffet.saladUpgradeSelections125,
-    pBuffet.saladUpgradeSelections150,
-    pBuffet.mainBeefSelections,
-    pBuffet.mainPorkSelections,
-    pBuffet.mainFishSelections,
-    pBuffet.mainSeafoodSelections,
-    pBuffet.mainChickenSelections,
-    pBuffet.mainPastaSelections,
+    pBuffet.cocktailSelections, pBuffet.upgradeSelections125, pBuffet.upgradeSelections150,
+    pBuffet.foodStations, pBuffet.oysterBarSelections,
+    pBuffet.appetizerUpgradeSelections125, pBuffet.appetizerUpgradeSelections150,
+    pBuffet.soupSelections, pBuffet.upgradeSoupSelections100,
+    pBuffet.saladUpgradeSelections125, pBuffet.saladUpgradeSelections150,
+    pBuffet.mainBeefSelections, pBuffet.beefUpgradeSelections100, pBuffet.beefUpgradeSelections125, pBuffet.beefUpgradeSelections500, pBuffet.beefUpgradeSelections1100,
+    pBuffet.mainPorkSelections, pBuffet.porkUpgradeSelections200, pBuffet.porkUpgradeSelections250, pBuffet.porkUpgradeSelections275, pBuffet.porkUpgradeSelections15000,
+    pBuffet.mainFishSelections, pBuffet.fishUpgradeSelections200, pBuffet.fishUpgradeSelections225,
+    pBuffet.mainSeafoodSelections, pBuffet.seafoodUpgradeSelections200, pBuffet.seafoodUpgradeSelections235, pBuffet.seafoodUpgradeSelections335,
+    pBuffet.mainChickenSelections, pBuffet.chickenUpgradeSelections95, pBuffet.chickenUpgradeSelections100, pBuffet.chickenUpgradeSelections110,
+    pBuffet.mainPastaSelections, pBuffet.pastaUpgradeSelections150,
     pBuffet.mainNoodlesSelections,
-    pBuffet.mainVegSelections,
+    pBuffet.mainVegSelections, pBuffet.vegUpgradeSelections50, pBuffet.vegUpgradeSelections60, pBuffet.vegUpgradeSelections75, pBuffet.vegUpgradeSelections650,
     pBuffet.mainSideDishSelections,
-    pBuffet.riceSelections,
-    pBuffet.dessertSelections,
-    pBuffet.drinksSelections
+    pBuffet.riceSelections, pBuffet.riceUpgradeSelections50, pBuffet.riceUpgradeSelections95, pBuffet.riceUpgradeSelections110,
+    pBuffet.dessertSelections, pBuffet.dessertUpgradeSelections250, pBuffet.dessertUpgradeSelections300, pBuffet.dessertUpgradeSelections350, pBuffet.dessertUpgradeSelections400, pBuffet.dessertUpgradeSelections450,
+    pBuffet.drinksSelections, pBuffet.drinksUpgradeSelections130, pBuffet.drinksUpgradeSelections150
   ]);
 
   // Page 4 fields (Menu/Pricing)
@@ -834,15 +919,12 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     foodStations: "",
     appetizer: "",
     soup: "",
-    bread: "",
     salad: "",
     mainEntree: "",
     rice: "",
     dessert: "",
     drinks: "",
     cakeName: "",
-    kidsMeal: "",
-    crewMeal: "",
     drinksCocktail: "",
     drinksMeal: "",
     roastedPig: "",
@@ -880,7 +962,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         appetizerUpgradeSelections150: existing.pageBuffet?.appetizerUpgradeSelections150 || [],
         soupSelections: existing.pageBuffet?.soupSelections || [],
         upgradeSoupSelections100: existing.pageBuffet?.upgradeSoupSelections100 || [],
-        breadSelections: existing.pageBuffet?.breadSelections || [],
         saladUpgradeSelections125: existing.pageBuffet?.saladUpgradeSelections125 || [],
         saladUpgradeSelections150: existing.pageBuffet?.saladUpgradeSelections150 || [],
         mainBeefSelections: existing.pageBuffet?.mainBeefSelections || [],
@@ -924,6 +1005,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         dessertUpgradeSelections400: existing.pageBuffet?.dessertUpgradeSelections400 || [],
         dessertUpgradeSelections450: existing.pageBuffet?.dessertUpgradeSelections450 || [],
         drinksSelections: existing.pageBuffet?.drinksSelections || [],
+        drinksUpgradeSelections130: existing.pageBuffet?.drinksUpgradeSelections130 || [],
+        drinksUpgradeSelections150: existing.pageBuffet?.drinksUpgradeSelections150 || [],
       });
       setP3(existing.page3 || {});
       setNextNumber(existing.contractNumber || "");
@@ -995,7 +1078,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                 (parseInt(p2.chairsTiffany) || 0) +
                 (parseInt(p2.chairsCrystal) || 0) +
                 (parseInt(p2.chairsRustic) || 0) +
-                (parseInt(p2.chairsKiddie) || 0) +
                 (parseInt(p2.premiumChairs) || 0);
     const total = parseInt(p2.totalChairs) || 0;
     if (sum !== total) {
@@ -1010,7 +1092,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         return newErrors;
       });
     }
-  }, [p2.chairsMonoblock, p2.chairsTiffany, p2.chairsCrystal, p2.chairsRustic, p2.chairsKiddie, p2.premiumChairs, p2.totalChairs]);
+  }, [p2.chairsMonoblock, p2.chairsTiffany, p2.chairsCrystal, p2.chairsRustic, p2.premiumChairs, p2.totalChairs]);
 
   // Auto-set VIP seats based on table type
   useEffect(() => {
@@ -1139,12 +1221,69 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   // Auto-compute total menu cost as price per plate * total guests + food stations additional cost
   useEffect(() => {
-    const price = parseFloat(p3.pricePerPlate) || 0;
+    // Remove commas from price string before parsing to ensure correct calculation
+    const price = parseFloat(String(p3.pricePerPlate).replace(/,/g, '')) || 0;
     const guests = parseInt(p1.totalGuests) || 0;
-    const additionalPerPax = (pBuffet.foodStations || []).reduce((sum, s) => sum + s.cost, 0) + ((pBuffet.upgradeSoupSelections100 || []).length * 100) + ((pBuffet.appetizerUpgradeSelections125 || []).length * 125) + ((pBuffet.appetizerUpgradeSelections150 || []).length * 150) + ((pBuffet.saladUpgradeSelections125 || []).length * 125) + ((pBuffet.saladUpgradeSelections150 || []).length * 150);
+
+    // Sum up the cost of all selected per-pax upgrades
+    const additionalPerPax =
+      // Food Stations
+      (pBuffet.foodStations || []).reduce((sum, s) => sum + s.cost, 0) +
+      // Cocktail Hour Upgrades
+      ((pBuffet.upgradeSelections125 || []).length * 125) +
+      ((pBuffet.upgradeSelections150 || []).length * 150) +
+      // Appetizer Upgrades
+      ((pBuffet.appetizerUpgradeSelections125 || []).length * 125) +
+      ((pBuffet.appetizerUpgradeSelections150 || []).length * 150) +
+      // Soup Upgrades
+      ((pBuffet.upgradeSoupSelections100 || []).length * 100) +
+      // Salad Upgrades
+      ((pBuffet.saladUpgradeSelections125 || []).length * 125) +
+      ((pBuffet.saladUpgradeSelections150 || []).length * 150) +
+      // Beef Upgrades
+      ((pBuffet.beefUpgradeSelections100 || []).length * 100) +
+      ((pBuffet.beefUpgradeSelections125 || []).length * 125) +
+      ((pBuffet.beefUpgradeSelections500 || []).length * 500) +
+      ((pBuffet.beefUpgradeSelections1100 || []).length * 1100) +
+      // Pork Upgrades (per-pax only)
+      ((pBuffet.porkUpgradeSelections200 || []).length * 200) +
+      ((pBuffet.porkUpgradeSelections250 || []).length * 250) +
+      ((pBuffet.porkUpgradeSelections275 || []).length * 275) +
+      // Fish Upgrades
+      ((pBuffet.fishUpgradeSelections200 || []).length * 200) +
+      ((pBuffet.fishUpgradeSelections225 || []).length * 225) +
+      // Seafood Upgrades
+      ((pBuffet.seafoodUpgradeSelections200 || []).length * 200) +
+      ((pBuffet.seafoodUpgradeSelections235 || []).length * 235) +
+      ((pBuffet.seafoodUpgradeSelections335 || []).length * 335) +
+      // Chicken Upgrades
+      ((pBuffet.chickenUpgradeSelections95 || []).length * 95) +
+      ((pBuffet.chickenUpgradeSelections100 || []).length * 100) +
+      ((pBuffet.chickenUpgradeSelections110 || []).length * 110) +
+      // Pasta Upgrades
+      ((pBuffet.pastaUpgradeSelections150 || []).length * 150) +
+      // Vegetable Upgrades
+      ((pBuffet.vegUpgradeSelections50 || []).length * 50) +
+      ((pBuffet.vegUpgradeSelections60 || []).length * 60) +
+      ((pBuffet.vegUpgradeSelections75 || []).length * 75) +
+      ((pBuffet.vegUpgradeSelections650 || []).length * 650) +
+      // Rice Upgrades
+      ((pBuffet.riceUpgradeSelections50 || []).length * 50) +
+      ((pBuffet.riceUpgradeSelections95 || []).length * 95) +
+      ((pBuffet.riceUpgradeSelections110 || []).length * 110) +
+      // Dessert Upgrades
+      ((pBuffet.dessertUpgradeSelections250 || []).length * 250) +
+      ((pBuffet.dessertUpgradeSelections300 || []).length * 300) +
+      ((pBuffet.dessertUpgradeSelections350 || []).length * 350) +
+      ((pBuffet.dessertUpgradeSelections400 || []).length * 400) +
+      ((pBuffet.dessertUpgradeSelections450 || []).length * 450) +
+      // Drinks Upgrades
+      ((pBuffet.drinksUpgradeSelections130 || []).length * 130) +
+      ((pBuffet.drinksUpgradeSelections150 || []).length * 150);
+
     const total = (price + additionalPerPax) * guests;
     setP3((prev) => ({ ...prev, totalMenuCost: total.toString() }));
-  }, [p3.pricePerPlate, p1.totalGuests, pBuffet.foodStations, pBuffet.upgradeSoupSelections100, pBuffet.appetizerUpgradeSelections125, pBuffet.appetizerUpgradeSelections150, pBuffet.saladUpgradeSelections125, pBuffet.saladUpgradeSelections150]);
+  }, [p3.pricePerPlate, p1.totalGuests, pBuffet]);
 
   // Auto-compute service charge as 10% of totalMenuCost + totalSpecialReqCost + mobilizationCharge
   useEffect(() => {
@@ -1317,7 +1456,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
     // Check required fields in page2 (chairs with asterisks)
     const requiredP2Fields = [
-      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs'
+      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'premiumChairs', 'totalChairs'
     ];
     for (const field of requiredP2Fields) {
       if (!p2[field] || !p2[field].trim()) return false;
@@ -1443,6 +1582,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       if (totalCocktailSelections !== cocktailLimit) {
         newErrors.cocktailSelections = `Please select exactly ${cocktailLimit} cocktail hour options (including upgrades).`;
       }
+    
       const soupUpgradeLimit = !pBuffet.selectedPackage ? 0 : (pBuffet.selectedPackage === "Buffet Package 1" ? 0 : (pBuffet.selectedPackage === "Buffet Package 2" ? 1 : 2));
       if ((pBuffet.upgradeSoupSelections100 || []).length > soupUpgradeLimit) {
         newErrors.upgradeSoupSelections100 = `Please select at most ${soupUpgradeLimit} soup upgrade options.`;
@@ -1600,12 +1740,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   const renderPage1 = () => (
     <div className="page">
-      <div className="form-row">
-        <div className="form-group">
-          <label>Contract No.</label>
-          <input type="text" value={nextNumber} readOnly />
-        </div>
-      </div>
 
       <h4>Celebrator</h4>
       <div className="form-row two">
@@ -1877,12 +2011,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
         </div>
       </div>
-      <div className="form-row four">
-        <div className="form-group"><label>Kiddie Meal Plated</label><input value={p1.kiddiePlated} onChange={(e)=>setP1({...p1, kiddiePlated:e.target.value})} /></div>
-        <div className="form-group"><label>Kiddie Meal Packed</label><input value={p1.kiddiePacked} onChange={(e)=>setP1({...p1, kiddiePacked:e.target.value})} /></div>
-        <div className="form-group"><label>Crew Meal Plated</label><input value={p1.crewPlated} onChange={(e)=>setP1({...p1, crewPlated:e.target.value})} /></div>
-        <div className="form-group"><label>Crew Meal Packed</label><input value={p1.crewPacked} onChange={(e)=>setP1({...p1, crewPacked:e.target.value})} /></div>
-      </div>
 
       <h4>Set Up</h4>
       <div className="form-row two">
@@ -1991,13 +2119,12 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         <div className="form-group"><label>Crystal <span className="required-asterisk">*</span></label><input value={p2.chairsCrystal} onChange={(e)=>setP2({...p2, chairsCrystal:e.target.value})} /></div>
       </div>
       <div className="form-row two">
-        <div className="form-group"><label>Kiddie <span className="required-asterisk">*</span></label><input value={p2.chairsKiddie} onChange={(e)=>setP2({...p2, chairsKiddie:e.target.value})} /></div>
         <div className="form-group"><label>Total Chairs <span className="required-asterisk">*</span></label><input value={p2.totalChairs} readOnly /></div>
       </div>
       {errors.chairsSum && <div className="validation-error">{errors.chairsSum}</div>}
       <div className="form-group"><label>Remarks</label><textarea value={p2.chairsRemarks} onChange={(e)=>setP2({...p2, chairsRemarks:convertToUppercase(e.target.value)})} /></div>
 
-      <h4>Flower Arrangement</h4>
+      <h4>Creative</h4>
       <div className="form-row two">
         <div className="form-group"><label>Backdrop</label><input value={p2.flowerBackdrop} onChange={(e)=>setP2({...p2, flowerBackdrop:e.target.value})} /></div>
         <div className="form-group"><label>VIP Centerpiece</label><input value={p2.flowerVipCenterpiece} onChange={(e)=>setP2({...p2, flowerVipCenterpiece:e.target.value})} /></div>
@@ -2020,10 +2147,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <div className="form-row two">
         <div className="form-group"><label>Celebrator's Car</label><input value={p2.celebratorsCar} onChange={(e)=>setP2({...p2, celebratorsCar:e.target.value})} /></div>
         <div className="form-group"><label>Emcee</label><input value={p2.emcee} onChange={(e)=>setP2({...p2, emcee:e.target.value})} /></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>Sound System</label><input value={p2.soundSystem} onChange={(e)=>setP2({...p2, soundSystem:e.target.value})} /></div>
-        <div className="form-group"><label>Tent</label><input value={p2.tent} onChange={(e)=>setP2({...p2, tent:e.target.value})} /></div>
       </div>
       <div className="form-group"><label>Celebrator's Chair</label><input value={p2.celebratorsChair} onChange={(e)=>setP2({...p2, celebratorsChair:e.target.value})} /></div>
     
@@ -2346,7 +2469,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       const currentSoup = prev.soupSelections || [];
       const currentUpgrade = prev.upgradeSoupSelections100 || [];
       const totalSoup = currentSoup.length + currentUpgrade.length;
-      const limit = 1 + soupUpgradeLimit;
+      const limit = 1; // Corrected limit
       const selections = currentSoup.includes(option)
         ? currentSoup.filter(s => s !== option)
         : totalSoup < limit ? [...currentSoup, option] : currentSoup;
@@ -2359,7 +2482,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       const currentSoup = prev.soupSelections || [];
       const currentUpgrade = prev.upgradeSoupSelections100 || [];
       const totalSoup = currentSoup.length + currentUpgrade.length;
-      const limit = 1 + soupUpgradeLimit;
+      const limit = 1; // Corrected limit
       const selections = currentUpgrade.includes(option)
         ? currentUpgrade.filter(s => s !== option)
         : totalSoup < limit ? [...currentUpgrade, option] : currentUpgrade;
@@ -3189,13 +3312,8 @@ const handleRiceUpgrade110Change = (option) => {
   });
 };
 
-  const handleDessertChange = (option) => {
+ const handleDessertChange = (option) => {
     setPBuffet(prev => {
-      const currentSelections = prev.dessertSelections || [];
-      const pkg = pBuffet.selectedPackage;
-      const limit = pkg === "Buffet Package 1" ? 1 : 2;
-      
-      // Calculate total dessert selections
       const totalDessertSelections = 
         (prev.dessertSelections || []).length +
         (prev.dessertUpgradeSelections250 || []).length +
@@ -3203,20 +3321,17 @@ const handleRiceUpgrade110Change = (option) => {
         (prev.dessertUpgradeSelections350 || []).length +
         (prev.dessertUpgradeSelections400 || []).length +
         (prev.dessertUpgradeSelections450 || []).length;
-      
+
+      const currentSelections = prev.dessertSelections || [];
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
+        : totalDessertSelections < dessertLimit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertSelections: selections };
     });
   };
 
   const handleDessertUpgrade250Change = (option) => {
     setPBuffet(prev => {
-      const currentSelections = prev.dessertUpgradeSelections250 || [];
-      const pkg = pBuffet.selectedPackage;
-      const limit = pkg === "Buffet Package 1" ? 1 : 2;
-      
       const totalDessertSelections = 
         (prev.dessertSelections || []).length +
         (prev.dessertUpgradeSelections250 || []).length +
@@ -3224,20 +3339,17 @@ const handleRiceUpgrade110Change = (option) => {
         (prev.dessertUpgradeSelections350 || []).length +
         (prev.dessertUpgradeSelections400 || []).length +
         (prev.dessertUpgradeSelections450 || []).length;
-      
+
+      const currentSelections = prev.dessertUpgradeSelections250 || [];
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
+        : totalDessertSelections < dessertLimit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections250: selections };
     });
   };
   
   const handleDessertUpgrade300Change = (option) => {
     setPBuffet(prev => {
-      const currentSelections = prev.dessertUpgradeSelections300 || [];
-      const pkg = pBuffet.selectedPackage;
-      const limit = pkg === "Buffet Package 1" ? 1 : 2;
-      
       const totalDessertSelections = 
         (prev.dessertSelections || []).length +
         (prev.dessertUpgradeSelections250 || []).length +
@@ -3245,20 +3357,17 @@ const handleRiceUpgrade110Change = (option) => {
         (prev.dessertUpgradeSelections350 || []).length +
         (prev.dessertUpgradeSelections400 || []).length +
         (prev.dessertUpgradeSelections450 || []).length;
-      
+    
+      const currentSelections = prev.dessertUpgradeSelections300 || [];
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
+        : totalDessertSelections < dessertLimit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections300: selections };
     });
   };
   
   const handleDessertUpgrade350Change = (option) => {
     setPBuffet(prev => {
-      const currentSelections = prev.dessertUpgradeSelections350 || [];
-      const pkg = pBuffet.selectedPackage;
-      const limit = pkg === "Buffet Package 1" ? 1 : 2;
-      
       const totalDessertSelections = 
         (prev.dessertSelections || []).length +
         (prev.dessertUpgradeSelections250 || []).length +
@@ -3266,20 +3375,17 @@ const handleRiceUpgrade110Change = (option) => {
         (prev.dessertUpgradeSelections350 || []).length +
         (prev.dessertUpgradeSelections400 || []).length +
         (prev.dessertUpgradeSelections450 || []).length;
-      
+    
+      const currentSelections = prev.dessertUpgradeSelections350 || [];
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
+        : totalDessertSelections < dessertLimit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections350: selections };
     });
   };
   
   const handleDessertUpgrade400Change = (option) => {
     setPBuffet(prev => {
-      const currentSelections = prev.dessertUpgradeSelections400 || [];
-      const pkg = pBuffet.selectedPackage;
-      const limit = pkg === "Buffet Package 1" ? 1 : 2;
-      
       const totalDessertSelections = 
         (prev.dessertSelections || []).length +
         (prev.dessertUpgradeSelections250 || []).length +
@@ -3287,20 +3393,17 @@ const handleRiceUpgrade110Change = (option) => {
         (prev.dessertUpgradeSelections350 || []).length +
         (prev.dessertUpgradeSelections400 || []).length +
         (prev.dessertUpgradeSelections450 || []).length;
-      
+    
+      const currentSelections = prev.dessertUpgradeSelections400 || [];
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
+        : totalDessertSelections < dessertLimit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections400: selections };
     });
   };
   
   const handleDessertUpgrade450Change = (option) => {
     setPBuffet(prev => {
-      const currentSelections = prev.dessertUpgradeSelections450 || [];
-      const pkg = pBuffet.selectedPackage;
-      const limit = pkg === "Buffet Package 1" ? 1 : 2;
-      
       const totalDessertSelections = 
         (prev.dessertSelections || []).length +
         (prev.dessertUpgradeSelections250 || []).length +
@@ -3308,10 +3411,11 @@ const handleRiceUpgrade110Change = (option) => {
         (prev.dessertUpgradeSelections350 || []).length +
         (prev.dessertUpgradeSelections400 || []).length +
         (prev.dessertUpgradeSelections450 || []).length;
-      
+    
+      const currentSelections = prev.dessertUpgradeSelections450 || [];
       const selections = currentSelections.includes(option)
         ? currentSelections.filter(s => s !== option)
-        : totalDessertSelections < limit ? [...currentSelections, option] : currentSelections;
+        : totalDessertSelections < dessertLimit ? [...currentSelections, option] : currentSelections;
       return { ...prev, dessertUpgradeSelections450: selections };
     });
   };
@@ -3519,6 +3623,7 @@ const handleRiceUpgrade110Change = (option) => {
                       type="checkbox"
                       checked={(pBuffet.foodStations || []).some(s => s.name === station.name)}
                       onChange={() => handleFoodStationChange(station)}
+                      disabled={!(pBuffet.foodStations || []).some(s => s.name === station.name) && getCurrentSelectionCounts.foodStations >= (menuLimits.foodStations || 1)}
                     />
                     {station.name}
                   </label>
@@ -3557,10 +3662,11 @@ const handleRiceUpgrade110Change = (option) => {
             <div className="menu-grid">
               {APPETIZER_UPGRADE_125_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
-                  <input
+                 <input
                     type="checkbox"
                     checked={(pBuffet.appetizerUpgradeSelections125 || []).includes(option)}
                     onChange={() => handleAppetizer125Change(option)}
+                    disabled={!(pBuffet.appetizerUpgradeSelections125 || []).includes(option) && getCurrentSelectionCounts.appetizer >= (menuLimits.appetizer || 1)}
                   />
                   {option}
                 </label>
@@ -3576,6 +3682,7 @@ const handleRiceUpgrade110Change = (option) => {
                     type="checkbox"
                     checked={(pBuffet.appetizerUpgradeSelections150 || []).includes(option)}
                     onChange={() => handleAppetizer150Change(option)}
+                    disabled={!(pBuffet.appetizerUpgradeSelections150 || []).includes(option) && getCurrentSelectionCounts.appetizer >= (menuLimits.appetizer || 1)}
                   />
                   {option}
                 </label>
@@ -3587,7 +3694,7 @@ const handleRiceUpgrade110Change = (option) => {
         <div className="menu-section">
           <h5>Soup</h5>
           <p style={{fontWeight: 'bold', color: '#2196F3'}}>
-          Soup Selections: {(pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length}/{1 + soupUpgradeLimit}</p>
+          Soup Selections: {(pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length}/1</p>
           <div className="menu-grid">
             {SOUP_OPTIONS.map(option => (
               <label key={option} className="menu-item">
@@ -3595,7 +3702,7 @@ const handleRiceUpgrade110Change = (option) => {
                   type="checkbox"
                   checked={(pBuffet.soupSelections || []).includes(option)}
                   onChange={() => handleSoupChange(option)}
-                  disabled={!(pBuffet.soupSelections || []).includes(option) && ((pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length) >= (1 + soupUpgradeLimit)}
+                  disabled={!(pBuffet.soupSelections || []).includes(option) && ((pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length) >= 1}
                 />
                 {option}
               </label>
@@ -3610,7 +3717,7 @@ const handleRiceUpgrade110Change = (option) => {
                   type="checkbox"
                   checked={(pBuffet.upgradeSoupSelections100 || []).includes(option)}
                   onChange={() => handleUpgradeSoupChange(option)}
-                  disabled={!(pBuffet.upgradeSoupSelections100 || []).includes(option) && ((pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length) >= (1 + soupUpgradeLimit)}
+                  disabled={!(pBuffet.upgradeSoupSelections100 || []).includes(option) && ((pBuffet.soupSelections || []).length + (pBuffet.upgradeSoupSelections100 || []).length) >= 1}
                 />
                 <span>{option}</span>
               </label>
@@ -3618,7 +3725,6 @@ const handleRiceUpgrade110Change = (option) => {
           </div>
         </div>
         </div>
-
         
         <div className="menu-section">
           <h5>Salad (Optional)</h5>
@@ -3630,10 +3736,11 @@ const handleRiceUpgrade110Change = (option) => {
             <div className="menu-grid">
               {SALAD_UPGRADE_125_OPTIONS.map(option => (
                 <label key={option} className="menu-item">
-                  <input
+                 <input
                     type="checkbox"
                     checked={(pBuffet.saladUpgradeSelections125 || []).includes(option)}
                     onChange={() => handleSalad125Change(option)}
+                    disabled={!(pBuffet.saladUpgradeSelections125 || []).includes(option) && getCurrentSelectionCounts.salad >= (menuLimits.salad || 1)}
                   />
                   {option}
                 </label>
@@ -3649,6 +3756,7 @@ const handleRiceUpgrade110Change = (option) => {
                     type="checkbox"
                     checked={(pBuffet.saladUpgradeSelections150 || []).includes(option)}
                     onChange={() => handleSalad150Change(option)}
+                    disabled={!(pBuffet.saladUpgradeSelections150 || []).includes(option) && getCurrentSelectionCounts.salad >= (menuLimits.salad || 1)}
                   />
                   {option}
                 </label>
@@ -3696,47 +3804,71 @@ const handleRiceUpgrade110Change = (option) => {
           <div className="menu-category">
             <h5>Beef</h5>
             <div className="menu-grid">
-              {MAIN_BEEF_OPTIONS.map(option => (
-                <label key={option} className="menu-item">
-                  <input
-                    type="checkbox"
-                    checked={(pBuffet.mainBeefSelections || []).includes(option)}
-                    onChange={() => handleMainBeefChange(option)}
-                  />
-                  {option}
-                </label>
-              ))}
+              {MAIN_BEEF_OPTIONS.map(option => {
+                const isChecked = (pBuffet.mainBeefSelections || []).includes(option);
+                const isDisabled = !isChecked && (
+                  (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.beef >= menuLimits.beef) ||
+                  ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+                );
+                return (
+                  <label key={option} className="menu-item">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleMainBeefChange(option)}
+                      disabled={isDisabled}
+                    />
+                    {option}
+                  </label>
+                );
+              })}
             </div>
             <div className="menu-category">
             <h6>+100 per pax</h6>
             <div className="menu-grid">
-            {BEEF_UPGRADE_100_OPTIONS.map(option => (
-              <div key={option}>
-                <input
-                  type="checkbox"
-                    id={`beef-upgrade-100-${option}`}
-                    checked={(pBuffet.beefUpgradeSelections100 || []).includes(option)}
-                    onChange={() => handleBeefUpgrade100Change(option)}
-                    />
-                    <label htmlFor={`beef-upgrade-100-${option}`}>{option}</label>
-                  </div>
-              ))}
+            {BEEF_UPGRADE_100_OPTIONS.map(option => {
+              const isChecked = (pBuffet.beefUpgradeSelections100 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.beef >= menuLimits.beef) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                      id={`beef-upgrade-100-${option}`}
+                      checked={isChecked}
+                      onChange={() => handleBeefUpgrade100Change(option)}
+                      disabled={isDisabled}
+                      />
+                      <label htmlFor={`beef-upgrade-100-${option}`}>{option}</label>
+                    </div>
+              );
+            })}
             </div>
             </div>
             <div className="menu-category">
             <h6>+125 per pax</h6>
             <div className="menu-grid">
-            {BEEF_UPGRADE_125_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`beef-upgrade-125-${option}`}
-      checked={(pBuffet.beefUpgradeSelections125 || []).includes(option)}
-      onChange={() => handleBeefUpgrade125Change(option)}
-    />
-    <label htmlFor={`beef-upgrade-125-${option}`}>{option}</label>
-  </div>
-))}
+            {BEEF_UPGRADE_125_OPTIONS.map(option => {
+              const isChecked = (pBuffet.beefUpgradeSelections125 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.beef >= menuLimits.beef) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`beef-upgrade-125-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleBeefUpgrade125Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`beef-upgrade-125-${option}`}>{option}</label>
+                </div>
+              );
+            })}
 
             </div>
             </div>
@@ -3744,34 +3876,50 @@ const handleRiceUpgrade110Change = (option) => {
             <div className="menu-category">
             <h6>+500 per pax</h6>
             <div className="menu-grid">
-            {BEEF_UPGRADE_500_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`beef-upgrade-500-${option}`}
-      checked={(pBuffet.beefUpgradeSelections500 || []).includes(option)}
-      onChange={() => handleBeefUpgrade500Change(option)}
-    />
-    <label htmlFor={`beef-upgrade-500-${option}`}>{option}</label>
-  </div>
-))}
+            {BEEF_UPGRADE_500_OPTIONS.map(option => {
+              const isChecked = (pBuffet.beefUpgradeSelections500 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.beef >= menuLimits.beef) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`beef-upgrade-500-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleBeefUpgrade500Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`beef-upgrade-500-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+1100 per pax</h6>
             <div className="menu-grid">
-            {BEEF_UPGRADE_1100_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`beef-upgrade-1100-${option}`}
-      checked={(pBuffet.beefUpgradeSelections1100 || []).includes(option)}
-      onChange={() => handleBeefUpgrade1100Change(option)}
-    />
-    <label htmlFor={`beef-upgrade-1100-${option}`}>{option}</label>
-  </div>
-))}
+            {BEEF_UPGRADE_1100_OPTIONS.map(option => {
+              const isChecked = (pBuffet.beefUpgradeSelections1100 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.beef >= menuLimits.beef) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`beef-upgrade-1100-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleBeefUpgrade1100Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`beef-upgrade-1100-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
           </div>
@@ -3780,82 +3928,122 @@ const handleRiceUpgrade110Change = (option) => {
           <div className="menu-category">
             <h5>Pork</h5>
             <div className="menu-grid">
-              {MAIN_PORK_OPTIONS.map(option => (
-                <label key={option} className="menu-item">
-                  <input
-                    type="checkbox"
-                    checked={(pBuffet.mainPorkSelections || []).includes(option)}
-                    onChange={() => handleMainPorkChange(option)}
-                  />
-                  {option}
-                </label>
-              ))}
+              {MAIN_PORK_OPTIONS.map(option => {
+                const isChecked = (pBuffet.mainPorkSelections || []).includes(option);
+                const isDisabled = !isChecked && (
+                  (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.pork >= menuLimits.pork) ||
+                  ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+                );
+                return (
+                  <label key={option} className="menu-item">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleMainPorkChange(option)}
+                      disabled={isDisabled}
+                    />
+                    {option}
+                  </label>
+                );
+              })}
             </div>
             <div className="menu-category">
             <h6>+200 per pax</h6>
             <div className="menu-grid">
-            {PORK_UPGRADE_200_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`pork-upgrade-200-${option}`}
-      checked={(pBuffet.porkUpgradeSelections200 || []).includes(option)}
-      onChange={() => handlePorkUpgrade200Change(option)}
-    />
-    <label htmlFor={`pork-upgrade-200-${option}`}>{option}</label>
-  </div>
-))}
+            {PORK_UPGRADE_200_OPTIONS.map(option => {
+              const isChecked = (pBuffet.porkUpgradeSelections200 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.pork >= menuLimits.pork) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`pork-upgrade-200-${option}`}
+                    checked={isChecked}
+                    onChange={() => handlePorkUpgrade200Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`pork-upgrade-200-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+250 per pax</h6>
             <div className="menu-grid">
-            {PORK_UPGRADE_250_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`pork-upgrade-250-${option}`}
-      checked={(pBuffet.porkUpgradeSelections250 || []).includes(option)}
-      onChange={() => handlePorkUpgrade250Change(option)}
-    />
-    <label htmlFor={`pork-upgrade-250-${option}`}>{option}</label>
-  </div>
-))}
+            {PORK_UPGRADE_250_OPTIONS.map(option => {
+              const isChecked = (pBuffet.porkUpgradeSelections250 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.pork >= menuLimits.pork) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`pork-upgrade-250-${option}`}
+                    checked={isChecked}
+                    onChange={() => handlePorkUpgrade250Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`pork-upgrade-250-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+275 per pax</h6>
             <div className="menu-grid">
-            {PORK_UPGRADE_275_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`pork-upgrade-275-${option}`}
-      checked={(pBuffet.porkUpgradeSelections275 || []).includes(option)}
-      onChange={() => handlePorkUpgrade275Change(option)}
-    />
-    <label htmlFor={`pork-upgrade-275-${option}`}>{option}</label>
-  </div>
-))}
+            {PORK_UPGRADE_275_OPTIONS.map(option => {
+              const isChecked = (pBuffet.porkUpgradeSelections275 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.pork >= menuLimits.pork) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`pork-upgrade-275-${option}`}
+                    checked={isChecked}
+                    onChange={() => handlePorkUpgrade275Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`pork-upgrade-275-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+15000 (good for 60-70 pax)</h6>
             <div className="menu-grid">
-            {PORK_UPGRADE_15000_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`pork-upgrade-15000-${option}`}
-      checked={(pBuffet.porkUpgradeSelections15000 || []).includes(option)}
-      onChange={() => handlePorkUpgrade15000Change(option)}
-    />
-    <label htmlFor={`pork-upgrade-15000-${option}`}>{option}</label>
-  </div>
-))}
+            {PORK_UPGRADE_15000_OPTIONS.map(option => {
+              const isChecked = (pBuffet.porkUpgradeSelections15000 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 3' && getCurrentSelectionCounts.pork >= menuLimits.pork) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 1' || pBuffet.selectedPackage === 'Buffet Package 2') && getCurrentSelectionCounts.beefPork >= menuLimits.beefPorkCombined)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`pork-upgrade-15000-${option}`}
+                    checked={isChecked}
+                    onChange={() => handlePorkUpgrade15000Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`pork-upgrade-15000-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
           </div>
@@ -3865,48 +4053,63 @@ const handleRiceUpgrade110Change = (option) => {
           <div className="menu-category">
             <h5>Fish</h5>
             <div className="menu-grid">
-              {MAIN_FISH_OPTIONS.map(option => (
-                <label key={option} className="menu-item">
-                  <input
-                    type="checkbox"
-                    checked={(pBuffet.mainFishSelections || []).includes(option)}
-                    onChange={() => handleMainFishChange(option)}
-                  />
-                  {option}
-                </label>
-              ))}
+              {MAIN_FISH_OPTIONS.map(option => {
+                const isChecked = (pBuffet.mainFishSelections || []).includes(option);
+                const isDisabled = !isChecked && getCurrentSelectionCounts.fishSeafood >= menuLimits.fishSeafoodCombined;
+                return (
+                  <label key={option} className="menu-item">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleMainFishChange(option)}
+                      disabled={isDisabled}
+                    />
+                    {option}
+                  </label>
+                );
+              })}
             </div>
             <div className="menu-category">
             <h6>+200 per pax</h6>
             <div className="menu-grid">
-            {FISH_UPGRADE_200_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`fish-upgrade-200-${option}`}
-      checked={(pBuffet.fishUpgradeSelections200 || []).includes(option)}
-      onChange={() => handleFishUpgrade200Change(option)}
-    />
-    <label htmlFor={`fish-upgrade-200-${option}`}>{option}</label>
-  </div>
-))}
+            {FISH_UPGRADE_200_OPTIONS.map(option => {
+              const isChecked = (pBuffet.fishUpgradeSelections200 || []).includes(option);
+              const isDisabled = !isChecked && getCurrentSelectionCounts.fishSeafood >= menuLimits.fishSeafoodCombined;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`fish-upgrade-200-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleFishUpgrade200Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`fish-upgrade-200-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+225 per pax</h6>
             <div className="menu-grid">
-            {FISH_UPGRADE_225_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`fish-upgrade-225-${option}`}
-      checked={(pBuffet.fishUpgradeSelections225 || []).includes(option)}
-      onChange={() => handleFishUpgrade225Change(option)}
-    />
-    <label htmlFor={`fish-upgrade-225-${option}`}>{option}</label>
-  </div>
-))}
+            {FISH_UPGRADE_225_OPTIONS.map(option => {
+              const isChecked = (pBuffet.fishUpgradeSelections225 || []).includes(option);
+              const isDisabled = !isChecked && getCurrentSelectionCounts.fishSeafood >= menuLimits.fishSeafoodCombined;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`fish-upgrade-225-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleFishUpgrade225Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`fish-upgrade-225-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
           </div>
@@ -3916,65 +4119,85 @@ const handleRiceUpgrade110Change = (option) => {
           <div className="menu-category">
             <h5>Seafood</h5>
             <div className="menu-grid">
-              {MAIN_SEAFOOD_OPTIONS.map(option => (
-                <label key={option} className="menu-item">
-                  <input
-                    type="checkbox"
-                    checked={(pBuffet.mainSeafoodSelections || []).includes(option)}
-                    onChange={() => handleMainSeafoodChange(option)}
-                  />
-                  {option}
-                </label>
-              ))}
+              {MAIN_SEAFOOD_OPTIONS.map(option => {
+                const isChecked = (pBuffet.mainSeafoodSelections || []).includes(option);
+                const isDisabled = !isChecked && getCurrentSelectionCounts.fishSeafood >= menuLimits.fishSeafoodCombined;
+                return (
+                  <label key={option} className="menu-item">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleMainSeafoodChange(option)}
+                      disabled={isDisabled}
+                    />
+                    {option}
+                  </label>
+                );
+              })}
             </div>
             <div className="menu-category">
             <h6>+200 per pax</h6>
             <div className="menu-grid">
-            {SEAFOOD_UPGRADE_200_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`seafood-upgrade-200-${option}`}
-      checked={(pBuffet.seafoodUpgradeSelections200 || []).includes(option)}
-      onChange={() => handleSeafoodUpgrade200Change(option)}
-    />
-    <label htmlFor={`seafood-upgrade-200-${option}`}>{option}</label>
-  </div>
-))}
+            {SEAFOOD_UPGRADE_200_OPTIONS.map(option => {
+              const isChecked = (pBuffet.seafoodUpgradeSelections200 || []).includes(option);
+              const isDisabled = !isChecked && getCurrentSelectionCounts.fishSeafood >= menuLimits.fishSeafoodCombined;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`seafood-upgrade-200-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleSeafoodUpgrade200Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`seafood-upgrade-200-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+235 per pax</h6>
             <div className="menu-grid">
-            {SEAFOOD_UPGRADE_235_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`seafood-upgrade-235-${option}`}
-      checked={(pBuffet.seafoodUpgradeSelections235 || []).includes(option)}
-      onChange={() => handleSeafoodUpgrade235Change(option)}
-    />
-    <label htmlFor={`seafood-upgrade-235-${option}`}>{option}</label>
-  </div>
-))}
+            {SEAFOOD_UPGRADE_235_OPTIONS.map(option => {
+              const isChecked = (pBuffet.seafoodUpgradeSelections235 || []).includes(option);
+              const isDisabled = !isChecked && getCurrentSelectionCounts.fishSeafood >= menuLimits.fishSeafoodCombined;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`seafood-upgrade-235-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleSeafoodUpgrade235Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`seafood-upgrade-235-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+335 per pax</h6>
             <div className="menu-grid">
-            {SEAFOOD_UPGRADE_335_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`seafood-upgrade-335-${option}`}
-      checked={(pBuffet.seafoodUpgradeSelections335 || []).includes(option)}
-      onChange={() => handleSeafoodUpgrade335Change(option)}
-    />
-    <label htmlFor={`seafood-upgrade-335-${option}`}>{option}</label>
-  </div>
-))}
+            {SEAFOOD_UPGRADE_335_OPTIONS.map(option => {
+              const isChecked = (pBuffet.seafoodUpgradeSelections335 || []).includes(option);
+              const isDisabled = !isChecked && getCurrentSelectionCounts.fishSeafood >= menuLimits.fishSeafoodCombined;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`seafood-upgrade-335-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleSeafoodUpgrade335Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`seafood-upgrade-335-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
           </div>
@@ -3984,65 +4207,85 @@ const handleRiceUpgrade110Change = (option) => {
           <div className="menu-category">
             <h5>Chicken</h5>
             <div className="menu-grid">
-              {MAIN_CHICKEN_OPTIONS.map(option => (
-                <label key={option} className="menu-item">
-                  <input
-                    type="checkbox"
-                    checked={(pBuffet.mainChickenSelections || []).includes(option)}
-                    onChange={() => handleMainChickenChange(option)}
-                  />
-                  {option}
-                </label>
-              ))}
+              {MAIN_CHICKEN_OPTIONS.map(option => {
+                const isChecked = (pBuffet.mainChickenSelections || []).includes(option);
+                const isDisabled = !isChecked && getCurrentSelectionCounts.chicken >= menuLimits.chicken;
+                return (
+                  <label key={option} className="menu-item">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleMainChickenChange(option)}
+                      disabled={isDisabled}
+                    />
+                    {option}
+                  </label>
+                );
+              })}
             </div>
             <div className="menu-category">
             <h6>+95 per pax</h6>
             <div className="menu-grid">
-            {CHICKEN_UPGRADE_95_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`chicken-upgrade-95-${option}`}
-      checked={(pBuffet.chickenUpgradeSelections95 || []).includes(option)}
-      onChange={() => handleChickenUpgrade95Change(option)}
-    />
-    <label htmlFor={`chicken-upgrade-95-${option}`}>{option}</label>
-  </div>
-))}
+            {CHICKEN_UPGRADE_95_OPTIONS.map(option => {
+              const isChecked = (pBuffet.chickenUpgradeSelections95 || []).includes(option);
+              const isDisabled = !isChecked && getCurrentSelectionCounts.chicken >= menuLimits.chicken;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`chicken-upgrade-95-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleChickenUpgrade95Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`chicken-upgrade-95-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+100 per pax</h6>
             <div className="menu-grid">
-            {CHICKEN_UPGRADE_100_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`chicken-upgrade-100-${option}`}
-      checked={(pBuffet.chickenUpgradeSelections100 || []).includes(option)}
-      onChange={() => handleChickenUpgrade100Change(option)}
-    />
-    <label htmlFor={`chicken-upgrade-100-${option}`}>{option}</label>
-  </div>
-))}
+            {CHICKEN_UPGRADE_100_OPTIONS.map(option => {
+              const isChecked = (pBuffet.chickenUpgradeSelections100 || []).includes(option);
+              const isDisabled = !isChecked && getCurrentSelectionCounts.chicken >= menuLimits.chicken;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`chicken-upgrade-100-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleChickenUpgrade100Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`chicken-upgrade-100-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+110 per pax</h6>
             <div className="menu-grid">
-            {CHICKEN_UPGRADE_110_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`chicken-upgrade-110-${option}`}
-      checked={(pBuffet.chickenUpgradeSelections110 || []).includes(option)}
-      onChange={() => handleChickenUpgrade110Change(option)}
-    />
-    <label htmlFor={`chicken-upgrade-110-${option}`}>{option}</label>
-  </div>
-))}
+            {CHICKEN_UPGRADE_110_OPTIONS.map(option => {
+              const isChecked = (pBuffet.chickenUpgradeSelections110 || []).includes(option);
+              const isDisabled = !isChecked && getCurrentSelectionCounts.chicken >= menuLimits.chicken;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`chicken-upgrade-110-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleChickenUpgrade110Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`chicken-upgrade-110-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
           </div>
@@ -4050,31 +4293,47 @@ const handleRiceUpgrade110Change = (option) => {
           <div className="menu-category">
             <h5>Pasta</h5>
             <div className="menu-grid">
-              {MAIN_PASTA_OPTIONS.map(option => (
-                <label key={option} className="menu-item">
-                  <input
-                    type="checkbox"
-                    checked={(pBuffet.mainPastaSelections || []).includes(option)}
-                    onChange={() => handleMainPastaChange(option)}
-                  />
-                  {option}
-                </label>
-              ))}
+              {MAIN_PASTA_OPTIONS.map(option => {
+                const isChecked = (pBuffet.mainPastaSelections || []).includes(option);
+                const isDisabled = !isChecked && (
+                  (pBuffet.selectedPackage === 'Buffet Package 1' && getCurrentSelectionCounts.pastaNoodlesVeg >= menuLimits.pastaNoodlesVegCombined) ||
+                  ((pBuffet.selectedPackage === 'Buffet Package 2' || pBuffet.selectedPackage === 'Buffet Package 3') && getCurrentSelectionCounts.pastaNoodles >= menuLimits.pastaNoodlesCombined)
+                );
+                return (
+                  <label key={option} className="menu-item">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleMainPastaChange(option)}
+                      disabled={isDisabled}
+                    />
+                    {option}
+                  </label>
+                );
+              })}
             </div>
             <div className="menu-category">
             <h6>+150 per pax</h6>
             <div className="menu-grid">
-            {PASTA_UPGRADE_150_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`pasta-upgrade-150-${option}`}
-      checked={(pBuffet.pastaUpgradeSelections150 || []).includes(option)}
-      onChange={() => handlePastaUpgrade150Change(option)}
-    />
-    <label htmlFor={`pasta-upgrade-150-${option}`}>{option}</label>
-  </div>
-))}
+            {PASTA_UPGRADE_150_OPTIONS.map(option => {
+              const isChecked = (pBuffet.pastaUpgradeSelections150 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 1' && getCurrentSelectionCounts.pastaNoodlesVeg >= menuLimits.pastaNoodlesVegCombined) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 2' || pBuffet.selectedPackage === 'Buffet Package 3') && getCurrentSelectionCounts.pastaNoodles >= menuLimits.pastaNoodlesCombined)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`pasta-upgrade-150-${option}`}
+                    checked={isChecked}
+                    onChange={() => handlePastaUpgrade150Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`pasta-upgrade-150-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
           </div>
@@ -4082,273 +4341,369 @@ const handleRiceUpgrade110Change = (option) => {
           <div className="menu-category">
             <h5>Noodles</h5>
             <div className="menu-grid">
-              {MAIN_NOODLES_OPTIONS.map(option => (
-                <label key={option} className="menu-item">
-                  <input
-                    type="checkbox"
-                    checked={(pBuffet.mainNoodlesSelections || []).includes(option)}
-                    onChange={() => handleMainNoodlesChange(option)}
-                  />
-                  {option}
-                </label>
-              ))}
+              {MAIN_NOODLES_OPTIONS.map(option => {
+                const isChecked = (pBuffet.mainNoodlesSelections || []).includes(option);
+                const isDisabled = !isChecked && (
+                  (pBuffet.selectedPackage === 'Buffet Package 1' && getCurrentSelectionCounts.pastaNoodlesVeg >= menuLimits.pastaNoodlesVegCombined) ||
+                  ((pBuffet.selectedPackage === 'Buffet Package 2' || pBuffet.selectedPackage === 'Buffet Package 3') && getCurrentSelectionCounts.pastaNoodles >= menuLimits.pastaNoodlesCombined)
+                );
+                return (
+                  <label key={option} className="menu-item">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleMainNoodlesChange(option)}
+                      disabled={isDisabled}
+                    />
+                    {option}
+                  </label>
+                );
+              })}
             </div>
           </div>
 
           <div className="menu-category">
             <h5>Vegetables</h5>
             <div className="menu-grid">
-              {MAIN_VEG_OPTIONS.map(option => (
-                <label key={option} className="menu-item">
-                  <input
-                    type="checkbox"
-                    checked={(pBuffet.mainVegSelections || []).includes(option)}
-                    onChange={() => handleMainVegChange(option)}
-                  />
-                  {option}
-                </label>
-              ))}
+              {MAIN_VEG_OPTIONS.map(option => {
+                const isChecked = (pBuffet.mainVegSelections || []).includes(option);
+                const isDisabled = !isChecked && (
+                  (pBuffet.selectedPackage === 'Buffet Package 1' && getCurrentSelectionCounts.pastaNoodlesVeg >= menuLimits.pastaNoodlesVegCombined) ||
+                  ((pBuffet.selectedPackage === 'Buffet Package 2' || pBuffet.selectedPackage === 'Buffet Package 3') && getCurrentSelectionCounts.vegetables >= menuLimits.vegetables)
+                );
+                return (
+                  <label key={option} className="menu-item">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleMainVegChange(option)}
+                      disabled={isDisabled}
+                    />
+                    {option}
+                  </label>
+                );
+              })}
             </div>
           </div>
           <div className="menu-category">
             <h6>+50 per pax</h6>
             <div className="menu-grid">
-            {VEG_UPGRADE_50_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`veg-upgrade-50-${option}`}
-      checked={(pBuffet.vegUpgradeSelections50 || []).includes(option)}
-      onChange={() => handleVegUpgrade50Change(option)}
-    />
-    <label htmlFor={`veg-upgrade-50-${option}`}>{option}</label>
-  </div>
-))}
+            {VEG_UPGRADE_50_OPTIONS.map(option => {
+              const isChecked = (pBuffet.vegUpgradeSelections50 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 1' && getCurrentSelectionCounts.pastaNoodlesVeg >= menuLimits.pastaNoodlesVegCombined) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 2' || pBuffet.selectedPackage === 'Buffet Package 3') && getCurrentSelectionCounts.vegetables >= menuLimits.vegetables)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`veg-upgrade-50-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleVegUpgrade50Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`veg-upgrade-50-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+60 per pax</h6>
             <div className="menu-grid">
-            {VEG_UPGRADE_60_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`veg-upgrade-60-${option}`}
-      checked={(pBuffet.vegUpgradeSelections60 || []).includes(option)}
-      onChange={() => handleVegUpgrade60Change(option)}
-    />
-    <label htmlFor={`veg-upgrade-60-${option}`}>{option}</label>
-  </div>
-))}
+            {VEG_UPGRADE_60_OPTIONS.map(option => {
+              const isChecked = (pBuffet.vegUpgradeSelections60 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 1' && getCurrentSelectionCounts.pastaNoodlesVeg >= menuLimits.pastaNoodlesVegCombined) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 2' || pBuffet.selectedPackage === 'Buffet Package 3') && getCurrentSelectionCounts.vegetables >= menuLimits.vegetables)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`veg-upgrade-60-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleVegUpgrade60Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`veg-upgrade-60-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+75 per pax</h6>
             <div className="menu-grid">
-            {VEG_UPGRADE_75_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`veg-upgrade-75-${option}`}
-      checked={(pBuffet.vegUpgradeSelections75 || []).includes(option)}
-      onChange={() => handleVegUpgrade75Change(option)}
-    />
-    <label htmlFor={`veg-upgrade-75-${option}`}>{option}</label>
-  </div>
-))}
+            {VEG_UPGRADE_75_OPTIONS.map(option => {
+              const isChecked = (pBuffet.vegUpgradeSelections75 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 1' && getCurrentSelectionCounts.pastaNoodlesVeg >= menuLimits.pastaNoodlesVegCombined) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 2' || pBuffet.selectedPackage === 'Buffet Package 3') && getCurrentSelectionCounts.vegetables >= menuLimits.vegetables)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`veg-upgrade-75-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleVegUpgrade75Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`veg-upgrade-75-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
             <div className="menu-category">
             <h6>+650 per pax</h6>
             <div className="menu-grid">
-            {VEG_UPGRADE_650_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`veg-upgrade-650-${option}`}
-      checked={(pBuffet.vegUpgradeSelections650 || []).includes(option)}
-      onChange={() => handleVegUpgrade650Change(option)}
-    />
-    <label htmlFor={`veg-upgrade-650-${option}`}>{option}</label>
-  </div>
-))}
+            {VEG_UPGRADE_650_OPTIONS.map(option => {
+              const isChecked = (pBuffet.vegUpgradeSelections650 || []).includes(option);
+              const isDisabled = !isChecked && (
+                (pBuffet.selectedPackage === 'Buffet Package 1' && getCurrentSelectionCounts.pastaNoodlesVeg >= menuLimits.pastaNoodlesVegCombined) ||
+                ((pBuffet.selectedPackage === 'Buffet Package 2' || pBuffet.selectedPackage === 'Buffet Package 3') && getCurrentSelectionCounts.vegetables >= menuLimits.vegetables)
+              );
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`veg-upgrade-650-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleVegUpgrade650Change(option)}
+                    disabled={isDisabled}
+                  />
+                  <label htmlFor={`veg-upgrade-650-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
         </div>
 
-        <div className="menu-section">
+       <div className="menu-section">
   <h5>Rice</h5>
   <p style={{fontWeight: 'bold', color: '#2196F3'}}>
     Rice Selected: {((pBuffet.riceSelections || []).length + (pBuffet.riceUpgradeSelections50 || []).length + (pBuffet.riceUpgradeSelections95 || []).length + (pBuffet.riceUpgradeSelections110 || []).length)}/1
   </p>
   <div className="menu-grid">
-    {RICE_OPTIONS.map(option => (
-      <label key={option} className="menu-item">
-        <input
-          type="checkbox"
-          checked={(pBuffet.riceSelections || []).includes(option)}
-          onChange={() => handleRiceChange(option)}
-          disabled={!(pBuffet.riceSelections || []).includes(option) && (pBuffet.riceSelections || []).length >= 1}
-        />
-        {option}
-      </label>
-    ))}
+    {RICE_OPTIONS.map(option => {
+      const totalRiceCount = ((pBuffet.riceSelections || []).length + (pBuffet.riceUpgradeSelections50 || []).length + (pBuffet.riceUpgradeSelections95 || []).length + (pBuffet.riceUpgradeSelections110 || []).length);
+      const isChecked = (pBuffet.riceSelections || []).includes(option);
+      return (
+        <label key={option} className="menu-item">
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={() => handleRiceChange(option)}
+            disabled={!isChecked && totalRiceCount >= 1}
+          />
+          {option}
+        </label>
+      );
+    })}
     
   </div>
   <div className="menu-category">
     <h6>+50 per pax</h6>
     <div className="menu-grid">
-      {RICE_UPGRADE_50_OPTIONS.map(option => (
-        <div key={option}>
-          <input
-            type="checkbox"
-            id={`rice-upgrade-50-${option}`}
-            checked={(pBuffet.riceUpgradeSelections50 || []).includes(option)}
-            onChange={() => handleRiceUpgrade50Change(option)}
-          />
-          <label htmlFor={`rice-upgrade-50-${option}`}>{option}</label>
-        </div>
-      ))}
+      {RICE_UPGRADE_50_OPTIONS.map(option => {
+        const totalRiceCount = ((pBuffet.riceSelections || []).length + (pBuffet.riceUpgradeSelections50 || []).length + (pBuffet.riceUpgradeSelections95 || []).length + (pBuffet.riceUpgradeSelections110 || []).length);
+        const isChecked = (pBuffet.riceUpgradeSelections50 || []).includes(option);
+        return (
+          <div key={option}>
+            <input
+              type="checkbox"
+              id={`rice-upgrade-50-${option}`}
+              checked={isChecked}
+              onChange={() => handleRiceUpgrade50Change(option)}
+              disabled={!isChecked && totalRiceCount >= 1}
+            />
+            <label htmlFor={`rice-upgrade-50-${option}`}>{option}</label>
+          </div>
+        );
+      })}
     </div>
   </div>
 
   <div className="menu-category">
     <h6>+95 per pax</h6>
     <div className="menu-grid">
-      {RICE_UPGRADE_95_OPTIONS.map(option => (
-        <div key={option}>
-          <input
-            type="checkbox"
-            id={`rice-upgrade-95-${option}`}
-            checked={(pBuffet.riceUpgradeSelections95 || []).includes(option)}
-            onChange={() => handleRiceUpgrade95Change(option)}
-          />
-          <label htmlFor={`rice-upgrade-95-${option}`}>{option}</label>
-        </div>
-      ))}
+      {RICE_UPGRADE_95_OPTIONS.map(option => {
+        const totalRiceCount = ((pBuffet.riceSelections || []).length + (pBuffet.riceUpgradeSelections50 || []).length + (pBuffet.riceUpgradeSelections95 || []).length + (pBuffet.riceUpgradeSelections110 || []).length);
+        const isChecked = (pBuffet.riceUpgradeSelections95 || []).includes(option);
+        return (
+          <div key={option}>
+            <input
+              type="checkbox"
+              id={`rice-upgrade-95-${option}`}
+              checked={isChecked}
+              onChange={() => handleRiceUpgrade95Change(option)}
+              disabled={!isChecked && totalRiceCount >= 1}
+            />
+            <label htmlFor={`rice-upgrade-95-${option}`}>{option}</label>
+          </div>
+        );
+      })}
     </div>
   </div>
 
   <div className="menu-category">
     <h6>+110 per pax</h6>
     <div className="menu-grid">
-      {RICE_UPGRADE_110_OPTIONS.map(option => (
-        <div key={option}>
-          <input
-            type="checkbox"
-            id={`rice-upgrade-110-${option}`}
-            checked={(pBuffet.riceUpgradeSelections110 || []).includes(option)}
-            onChange={() => handleRiceUpgrade110Change(option)}
-          />
-          <label htmlFor={`rice-upgrade-110-${option}`}>{option}</label>
-        </div>
-      ))}
+      {RICE_UPGRADE_110_OPTIONS.map(option => {
+        const totalRiceCount = ((pBuffet.riceSelections || []).length + (pBuffet.riceUpgradeSelections50 || []).length + (pBuffet.riceUpgradeSelections95 || []).length + (pBuffet.riceUpgradeSelections110 || []).length);
+        const isChecked = (pBuffet.riceUpgradeSelections110 || []).includes(option);
+        return (
+          <div key={option}>
+            <input
+              type="checkbox"
+              id={`rice-upgrade-110-${option}`}
+              checked={isChecked}
+              onChange={() => handleRiceUpgrade110Change(option)}
+              disabled={!isChecked && totalRiceCount >= 1}
+            />
+            <label htmlFor={`rice-upgrade-110-${option}`}>{option}</label>
+          </div>
+        );
+      })}
     </div>
   </div>
 </div>
-        
 
         <div className="menu-section">
           <h5>Dessert</h5>
           <p style={{fontWeight: 'bold', color: '#2196F3'}}>
-            Dessert Selections: {(pBuffet.dessertSelections || []).length}/</p>
+            Dessert Selections: {(
+              (pBuffet.dessertSelections || []).length +
+              (pBuffet.dessertUpgradeSelections250 || []).length +
+              (pBuffet.dessertUpgradeSelections300 || []).length +
+              (pBuffet.dessertUpgradeSelections350 || []).length +
+              (pBuffet.dessertUpgradeSelections400 || []).length +
+              (pBuffet.dessertUpgradeSelections450 || []).length
+            )}/{dessertLimit}</p>
           <div className="menu-grid">
-            {DESSERT_OPTIONS.map(option => (
-              <label key={option} className="menu-item">
-                <input
-                  type="checkbox"
-                  checked={(pBuffet.dessertSelections || []).includes(option)}
-                  onChange={() => handleDessertChange(option)}
-                  disabled={!(pBuffet.dessertSelections || []).includes(option) && (pBuffet.dessertSelections || []).length >= 2}
-                />
-                {option}
-              </label>
-            ))}
+            {DESSERT_OPTIONS.map(option => {
+              const totalDessertSelections = (pBuffet.dessertSelections || []).length + (pBuffet.dessertUpgradeSelections250 || []).length + (pBuffet.dessertUpgradeSelections300 || []).length + (pBuffet.dessertUpgradeSelections350 || []).length + (pBuffet.dessertUpgradeSelections400 || []).length + (pBuffet.dessertUpgradeSelections450 || []).length;
+              return (
+                <label key={option} className="menu-item">
+                  <input
+                    type="checkbox"
+                    checked={(pBuffet.dessertSelections || []).includes(option)}
+                    onChange={() => handleDessertChange(option)}
+                    disabled={!(pBuffet.dessertSelections || []).includes(option) && totalDessertSelections >= dessertLimit}
+                  />
+                  {option}
+                </label>
+              );
+            })}
           </div>
           <div className="menu-category">
             <h6>+250 per pax</h6>
             <div className="menu-grid">
-            {DESSERT_UPGRADE_250_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`dessert-upgrade-250-${option}`}
-      checked={(pBuffet.dessertUpgradeSelections250 || []).includes(option)}
-      onChange={() => handleDessertUpgrade250Change(option)}
-    />
-    <label htmlFor={`dessert-upgrade-250-${option}`}>{option}</label>
-  </div>
-))}
+            {DESSERT_UPGRADE_250_OPTIONS.map(option => {
+              const totalDessertSelections = (pBuffet.dessertSelections || []).length + (pBuffet.dessertUpgradeSelections250 || []).length + (pBuffet.dessertUpgradeSelections300 || []).length + (pBuffet.dessertUpgradeSelections350 || []).length + (pBuffet.dessertUpgradeSelections400 || []).length + (pBuffet.dessertUpgradeSelections450 || []).length;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`dessert-upgrade-250-${option}`}
+                    checked={(pBuffet.dessertUpgradeSelections250 || []).includes(option)}
+                    onChange={() => handleDessertUpgrade250Change(option)}
+                    disabled={!(pBuffet.dessertUpgradeSelections250 || []).includes(option) && totalDessertSelections >= dessertLimit}
+                  />
+                  <label htmlFor={`dessert-upgrade-250-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+300 per pax</h6>
             <div className="menu-grid">
-            {DESSERT_UPGRADE_300_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`dessert-upgrade-300-${option}`}
-      checked={(pBuffet.dessertUpgradeSelections300 || []).includes(option)}
-      onChange={() => handleDessertUpgrade300Change(option)}
-    />
-    <label htmlFor={`dessert-upgrade-300-${option}`}>{option}</label>
-  </div>
-))}
+            {DESSERT_UPGRADE_300_OPTIONS.map(option => {
+               const totalDessertSelections = (pBuffet.dessertSelections || []).length + (pBuffet.dessertUpgradeSelections250 || []).length + (pBuffet.dessertUpgradeSelections300 || []).length + (pBuffet.dessertUpgradeSelections350 || []).length + (pBuffet.dessertUpgradeSelections400 || []).length + (pBuffet.dessertUpgradeSelections450 || []).length;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`dessert-upgrade-300-${option}`}
+                    checked={(pBuffet.dessertUpgradeSelections300 || []).includes(option)}
+                    onChange={() => handleDessertUpgrade300Change(option)}
+                    disabled={!(pBuffet.dessertUpgradeSelections300 || []).includes(option) && totalDessertSelections >= dessertLimit}
+                  />
+                  <label htmlFor={`dessert-upgrade-300-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+350 per pax</h6>
             <div className="menu-grid">
-            {DESSERT_UPGRADE_350_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`dessert-upgrade-350-${option}`}
-      checked={(pBuffet.dessertUpgradeSelections350 || []).includes(option)}
-      onChange={() => handleDessertUpgrade350Change(option)}
-    />
-    <label htmlFor={`dessert-upgrade-350-${option}`}>{option}</label>
-  </div>
-))}
+            {DESSERT_UPGRADE_350_OPTIONS.map(option => {
+              const totalDessertSelections = (pBuffet.dessertSelections || []).length + (pBuffet.dessertUpgradeSelections250 || []).length + (pBuffet.dessertUpgradeSelections300 || []).length + (pBuffet.dessertUpgradeSelections350 || []).length + (pBuffet.dessertUpgradeSelections400 || []).length + (pBuffet.dessertUpgradeSelections450 || []).length;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`dessert-upgrade-350-${option}`}
+                    checked={(pBuffet.dessertUpgradeSelections350 || []).includes(option)}
+                    onChange={() => handleDessertUpgrade350Change(option)}
+                    disabled={!(pBuffet.dessertUpgradeSelections350 || []).includes(option) && totalDessertSelections >= dessertLimit}
+                  />
+                  <label htmlFor={`dessert-upgrade-350-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+400 per pax</h6>
             <div className="menu-grid">
-            {DESSERT_UPGRADE_400_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`dessert-upgrade-400-${option}`}
-      checked={(pBuffet.dessertUpgradeSelections400 || []).includes(option)}
-      onChange={() => handleDessertUpgrade400Change(option)}
-    />
-    <label htmlFor={`dessert-upgrade-400-${option}`}>{option}</label>
-  </div>
-))}
+            {DESSERT_UPGRADE_400_OPTIONS.map(option => {
+              const totalDessertSelections = (pBuffet.dessertSelections || []).length + (pBuffet.dessertUpgradeSelections250 || []).length + (pBuffet.dessertUpgradeSelections300 || []).length + (pBuffet.dessertUpgradeSelections350 || []).length + (pBuffet.dessertUpgradeSelections400 || []).length + (pBuffet.dessertUpgradeSelections450 || []).length;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`dessert-upgrade-400-${option}`}
+                    checked={(pBuffet.dessertUpgradeSelections400 || []).includes(option)}
+                    onChange={() => handleDessertUpgrade400Change(option)}
+                    disabled={!(pBuffet.dessertUpgradeSelections400 || []).includes(option) && totalDessertSelections >= dessertLimit}
+                  />
+                  <label htmlFor={`dessert-upgrade-400-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+450 per pax</h6>
             <div className="menu-grid">
-            {DESSERT_UPGRADE_450_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`dessert-upgrade-450-${option}`}
-      checked={(pBuffet.dessertUpgradeSelections450 || []).includes(option)}
-      onChange={() => handleDessertUpgrade450Change(option)}
-    />
-    <label htmlFor={`dessert-upgrade-450-${option}`}>{option}</label>
-  </div>
-))}
+            {DESSERT_UPGRADE_450_OPTIONS.map(option => {
+              const totalDessertSelections = (pBuffet.dessertSelections || []).length + (pBuffet.dessertUpgradeSelections250 || []).length + (pBuffet.dessertUpgradeSelections300 || []).length + (pBuffet.dessertUpgradeSelections350 || []).length + (pBuffet.dessertUpgradeSelections400 || []).length + (pBuffet.dessertUpgradeSelections450 || []).length;
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`dessert-upgrade-450-${option}`}
+                    checked={(pBuffet.dessertUpgradeSelections450 || []).includes(option)}
+                    onChange={() => handleDessertUpgrade450Change(option)}
+                    disabled={!(pBuffet.dessertUpgradeSelections450 || []).includes(option) && totalDessertSelections >= dessertLimit}
+                  />
+                  <label htmlFor={`dessert-upgrade-450-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
         </div>
@@ -4356,51 +4711,65 @@ const handleRiceUpgrade110Change = (option) => {
         <div className="menu-section">
           <h5>Drinks</h5>
           <p style={{fontWeight: 'bold', color: '#2196F3'}}>
-            Drinks Selections: {(pBuffet.drinksSelections || []).length}/2</p>
+            Drinks Selections: {(pBuffet.drinksSelections || []).length + (pBuffet.drinksUpgradeSelections130 || []).length + (pBuffet.drinksUpgradeSelections150 || []).length}/2</p>
           <div className="menu-grid">
-            {DRINKS_OPTIONS.map(option => (
-              <label key={option} className="menu-item">
-                <input
-                  type="checkbox"
-                  checked={(pBuffet.drinksSelections || []).includes(option)}
-                  onChange={() => handleDrinksChange(option)}
-                  disabled={!(pBuffet.drinksSelections || []).includes(option) && (pBuffet.drinksSelections || []).length >= 2}
-                />
-                {option}
-              </label>
-            ))}
+            {DRINKS_OPTIONS.map(option => {
+              const totalDrinksSelections = (pBuffet.drinksSelections || []).length + (pBuffet.drinksUpgradeSelections130 || []).length + (pBuffet.drinksUpgradeSelections150 || []).length;
+              const isChecked = (pBuffet.drinksSelections || []).includes(option);
+              return (
+                <label key={option} className="menu-item">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => handleDrinksChange(option)}
+                    disabled={!isChecked && totalDrinksSelections >= 2}
+                  />
+                  {option}
+                </label>
+              );
+            })}
           </div>
           <div className="menu-category">
             <h6>+130 per pax</h6>
             <div className="menu-grid">
-            {DRINK_UPGRADE_130_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`drinks-upgrade-130-${option}`}
-      checked={(pBuffet.drinksUpgradeSelections130 || []).includes(option)}
-      onChange={() => handleDrinksUpgrade130Change(option)}
-    />
-    <label htmlFor={`drinks-upgrade-130-${option}`}>{option}</label>
-  </div>
-))}
+            {DRINK_UPGRADE_130_OPTIONS.map(option => {
+              const totalDrinksSelections = (pBuffet.drinksSelections || []).length + (pBuffet.drinksUpgradeSelections130 || []).length + (pBuffet.drinksUpgradeSelections150 || []).length;
+              const isChecked = (pBuffet.drinksUpgradeSelections130 || []).includes(option);
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`drinks-upgrade-130-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleDrinksUpgrade130Change(option)}
+                    disabled={!isChecked && totalDrinksSelections >= 2}
+                  />
+                  <label htmlFor={`drinks-upgrade-130-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
 
             <div className="menu-category">
             <h6>+150 per pax</h6>
             <div className="menu-grid">
-            {DRINK_UPGRADE_150_OPTIONS.map(option => (
-  <div key={option}>
-    <input
-      type="checkbox"
-      id={`drinks-upgrade-150-${option}`}
-      checked={(pBuffet.drinksUpgradeSelections150 || []).includes(option)}
-      onChange={() => handleDrinksUpgrade150Change(option)}
-    />
-    <label htmlFor={`drinks-upgrade-150-${option}`}>{option}</label>
-  </div>
-))}
+            {DRINK_UPGRADE_150_OPTIONS.map(option => {
+              const totalDrinksSelections = (pBuffet.drinksSelections || []).length + (pBuffet.drinksUpgradeSelections130 || []).length + (pBuffet.drinksUpgradeSelections150 || []).length;
+              const isChecked = (pBuffet.drinksUpgradeSelections150 || []).includes(option);
+              return (
+                <div key={option}>
+                  <input
+                    type="checkbox"
+                    id={`drinks-upgrade-150-${option}`}
+                    checked={isChecked}
+                    onChange={() => handleDrinksUpgrade150Change(option)}
+                    disabled={!isChecked && totalDrinksSelections >= 2}
+                  />
+                  <label htmlFor={`drinks-upgrade-150-${option}`}>{option}</label>
+                </div>
+              );
+            })}
            </div>
             </div>
         </div>
@@ -4409,122 +4778,113 @@ const handleRiceUpgrade110Change = (option) => {
     );
   };
 
-  const renderPage5 = () => (
+   const renderPage5 = () => {
+    // This calculates the final price per plate for display purposes.
+    // It takes the base price and adds the cost of all selected upgrades.
+    const basePricePerPlate = parseFloat(String(p3.pricePerPlate).replace(/,/g, '')) || 0;
+    const finalPricePerPlate = basePricePerPlate + totalUpgradeCostPerPax;
+    
+    return (
     <div className="page">
-      <div className="form-group"><label>Price Per Plate <span className="required-asterisk">*</span></label><input value={p3.pricePerPlate} onChange={(e)=>setP3({...p3, pricePerPlate:e.target.value})} /></div>
+      {/* --- MODIFIED PRICE PER PLATE SECTION --- */}
+      <div className="form-group">
+        <label>Price Per Plate (Calculated) <span className="required-asterisk">*</span></label>
+        <input 
+            value={formatNumber(finalPricePerPlate.toFixed(2))} 
+            readOnly 
+            className="calculated-field"
+        />
+        <small style={{ color: '#6c757d', marginTop: '5px', display: 'block' }}>
+            (Base: {formatNumber(p3.pricePerPlate)} + Upgrades: {formatNumber(totalUpgradeCostPerPax.toFixed(2))})
+        </small>
+      </div>
 
       <h4>Menu Details</h4>
+      {/* These textareas are now readOnly because their values are set automatically */}
       <div className="form-group">
         <label>Cocktail Hour</label>
         <textarea
           value={p3.cocktailHour}
-          onChange={(e)=>setP3({...p3, cocktailHour:convertToUppercase(e.target.value)})}
           rows={3}
-          placeholder="Enter cocktail hour details..."
+          readOnly
+          placeholder="Menu selections will appear here..."
         />
       </div>
-
-      <h4>Main Entree and Sides</h4>
 
       <div className="form-group">
         <label>Appetizer</label>
         <textarea 
           value={p3.appetizer} 
-          onChange={(e)=>setP3({...p3, appetizer:convertToUppercase(e.target.value)})} 
           rows={3}
-          placeholder="Enter appetizer details..."
+          readOnly
+          placeholder="Menu selections will appear here..."
         />
       </div>
       <div className="form-group">
         <label>Soup</label>
         <textarea 
           value={p3.soup} 
-          onChange={(e)=>setP3({...p3, soup:convertToUppercase(e.target.value)})} 
           rows={3}
-          placeholder="Enter soup details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Bread</label>
-        <textarea 
-          value={p3.bread} 
-          onChange={(e)=>setP3({...p3, bread:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter bread details..."
+          readOnly
+          placeholder="Menu selections will appear here..."
         />
       </div>
       <div className="form-group">
         <label>Salad</label>
         <textarea 
           value={p3.salad} 
-          onChange={(e)=>setP3({...p3, salad:convertToUppercase(e.target.value)})} 
           rows={3}
-          placeholder="Enter salad details..."
+          readOnly
+          placeholder="Menu selections will appear here..."
         />
       </div>
       <div className="form-group">
         <label>Main Entrée</label>
         <textarea 
           value={p3.mainEntree} 
-          onChange={(e)=>setP3({...p3, mainEntree:convertToUppercase(e.target.value)})} 
           rows={9}
-          placeholder="Enter main entrée details..."
+          readOnly
+          placeholder="Menu selections will appear here..."
+        />
+      </div>
+       <div className="form-group">
+        <label>Rice</label>
+        <textarea 
+          value={p3.rice} 
+          rows={3}
+          readOnly
+          placeholder="Menu selections will appear here..."
         />
       </div>
       <div className="form-group">
         <label>Dessert</label>
         <textarea 
           value={p3.dessert} 
-          onChange={(e)=>setP3({...p3, dessert:convertToUppercase(e.target.value)})} 
           rows={3}
-          placeholder="Enter dessert details..."
+          readOnly
+          placeholder="Menu selections will appear here..."
         />
       </div>
+       <div className="form-group">
+        <label>Drinks</label>
+        <textarea 
+          value={p3.drinks} 
+          rows={3}
+          readOnly
+          placeholder="Menu selections will appear here..."
+        />
+      </div>
+
+      {/* These fields below are now also read-only */}
       <div className="form-group">
         <label>Cake Name</label>
         <textarea 
           value={p3.cakeName} 
-          onChange={(e)=>setP3({...p3, cakeName:convertToUppercase(e.target.value)})} 
           rows={3}
-          placeholder="Enter cake name and details..."
+          placeholder="Cake name and details will appear here..."
+          readOnly
         />
-      </div>
-      <div className="form-group">
-        <label>Kids Meal</label>
-        <textarea 
-          value={p3.kidsMeal} 
-          onChange={(e)=>setP3({...p3, kidsMeal:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter kids meal details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Crew Meal</label>
-        <textarea 
-          value={p3.crewMeal} 
-          onChange={(e)=>setP3({...p3, crewMeal:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter crew meal details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Drinks at Cocktail</label>
-        <textarea 
-          value={p3.drinksCocktail} 
-          onChange={(e)=>setP3({...p3, drinksCocktail:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter drinks at cocktail details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Drinks at Meal</label>
-        <textarea 
-          value={p3.drinksMeal} 
-          onChange={(e)=>setP3({...p3, drinksMeal:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter drinks at meal details..."
-        />
-      </div>
+      </div>     
       <div className="form-row two">
         <div className="form-group">
           <label>Roasted Pig</label>
@@ -4596,13 +4956,13 @@ const handleRiceUpgrade110Change = (option) => {
 
       <div className="form-group"><label>Remarks</label><textarea value={p3.remarks} onChange={(e)=>setP3({...p3, remarks:e.target.value})} /></div>
     </div>
-  );
+  )};
 
   return (
     <div className="contract-form">
       <div className="form-header">
         <h3>Contract {existing ? "(Edit)" : "(New)"}</h3>
-        {nextNumber && <div className="number">No.: {nextNumber}</div>}
+        {nextNumber && <div className="number">Contract No.: {nextNumber}</div>}
       </div>
 
       <form onKeyDown={(e) => { 

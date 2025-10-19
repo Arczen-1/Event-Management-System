@@ -40,28 +40,19 @@ function AccountingDashboard({ onLogout }) {
   };
 
   const handleAccountingApprove = async (contractId) => {
-    try {
-      const res = await fetch(`http://localhost:5000/contracts/${contractId}/accounting-approve`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-      });
+    // This function no longer sends approval data to the backend.
+    // The status change is now only reflected in the local user interface.
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to approve");
-
-      // Update local state
-      setContracts(contracts.map(c => 
-        c.id === contractId 
-          ? { ...c, status: "Active" }
-          : c
-      ));
-      
-      alert("Contract approved and activated");
-      setSelectedContract(null);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to approve contract. Please try again.");
-    }
+    // Update local state to visually reflect the change
+    setContracts(contracts.map(c => 
+      c.id === contractId 
+        ? { ...c, status: "Active" }
+        : c
+    ));
+    
+    // Notify the user of the visual change and close the modal
+    alert("Contract status updated to 'Active' locally.");
+    setSelectedContract(null);
   };
 
   const handleAccountingReject = async () => {
