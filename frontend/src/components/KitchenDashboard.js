@@ -17,14 +17,13 @@ function KitchenDashboard({ onLogout }) {
       const data = await res.json();
       if (res.ok) {
         setContracts(
-          (data.contracts || []).filter(c => c.status === "Active").map((c) => ({
+          // 1. CHANGED: Filter for "For Approval" status
+          (data.contracts || []).filter(c => c.status === "For Approval").map((c) => ({
             id: c._id,
             name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
             celebratorName: (c.page1 && c.page1.celebratorName) || "",
             contractNumber: c.contractNumber,
-            page1: c.page1,
-            page2: c.page2,
-            page3: c.page3,
+            // Only map data needed for the table, modal will fetch full details
           }))
         );
       }
@@ -41,7 +40,8 @@ function KitchenDashboard({ onLogout }) {
     return (
       <div className="contracts-table-container">
         <div className="table-header">
-          <h3>Active Contracts</h3>
+          {/* 2. CHANGED: Title updated */}
+          <h3>Contracts for Kitchen Review</h3>
           <div className="pager">
             <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
             <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
@@ -61,7 +61,8 @@ function KitchenDashboard({ onLogout }) {
             <tbody>
               {paginatedContracts.length === 0 ? (
                 <tr className="no-contracts">
-                  <td colSpan="4">No active contracts available</td>
+                  {/* 3. CHANGED: Text updated */}
+                  <td colSpan="4">No contracts awaiting review</td>
                 </tr>
               ) : (
                 paginatedContracts.map(contract => (
@@ -89,7 +90,8 @@ function KitchenDashboard({ onLogout }) {
                           }
                         }}
                       >
-                        View Details
+                        {/* 4. CHANGED: Button text updated */}
+                        Review Menu
                       </button>
                     </td>
                   </tr>
@@ -102,9 +104,31 @@ function KitchenDashboard({ onLogout }) {
     );
   };
 
+  // Helper to render multi-line menu items nicely
+  const renderMenuSection = (title, data) => {
+    if (!data) return <div className="detail-row"><strong>{title}:</strong> N/A</div>;
+    
+    const items = data.split('\n').filter(item => item.trim() !== "");
+    if (items.length === 0) {
+      return <div className="detail-row"><strong>{title}:</strong> N/A</div>;
+    }
+
+    return (
+      <>
+        <div className="detail-row"><strong>{title}:</strong></div>
+        <ul className="menu-detail-list">
+          {items.map((item, index) => (
+            <li key={index}>{item.trim()}</li>
+          ))}
+        </ul>
+      </>
+    );
+  };
+
+  // 5. MODIFIED: Modal now shows all fields from your new code
   const renderDetailsModal = () => (
     <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Kitchen Contract Details</h3>
           <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
@@ -113,18 +137,18 @@ function KitchenDashboard({ onLogout }) {
           {selectedContract && (
             <div className="contract-details">
               <div className="detail-section">
-                <h4>Contract Information</h4>
+                <h4>Event Information</h4>
                 <div className="detail-row">
                   <strong>Contract Number:</strong> {selectedContract.contractNumber}
                 </div>
                 <div className="detail-row">
-                  <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                  <strong>Celebrator:</strong> {selectedContract.page1?.celebratorName || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
                 </div>
                 <div className="detail-row">
-                  <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
+                  <strong>Ingress Time:</strong> {selectedContract.page1?.ingressTime || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
@@ -132,50 +156,35 @@ function KitchenDashboard({ onLogout }) {
               </div>
 
               <div className="detail-section">
+                <h4>Coordinator Details</h4>
+                 <div className="detail-row">
+                  <strong>Name:</strong> {selectedContract.page1?.coordinatorName || "N/A"}
+                </div>
+                 <div className="detail-row">
+                  <strong>Mobile:</strong> {selectedContract.page1?.coordinatorMobile || "N/A"}
+                </div>
+                 <div className="detail-row">
+                  <strong>Email:</strong> {selectedContract.page1?.coordinatorEmail || "N/A"}
+                </div>
+              </div>
+
+              <div className="detail-section">
                 <h4>Menu Details</h4>
-                <div className="detail-row">
-                  <strong>Cocktail Hour:</strong> {selectedContract.page3?.cocktailHour || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Appetizer:</strong> {selectedContract.page3?.appetizer || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Soup:</strong> {selectedContract.page3?.soup || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Bread:</strong> {selectedContract.page3?.bread || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Salad:</strong> {selectedContract.page3?.salad || "N/A"}
-                </div>
-                {selectedContract.page3?.mainEntree ? (
-                  selectedContract.page3.mainEntree.split('\n').map((item, index) => (
-                    <div key={index} className="detail-row">
-                      <strong>{index === 0 ? 'Main Entrée:' : ''}</strong> {item.trim()}
-                    </div>
-                  ))
-                ) : (
-                  <div className="detail-row">
-                    <strong>Main Entrée:</strong> N/A
-                  </div>
-                )}
-                <div className="detail-row">
-                  <strong>Dessert:</strong> {selectedContract.page3?.dessert || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Cake Name:</strong> {selectedContract.page3?.cakeName || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Kids Meal:</strong> {selectedContract.page3?.kidsMeal || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Crew Meal:</strong> {selectedContract.page3?.crewMeal || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Drinks at Cocktail:</strong> {selectedContract.page3?.drinksCocktail || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Drinks at Meal:</strong> {selectedContract.page3?.drinksMeal || "N/A"}
+                {renderMenuSection("Cocktail Hour", selectedContract.page3?.cocktailHour)}
+                {renderMenuSection("Food Stations", selectedContract.page3?.foodStations)}
+                {renderMenuSection("Appetizer", selectedContract.page3?.appetizer)}
+                {renderMenuSection("Soup", selectedContract.page3?.soup)}
+                {renderMenuSection("Salad", selectedContract.page3?.salad)}
+                {renderMenuSection("Main Entrée", selectedContract.page3?.mainEntree)}
+                {renderMenuSection("Rice", selectedContract.page3?.rice)}
+                {renderMenuSection("Dessert", selectedContract.page3?.dessert)}
+                {renderMenuSection("Drinks", selectedContract.page3?.drinks)}
+              </div>
+              
+              <div className="detail-section">
+                <h4>Other Items</h4>
+                 <div className="detail-row">
+                  <strong>Cake:</strong> {selectedContract.page2?.cakeNameCode || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Roasted Pig:</strong> {selectedContract.page3?.roastedPig || "N/A"}
@@ -184,9 +193,11 @@ function KitchenDashboard({ onLogout }) {
                   <strong>Roasted Calf:</strong> {selectedContract.page3?.roastedCalf || "N/A"}
                 </div>
               </div>
+
             </div>
           )}
         </div>
+        {/* 6. MODIFIED: Only Close button is present */}
         <div className="modal-actions">
           <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
         </div>
@@ -211,6 +222,3 @@ function KitchenDashboard({ onLogout }) {
 }
 
 export default KitchenDashboard;
-
-
-

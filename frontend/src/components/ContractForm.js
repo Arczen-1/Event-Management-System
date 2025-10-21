@@ -794,9 +794,9 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
       const foodStationsText = (pBuffet.foodStations || []).map(s => {
         if (s.name === "Oyster Bar") {
-          return `${s.name} (+++${s.cost}) - ${(pBuffet.oysterBarSelections || []).join(", ")}`;
+          return `${s.name} (+${s.cost}) - ${(pBuffet.oysterBarSelections || []).join(", ")}`;
         }
-        return `${s.name} (+++${s.cost})`;
+        return `${s.name} (+${s.cost})`;
       }).join("\n");
 
       const appetizerText = [
@@ -4813,7 +4813,15 @@ const handleRiceUpgrade110Change = (option) => {
           placeholder="Menu selections will appear here..."
         />
       </div>
-
+      <div className="form-group">
+        <label>Food Stations</label>
+        <textarea 
+          value={p3.foodStations} 
+          rows={3}
+          readOnly
+          placeholder="Menu selections will appear here..."
+        />
+      </div>
       <h4>Main Entree and Sides</h4>
       <div className="form-group">
         <label>Appetizer</label>

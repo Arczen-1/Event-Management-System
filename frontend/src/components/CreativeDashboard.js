@@ -17,14 +17,12 @@ function CreativeDashboard({ onLogout }) {
       const data = await res.json();
       if (res.ok) {
         setContracts(
-          (data.contracts || []).filter(c => c.status === "Active").map((c) => ({
+          // Filter for "For Approval" status
+          (data.contracts || []).filter(c => c.status === "For Approval").map((c) => ({
             id: c._id,
             name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
             celebratorName: (c.page1 && c.page1.celebratorName) || "",
             contractNumber: c.contractNumber,
-            page1: c.page1,
-            page2: c.page2,
-            page3: c.page3,
           }))
         );
       }
@@ -41,7 +39,7 @@ function CreativeDashboard({ onLogout }) {
     return (
       <div className="contracts-table-container">
         <div className="table-header">
-          <h3>Active Contracts</h3>
+          <h3>Contracts for Creative Review</h3>
           <div className="pager">
             <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
             <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
@@ -61,7 +59,7 @@ function CreativeDashboard({ onLogout }) {
             <tbody>
               {paginatedContracts.length === 0 ? (
                 <tr className="no-contracts">
-                  <td colSpan="4">No active contracts available</td>
+                  <td colSpan="4">No contracts awaiting review</td>
                 </tr>
               ) : (
                 paginatedContracts.map(contract => (
@@ -118,16 +116,32 @@ function CreativeDashboard({ onLogout }) {
                   <strong>Contract Number:</strong> {selectedContract.contractNumber}
                 </div>
                 <div className="detail-row">
-                  <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                  <strong>Celebrator:</strong> {selectedContract.page1?.celebratorName || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
+                </div>
+                 <div className="detail-row">
+                  <strong>Ingress Time:</strong> {selectedContract.page1?.ingressTime || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Coordinator Details</h4>
+                <div className="detail-row">
+                  <strong>Name:</strong> {selectedContract.page1?.coordinatorName || "N/A"}
+                </div>
+                 <div className="detail-row">
+                  <strong>Mobile:</strong> {selectedContract.page1?.coordinatorMobile || "N/A"}
+                </div>
+                 <div className="detail-row">
+                  <strong>Email:</strong> {selectedContract.page1?.coordinatorEmail || "N/A"}
                 </div>
               </div>
 
@@ -140,7 +154,7 @@ function CreativeDashboard({ onLogout }) {
                   <strong>Color Motif:</strong> {selectedContract.page1?.colorMotif || "N/A"}
                 </div>
                 <div className="detail-row">
-                  <strong>Remarks:</strong> {selectedContract.page1?.setupRemarks || "N/A"}
+                  <strong>Setup Remarks:</strong> {selectedContract.page1?.setupRemarks || "N/A"}
                 </div>
               </div>
 
@@ -159,12 +173,16 @@ function CreativeDashboard({ onLogout }) {
                   <strong>Cake Table:</strong> {selectedContract.page2?.flowerCakeTable || "N/A"}
                 </div>
                 <div className="detail-row">
-                  <strong>Couple Chair:</strong> {selectedContract.page2?.celebratorsChair || "N/A"}
+                  <strong>Couple/Celebrator's Chair:</strong> {selectedContract.page2?.celebratorsChair || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Flower Remarks:</strong> {selectedContract.page2?.flowerRemarks || "N/A"}
                 </div>
               </div>
             </div>
           )}
         </div>
+        {/* --- MODIFIED: Removed Approve/Reject buttons --- */}
         <div className="modal-actions">
           <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
         </div>
@@ -189,6 +207,3 @@ function CreativeDashboard({ onLogout }) {
 }
 
 export default CreativeDashboard;
-
-
-

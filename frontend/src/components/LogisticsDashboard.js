@@ -17,14 +17,12 @@ function LogisticsDashboard({ onLogout }) {
       const data = await res.json();
       if (res.ok) {
         setContracts(
-          (data.contracts || []).filter(c => c.status === "Active").map((c) => ({
+          // 1. CHANGED: Filter for "For Approval" status
+          (data.contracts || []).filter(c => c.status === "For Approval").map((c) => ({
             id: c._id,
             name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
             celebratorName: (c.page1 && c.page1.celebratorName) || "",
             contractNumber: c.contractNumber,
-            page1: c.page1,
-            page2: c.page2,
-            page3: c.page3,
           }))
         );
       }
@@ -41,7 +39,8 @@ function LogisticsDashboard({ onLogout }) {
     return (
       <div className="contracts-table-container">
         <div className="table-header">
-          <h3>Active Contracts</h3>
+          {/* 2. CHANGED: Title updated */}
+          <h3>Contracts for Logistics Review</h3>
           <div className="pager">
             <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
             <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
@@ -61,7 +60,8 @@ function LogisticsDashboard({ onLogout }) {
             <tbody>
               {paginatedContracts.length === 0 ? (
                 <tr className="no-contracts">
-                  <td colSpan="4">No active contracts available</td>
+                  {/* 3. CHANGED: Text updated */}
+                  <td colSpan="4">No contracts awaiting review</td>
                 </tr>
               ) : (
                 paginatedContracts.map(contract => (
@@ -102,6 +102,7 @@ function LogisticsDashboard({ onLogout }) {
     );
   };
 
+  // 4. MODIFIED: Modal now shows all fields from your new code
   const renderDetailsModal = () => (
     <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -113,18 +114,31 @@ function LogisticsDashboard({ onLogout }) {
           {selectedContract && (
             <div className="contract-details">
               <div className="detail-section">
-                <h4>Contract Information</h4>
+                <h4>Event Information</h4>
                 <div className="detail-row">
                   <strong>Contract Number:</strong> {selectedContract.contractNumber}
                 </div>
                 <div className="detail-row">
-                  <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                  <strong>Celebrator:</strong> {selectedContract.page1?.celebratorName || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
                 </div>
                 <div className="detail-row">
-                  <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
+                  <strong>Ingress Time:</strong> {selectedContract.page1?.ingressTime || "N/A"}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Coordinator Details</h4>
+                 <div className="detail-row">
+                  <strong>Name:</strong> {selectedContract.page1?.coordinatorName || "N/A"}
+                </div>
+                 <div className="detail-row">
+                  <strong>Mobile:</strong> {selectedContract.page1?.coordinatorMobile || "N/A"}
+                </div>
+                 <div className="detail-row">
+                  <strong>Email:</strong> {selectedContract.page1?.coordinatorEmail || "N/A"}
                 </div>
               </div>
 
@@ -143,6 +157,7 @@ function LogisticsDashboard({ onLogout }) {
             </div>
           )}
         </div>
+        {/* 5. MODIFIED: Only Close button is present */}
         <div className="modal-actions">
           <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
         </div>
@@ -167,6 +182,3 @@ function LogisticsDashboard({ onLogout }) {
 }
 
 export default LogisticsDashboard;
-
-
-

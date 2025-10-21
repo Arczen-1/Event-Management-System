@@ -17,14 +17,12 @@ function WarehouseDashboard({ onLogout }) {
       const data = await res.json();
       if (res.ok) {
         setContracts(
-          (data.contracts || []).filter(c => c.status === "Active").map((c) => ({
+          // 1. CHANGED: Filter for "For Approval" status
+          (data.contracts || []).filter(c => c.status === "For Approval").map((c) => ({
             id: c._id,
             name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
             celebratorName: (c.page1 && c.page1.celebratorName) || "",
             contractNumber: c.contractNumber,
-            page1: c.page1,
-            page2: c.page2,
-            page3: c.page3,
           }))
         );
       }
@@ -41,7 +39,8 @@ function WarehouseDashboard({ onLogout }) {
     return (
       <div className="contracts-table-container">
         <div className="table-header">
-          <h3>Active Contracts</h3>
+          {/* 2. CHANGED: Title updated */}
+          <h3>Contracts for Warehouse Review</h3>
           <div className="pager">
             <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
             <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
@@ -61,7 +60,8 @@ function WarehouseDashboard({ onLogout }) {
             <tbody>
               {paginatedContracts.length === 0 ? (
                 <tr className="no-contracts">
-                  <td colSpan="4">No active contracts available</td>
+                  {/* 3. CHANGED: Text updated */}
+                  <td colSpan="4">No contracts awaiting review</td>
                 </tr>
               ) : (
                 paginatedContracts.map(contract => (
@@ -102,6 +102,7 @@ function WarehouseDashboard({ onLogout }) {
     );
   };
 
+  // 4. MODIFIED: Modal now shows all fields from your new code
   const renderDetailsModal = () => (
     <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -113,18 +114,18 @@ function WarehouseDashboard({ onLogout }) {
           {selectedContract && (
             <div className="contract-details">
               <div className="detail-section">
-                <h4>Contract Information</h4>
+                <h4>Event Information</h4>
                 <div className="detail-row">
                   <strong>Contract Number:</strong> {selectedContract.contractNumber}
                 </div>
                 <div className="detail-row">
-                  <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                  <strong>Celebrator:</strong> {selectedContract.page1?.celebratorName || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
                 </div>
                 <div className="detail-row">
-                  <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
+                  <strong>Ingress Time:</strong> {selectedContract.page1?.ingressTime || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
@@ -132,86 +133,62 @@ function WarehouseDashboard({ onLogout }) {
               </div>
 
               <div className="detail-section">
-                <h4>Table Types</h4>
-                <div className="detail-row">
-                  <strong>VIP Table Type:</strong> {selectedContract.page1?.vipTableType || "N/A"}
+                <h4>Coordinator Details</h4>
+                 <div className="detail-row">
+                  <strong>Name:</strong> {selectedContract.page1?.coordinatorName || "N/A"}
                 </div>
-                <div className="detail-row">
-                  <strong>Regular Table Type:</strong> {selectedContract.page1?.regularTableType || "N/A"}
+                 <div className="detail-row">
+                  <strong>Mobile:</strong> {selectedContract.page1?.coordinatorMobile || "N/A"}
+                </div>
+                 <div className="detail-row">
+                  <strong>Email:</strong> {selectedContract.page1?.coordinatorEmail || "N/A"}
                 </div>
               </div>
 
               <div className="detail-section">
-                <h4>Chairs</h4>
+                <h4>Table Setup</h4>
                 <div className="detail-row">
-                  <strong>Monoblock:</strong> {selectedContract.page2?.chairsMonoblock || "N/A"}
+                  <strong>VIP Table Type:</strong> {selectedContract.page1?.vipTableType || "N/A"}
                 </div>
                 <div className="detail-row">
-                  <strong>Tiffany:</strong> {selectedContract.page2?.chairsTiffany || "N/A"}
+                  <strong>VIP Table Quantity:</strong> {selectedContract.page1?.vipTableQuantity || "N/A"}
                 </div>
                 <div className="detail-row">
-                  <strong>Crystal:</strong> {selectedContract.page2?.chairsCrystal || "N/A"}
+                  <strong>Regular Table Type:</strong> {selectedContract.page1?.regularTableType || "N/A"}
                 </div>
                 <div className="detail-row">
-                  <strong>Rustic:</strong> {selectedContract.page2?.chairsRustic || "N/A"}
+                  <strong>Regular Table Quantity:</strong> {selectedContract.page1?.regularTableQuantity || "N/A"}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>Chair Requirements</h4>
+                <div className="detail-row">
+                  <strong>Monoblock:</strong> {selectedContract.page2?.chairsMonoblock || "0"}
                 </div>
                 <div className="detail-row">
-                  <strong>Kiddie:</strong> {selectedContract.page2?.chairsKiddie || "N/A"}
+                  <strong>Tiffany:</strong> {selectedContract.page2?.chairsTiffany || "0"}
                 </div>
                 <div className="detail-row">
-                  <strong>Premium Chairs:</strong> {selectedContract.page2?.premiumChairs || "N/A"}
+                  <strong>Crystal:</strong> {selectedContract.page2?.chairsCrystal || "0"}
+                </div>
+                <div className="detail-row">
+                  <strong>Rustic:</strong> {selectedContract.page2?.chairsRustic || "0"}
+                </div>
+                <div className="detail-row">
+                  <strong>Premium Chairs:</strong> {selectedContract.page2?.premiumChairs || "0"}
+                </div>
+                 <div className="detail-row">
+                  <strong>Total Chairs (from form):</strong> {selectedContract.page2?.totalChairs || "N/A"}
                 </div>
                 <div className="detail-row">
                   <strong>Chair Remarks:</strong> {selectedContract.page2?.chairsRemarks || "N/A"}
                 </div>
               </div>
-
-              <div className="detail-section">
-                <h4>Cake Table</h4>
-                <div className="detail-row">
-                  <strong>Cake Table:</strong> {selectedContract.page2?.flowerCakeTable || "N/A"}
-                </div>
-              </div>
-
-              <div className="detail-section">
-                <h4>Menu Quantities</h4>
-                <div className="detail-row">
-                  <strong>Appetizer =</strong> {selectedContract.page3?.appetizer === "N/A" || selectedContract.page3?.appetizer === "Not Applicable" ? 0 : 1}
-                </div>
-                <div className="detail-row">
-                  <strong>Soup =</strong> {selectedContract.page3?.soup === "N/A" || selectedContract.page3?.soup === "Not Applicable" ? 0 : 1}
-                </div>
-                <div className="detail-row">
-                  <strong>Bread =</strong> {selectedContract.page3?.bread === "N/A" || selectedContract.page3?.bread === "Not Applicable" ? 0 : 1}
-                </div>
-                <div className="detail-row">
-                  <strong>Salad =</strong> {selectedContract.page3?.salad === "N/A" || selectedContract.page3?.salad === "Not Applicable" ? 0 : 1}
-                </div>
-                <div className="detail-row">
-                  <strong>Main Entrée =</strong> {selectedContract.page3?.mainEntree === "N/A" || selectedContract.page3?.mainEntree === "Not Applicable" ? 0 : selectedContract.page3.mainEntree.split('\n').filter(item => item.trim()).length}
-                </div>
-                <div className="detail-row">
-                  <strong>Dessert =</strong> {selectedContract.page3?.dessert === "N/A" || selectedContract.page3?.dessert === "Not Applicable" ? 0 : 1}
-                </div>
-                <div className="detail-row">
-                  <strong>Crew Meal =</strong> {selectedContract.page3?.crewMeal === "N/A" || selectedContract.page3?.crewMeal === "Not Applicable" ? 0 : 1}
-                </div>
-                <div className="detail-row">
-                  <strong>Drinks at Cocktail =</strong> {selectedContract.page3?.drinksCocktail === "N/A" || selectedContract.page3?.drinksCocktail === "Not Applicable" ? 0 : 1}
-                </div>
-                <div className="detail-row">
-                  <strong>Drinks at Meal =</strong> {selectedContract.page3?.drinksMeal === "N/A" || selectedContract.page3?.drinksMeal === "Not Applicable" ? 0 : 1}
-                </div>
-                <div className="detail-row">
-                  <strong>Roasted Pig =</strong> {selectedContract.page3?.roastedPig === "N/A" || selectedContract.page3?.roastedPig === "Not Applicable" ? 0 : 1}
-                </div>
-                <div className="detail-row">
-                  <strong>Roasted Calf =</strong> {selectedContract.page3?.roastedCalf === "N/A" || selectedContract.page3?.roastedCalf === "Not Applicable" ? 0 : 1}
-                </div>
-              </div>
             </div>
           )}
         </div>
+        {/* 5. MODIFIED: Only Close button is present */}
         <div className="modal-actions">
           <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
         </div>
@@ -236,6 +213,3 @@ function WarehouseDashboard({ onLogout }) {
 }
 
 export default WarehouseDashboard;
-
-
-
