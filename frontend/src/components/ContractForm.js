@@ -925,8 +925,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     dessert: "",
     drinks: "",
     cakeName: "",
-    drinksCocktail: "",
-    drinksMeal: "",
     roastedPig: "",
     roastedCalf: "",
     totalMenuCost: "0",
@@ -1740,6 +1738,8 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
   const renderPage1 = () => (
     <div className="page">
+      <div className="form-row">
+      </div>
 
       <h4>Celebrator</h4>
       <div className="form-row two">
@@ -2011,7 +2011,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
         </div>
       </div>
-
       <h4>Set Up</h4>
       <div className="form-row two">
         <div className="form-group"><label>
@@ -2124,7 +2123,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       {errors.chairsSum && <div className="validation-error">{errors.chairsSum}</div>}
       <div className="form-group"><label>Remarks</label><textarea value={p2.chairsRemarks} onChange={(e)=>setP2({...p2, chairsRemarks:convertToUppercase(e.target.value)})} /></div>
 
-      <h4>Creative</h4>
+      <h4>Flower Arrangement</h4>
       <div className="form-row two">
         <div className="form-group"><label>Backdrop</label><input value={p2.flowerBackdrop} onChange={(e)=>setP2({...p2, flowerBackdrop:e.target.value})} /></div>
         <div className="form-group"><label>VIP Centerpiece</label><input value={p2.flowerVipCenterpiece} onChange={(e)=>setP2({...p2, flowerVipCenterpiece:e.target.value})} /></div>
@@ -2147,6 +2146,10 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
       <div className="form-row two">
         <div className="form-group"><label>Celebrator's Car</label><input value={p2.celebratorsCar} onChange={(e)=>setP2({...p2, celebratorsCar:e.target.value})} /></div>
         <div className="form-group"><label>Emcee</label><input value={p2.emcee} onChange={(e)=>setP2({...p2, emcee:e.target.value})} /></div>
+      </div>
+      <div className="form-row two">
+        <div className="form-group"><label>Sound System</label><input value={p2.soundSystem} onChange={(e)=>setP2({...p2, soundSystem:e.target.value})} /></div>
+        <div className="form-group"><label>Tent</label><input value={p2.tent} onChange={(e)=>setP2({...p2, tent:e.target.value})} /></div>
       </div>
       <div className="form-group"><label>Celebrator's Chair</label><input value={p2.celebratorsChair} onChange={(e)=>setP2({...p2, celebratorsChair:e.target.value})} /></div>
     
@@ -4778,7 +4781,7 @@ const handleRiceUpgrade110Change = (option) => {
     );
   };
 
-   const renderPage5 = () => {
+  const renderPage5 = () => {
     // This calculates the final price per plate for display purposes.
     // It takes the base price and adds the cost of all selected upgrades.
     const basePricePerPlate = parseFloat(String(p3.pricePerPlate).replace(/,/g, '')) || 0;
@@ -4811,6 +4814,7 @@ const handleRiceUpgrade110Change = (option) => {
         />
       </div>
 
+      <h4>Main Entree and Sides</h4>
       <div className="form-group">
         <label>Appetizer</label>
         <textarea 
@@ -4875,16 +4879,7 @@ const handleRiceUpgrade110Change = (option) => {
         />
       </div>
 
-      {/* These fields below are now also read-only */}
-      <div className="form-group">
-        <label>Cake Name</label>
-        <textarea 
-          value={p3.cakeName} 
-          rows={3}
-          placeholder="Cake name and details will appear here..."
-          readOnly
-        />
-      </div>     
+      {/* These fields below remain editable */}
       <div className="form-row two">
         <div className="form-group">
           <label>Roasted Pig</label>
