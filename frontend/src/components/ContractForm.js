@@ -449,10 +449,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     totalGuests: "",
     totalVIP: "",
     totalRegular: "",
-    kiddiePlated: "",
-    kiddiePacked: "",
-    crewPlated: "",
-    crewPacked: "",
     themeSetup: "",
     colorMotif: "",
     vipTableType: "",
@@ -478,7 +474,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     chairsTiffany: "0",
     chairsCrystal: "0",
     chairsRustic: "0",
-    chairsKiddie: "0",
     premiumChairs: "0",
     totalChairs: "",
     chairsRemarks: "",
@@ -930,10 +925,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     dessert: "",
     drinks: "",
     cakeName: "",
-    kidsMeal: "",
-    crewMeal: "",
-    drinksCocktail: "",
-    drinksMeal: "",
     roastedPig: "",
     roastedCalf: "",
     totalMenuCost: "0",
@@ -1085,7 +1076,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
                 (parseInt(p2.chairsTiffany) || 0) +
                 (parseInt(p2.chairsCrystal) || 0) +
                 (parseInt(p2.chairsRustic) || 0) +
-                (parseInt(p2.chairsKiddie) || 0) +
                 (parseInt(p2.premiumChairs) || 0);
     const total = parseInt(p2.totalChairs) || 0;
     if (sum !== total) {
@@ -1100,7 +1090,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         return newErrors;
       });
     }
-  }, [p2.chairsMonoblock, p2.chairsTiffany, p2.chairsCrystal, p2.chairsRustic, p2.chairsKiddie, p2.premiumChairs, p2.totalChairs]);
+  }, [p2.chairsMonoblock, p2.chairsTiffany, p2.chairsCrystal, p2.chairsRustic, p2.premiumChairs, p2.totalChairs]);
 
   // Auto-set VIP seats based on table type
   useEffect(() => {
@@ -1464,7 +1454,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
 
     // Check required fields in page2 (chairs with asterisks)
     const requiredP2Fields = [
-      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs'
+      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'premiumChairs', 'totalChairs'
     ];
     for (const field of requiredP2Fields) {
       if (!p2[field] || !p2[field].trim()) return false;
@@ -1749,10 +1739,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   const renderPage1 = () => (
     <div className="page">
       <div className="form-row">
-        <div className="form-group">
-          <label>Contract No.</label>
-          <input type="text" value={nextNumber} readOnly />
-        </div>
       </div>
 
       <h4>Celebrator</h4>
@@ -2025,13 +2011,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
           {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
         </div>
       </div>
-      <div className="form-row four">
-        <div className="form-group"><label>Kiddie Meal Plated</label><input value={p1.kiddiePlated} onChange={(e)=>setP1({...p1, kiddiePlated:e.target.value})} /></div>
-        <div className="form-group"><label>Kiddie Meal Packed</label><input value={p1.kiddiePacked} onChange={(e)=>setP1({...p1, kiddiePacked:e.target.value})} /></div>
-        <div className="form-group"><label>Crew Meal Plated</label><input value={p1.crewPlated} onChange={(e)=>setP1({...p1, crewPlated:e.target.value})} /></div>
-        <div className="form-group"><label>Crew Meal Packed</label><input value={p1.crewPacked} onChange={(e)=>setP1({...p1, crewPacked:e.target.value})} /></div>
-      </div>
-
       <h4>Set Up</h4>
       <div className="form-row two">
         <div className="form-group"><label>
@@ -2139,7 +2118,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
         <div className="form-group"><label>Crystal <span className="required-asterisk">*</span></label><input value={p2.chairsCrystal} onChange={(e)=>setP2({...p2, chairsCrystal:e.target.value})} /></div>
       </div>
       <div className="form-row two">
-        <div className="form-group"><label>Kiddie <span className="required-asterisk">*</span></label><input value={p2.chairsKiddie} onChange={(e)=>setP2({...p2, chairsKiddie:e.target.value})} /></div>
         <div className="form-group"><label>Total Chairs <span className="required-asterisk">*</span></label><input value={p2.totalChairs} readOnly /></div>
       </div>
       {errors.chairsSum && <div className="validation-error">{errors.chairsSum}</div>}
@@ -4902,51 +4880,6 @@ const handleRiceUpgrade110Change = (option) => {
       </div>
 
       {/* These fields below remain editable */}
-      <div className="form-group">
-        <label>Cake Name</label>
-        <textarea 
-          value={p3.cakeName} 
-          onChange={(e)=>setP3({...p3, cakeName:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter cake name and details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Kids Meal</label>
-        <textarea 
-          value={p3.kidsMeal} 
-          onChange={(e)=>setP3({...p3, kidsMeal:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter kids meal details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Crew Meal</label>
-        <textarea 
-          value={p3.crewMeal} 
-          onChange={(e)=>setP3({...p3, crewMeal:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter crew meal details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Drinks at Cocktail</label>
-        <textarea 
-          value={p3.drinksCocktail} 
-          onChange={(e)=>setP3({...p3, drinksCocktail:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter drinks at cocktail details..."
-        />
-      </div>
-      <div className="form-group">
-        <label>Drinks at Meal</label>
-        <textarea 
-          value={p3.drinksMeal} 
-          onChange={(e)=>setP3({...p3, drinksMeal:convertToUppercase(e.target.value)})} 
-          rows={3}
-          placeholder="Enter drinks at meal details..."
-        />
-      </div>
       <div className="form-row two">
         <div className="form-group">
           <label>Roasted Pig</label>
@@ -5024,7 +4957,7 @@ const handleRiceUpgrade110Change = (option) => {
     <div className="contract-form">
       <div className="form-header">
         <h3>Contract {existing ? "(Edit)" : "(New)"}</h3>
-        {nextNumber && <div className="number">No.: {nextNumber}</div>}
+        {nextNumber && <div className="number">Contract No.: {nextNumber}</div>}
       </div>
 
       <form onKeyDown={(e) => { 
