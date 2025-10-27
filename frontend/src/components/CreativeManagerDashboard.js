@@ -11,6 +11,9 @@ function CreativeManagerDashboard({ onLogout }) {
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
 
+  const [sheetData, setSheetData] = useState([]);
+  const [showSheetData, setShowSheetData] = useState(false);
+
   useEffect(() => {
     fetchContracts();
     fetchCreativeRequests();
@@ -62,6 +65,19 @@ function CreativeManagerDashboard({ onLogout }) {
     } catch (err) {
       console.error("Error fetching creative requests:", err);
       setCreativeRequests([]);
+    }
+  };
+
+  // === FETCH GOOGLE SHEET DATA ===
+  const fetchGoogleSheetData = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/sheets/creative");
+      const data = await res.json();
+      setSheetData(data.data || []);
+      setShowSheetData(true);
+    } catch (err) {
+      console.error("Error fetching Google Sheets data:", err);
+      alert("Failed to fetch Google Sheets data.");
     }
   };
 
@@ -158,6 +174,97 @@ function CreativeManagerDashboard({ onLogout }) {
     }
   };
 
+  // === GOOGLE SHEET TABLE RENDER ===
+  const renderGoogleSheetTable = () => (
+    <div className="contracts-table-container" style={{ marginTop: "30px" }}>
+      <div className="table-header">
+        <h3 style={{ color: "#500000" }}>Google Sheets Data</h3>
+      </div>
+
+      <div className="contracts-table white-theme">
+        {Array.isArray(sheetData) && sheetData.length > 0 ? (
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              backgroundColor: "#fff",
+              fontSize: "14px",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  backgroundColor: "#4B0011",
+                  color: "white",
+                  borderBottom: "2px solid #333",
+                }}
+              >
+                <th style={{ padding: "8px" }}>Item No.</th>
+                <th style={{ padding: "8px", textAlign: "left" }}>
+                  Item Description
+                </th>
+                <th style={{ padding: "8px" }}>UOM</th>
+                <th style={{ padding: "8px" }}>Actual Count (March 2025)</th>
+                <th style={{ padding: "8px" }}>Damage / For Repair</th>
+                <th style={{ padding: "8px" }}>For Disposal</th>
+                <th style={{ padding: "8px" }}>Good Inventory (March 2025)</th>
+                <th style={{ padding: "8px" }}>Remarks</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {sheetData.map((row, idx) => {
+                const shiftedRow =
+                  row[0] === "" || row[0] === undefined ? row.slice(1) : row;
+                const [
+                  itemNo = "",
+                  description = "",
+                  uom = "",
+                  actualCount = "",
+                  damaged = "",
+                  disposal = "",
+                  goodInventory = "",
+                  remarks = "",
+                ] = shiftedRow;
+
+                return (
+                  <tr
+                    key={idx}
+                    style={{
+                      borderBottom: "1px solid #ddd",
+                      backgroundColor: idx % 2 === 0 ? "#fafafa" : "#fff",
+                      textAlign: "center",
+                    }}
+                  >
+                    <td style={{ padding: "6px" }}>{itemNo || "–"}</td>
+                    <td style={{ padding: "6px", textAlign: "left" }}>
+                      {description || "–"}
+                    </td>
+                    <td style={{ padding: "6px" }}>{uom || "–"}</td>
+                    <td style={{ padding: "6px" }}>{actualCount || "–"}</td>
+                    <td style={{ padding: "6px" }}>{damaged || "–"}</td>
+                    <td style={{ padding: "6px" }}>{disposal || "–"}</td>
+                    <td style={{ padding: "6px" }}>{goodInventory || "–"}</td>
+                    <td style={{ padding: "6px" }}>{remarks || "–"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <p style={{ padding: "10px" }}>
+            No data found in Google Sheet
+            <br />
+            <small style={{ color: "#888" }}>
+              (Ensure tab name is “CREATIVE INVENTORY (2)” and data exists from
+              A8 downward)
+            </small>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
   const getFilteredRequests = () => {
     switch (activeTab) {
       case "for-approval":
@@ -186,9 +293,18 @@ function CreativeManagerDashboard({ onLogout }) {
       <div className="dashboard-header">
         <div className="dashboard-header-inner">
           <h1>Creative Manager Dashboard</h1>
-          <button onClick={onLogout} className="logout-btn header-logout">
-            Logout
-          </button>
+          <div>
+            <button
+              onClick={fetchGoogleSheetData}
+              className="action-btn"
+              style={{ marginRight: "10px" }}
+            >
+              View Google Sheets Data
+            </button>
+            <button onClick={onLogout} className="logout-btn header-logout">
+              Logout
+            </button>
+          </div>
         </div>
       </div>
 
@@ -334,7 +450,9 @@ function CreativeManagerDashboard({ onLogout }) {
           </div>
         </div>
 
-        {/* === CONTRACT DETAILS MODAL === */}
+        {showSheetData && renderGoogleSheetTable()}
+
+        {/* === MODALS === */}
         {selectedContract && (
           <div
             className="modal-overlay"
@@ -388,7 +506,6 @@ function CreativeManagerDashboard({ onLogout }) {
           </div>
         )}
 
-        {/* === REVIEW MODAL === */}
         {showReviewModal && reviewingRequest && (
           <div
             className="modal-overlay"
@@ -448,7 +565,6 @@ function CreativeManagerDashboard({ onLogout }) {
           </div>
         )}
 
-        {/* === REJECT MODAL === */}
         {showRejectModal && (
           <div
             className="modal-overlay"

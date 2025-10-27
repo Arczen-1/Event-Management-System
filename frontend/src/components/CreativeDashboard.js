@@ -4,6 +4,8 @@ import "./SalesManagerDashboard.css";
 function CreativeDashboard({ onLogout }) {
   const [contracts, setContracts] = useState([]);
   const [creativeRequests, setCreativeRequests] = useState([]);
+  const [sheetData, setSheetData] = useState([]);
+  const [showSheetData, setShowSheetData] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [activeContract, setActiveContract] = useState(null);
   const [editingRequest, setEditingRequest] = useState(null);
@@ -68,6 +70,18 @@ function CreativeDashboard({ onLogout }) {
     } catch (err) {
       console.error("Error fetching creative requests:", err);
       setCreativeRequests([]);
+    }
+  };
+
+  const fetchGoogleSheetData = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/sheets/creative");
+      const data = await res.json();
+      setSheetData(data.data || []);
+      setShowSheetData(true);
+    } catch (err) {
+      console.error("Error fetching Google Sheets data:", err);
+      alert("Failed to fetch Google Sheets data.");
     }
   };
 
@@ -217,7 +231,7 @@ function CreativeDashboard({ onLogout }) {
 
   const sectionStyle = { marginTop: "28px" };
 
-  // ✅ Create / Edit Request Form (restored)
+  // === RENDER FUNCTIONS ===
   const renderCreateForm = () => (
     <div className="create-contract-form">
       <h3>
@@ -308,7 +322,73 @@ function CreativeDashboard({ onLogout }) {
     </div>
   );
 
-  // ✅ Requests Table with remarks (unchanged)
+  const renderContractsTable = () => (
+    <div className="contracts-table-container">
+      <div className="table-header">
+        <h3>Contracts from Sales</h3>
+      </div>
+      <div className="contracts-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Contract Name</th>
+              <th>Client</th>
+              <th>Contract No.</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contracts.length === 0 ? (
+              <tr className="no-contracts">
+                <td colSpan="7">No contracts found</td>
+              </tr>
+            ) : (
+              contracts.map((c) => (
+                <tr
+                  key={c.id}
+                  className="clickable-row"
+                  onClick={() => onContractRowClick(c)}
+                >
+                  <td>{c.name}</td>
+                  <td>{c.client}</td>
+                  <td>{c.contractNumber || "-"}</td>
+                  <td>{c.startDate?.slice(0, 10)}</td>
+                  <td>{c.endDate?.slice(0, 10)}</td>
+                  <td>
+                    <span className={`status ${statusClass(c.status)}`}>
+                      {c.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className="action-btn primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveContract(c);
+                        setEditingRequest(null);
+                        setShowForm(true);
+                        setNewRequest((prev) => ({
+                          ...prev,
+                          requestName: c.name,
+                          contractNo: c.contractNumber,
+                        }));
+                      }}
+                    >
+                      Add Creative Request
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   const renderRequestsTable = () => (
     <div className="contracts-table-container" style={sectionStyle}>
       <div className="table-header">
@@ -446,74 +526,6 @@ function CreativeDashboard({ onLogout }) {
     </div>
   );
 
-  // ✅ Contracts + Details modal remain unchanged
-  const renderContractsTable = () => (
-    <div className="contracts-table-container">
-      <div className="table-header">
-        <h3>Contracts from Sales</h3>
-      </div>
-      <div className="contracts-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Contract Name</th>
-              <th>Client</th>
-              <th>Contract No.</th>
-              <th>Start Date</th>
-              <th>End Date</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contracts.length === 0 ? (
-              <tr className="no-contracts">
-                <td colSpan="7">No contracts found</td>
-              </tr>
-            ) : (
-              contracts.map((c) => (
-                <tr
-                  key={c.id}
-                  className="clickable-row"
-                  onClick={() => onContractRowClick(c)}
-                >
-                  <td>{c.name}</td>
-                  <td>{c.client}</td>
-                  <td>{c.contractNumber || "-"}</td>
-                  <td>{c.startDate?.slice(0, 10)}</td>
-                  <td>{c.endDate?.slice(0, 10)}</td>
-                  <td>
-                    <span className={`status ${statusClass(c.status)}`}>
-                      {c.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="action-btn primary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveContract(c);
-                        setEditingRequest(null);
-                        setShowForm(true);
-                        setNewRequest((prev) => ({
-                          ...prev,
-                          requestName: c.name,
-                          contractNo: c.contractNumber,
-                        }));
-                      }}
-                    >
-                      Add Creative Request
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
   const renderDetailsModal = () => (
     <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -559,17 +571,124 @@ function CreativeDashboard({ onLogout }) {
     </div>
   );
 
-  // ✅ Fixed final return
+  const renderGoogleSheetTable = () => (
+  <div className="contracts-table-container" style={{ marginTop: "30px" }}>
+    <div className="table-header">
+      <h3 style={{ color: "#500000" }}>Google Sheets Data</h3>
+    </div>
+
+    <div className="contracts-table white-theme">
+      {Array.isArray(sheetData) && sheetData.length > 0 ? (
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            backgroundColor: "#fff",
+            fontSize: "14px",
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                backgroundColor: "#4B0011",
+                color: "white",
+                borderBottom: "2px solid #333",
+              }}
+            >
+              <th style={{ padding: "8px" }}>Item No.</th>
+              <th style={{ padding: "8px", textAlign: "left" }}>
+                Item Description
+              </th>
+              <th style={{ padding: "8px" }}>UOM</th>
+              <th style={{ padding: "8px" }}>Actual Count (March 2025)</th>
+              <th style={{ padding: "8px" }}>Damage / For Repair</th>
+              <th style={{ padding: "8px" }}>For Disposal</th>
+              <th style={{ padding: "8px" }}>Good Inventory (March 2025)</th>
+              <th style={{ padding: "8px" }}>Remarks</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {sheetData.map((row, idx) => {
+              // Only shift left if the first cell is blank and the second cell has data
+              const shiftedRow =
+                row[0] === "" || row[0] === undefined ? row.slice(1) : row;
+
+              const [
+                itemNo = "",
+                description = "",
+                uom = "",
+                actualCount = "",
+                damaged = "",
+                disposal = "",
+                goodInventory = "",
+                remarks = "",
+              ] = shiftedRow;
+
+              return (
+                <tr
+                  key={idx}
+                  style={{
+                    borderBottom: "1px solid #ddd",
+                    backgroundColor: idx % 2 === 0 ? "#fafafa" : "#fff",
+                    textAlign: "center",
+                  }}
+                >
+                  <td style={{ padding: "6px" }}>{itemNo || "–"}</td>
+                  <td style={{ padding: "6px", textAlign: "left" }}>
+                    {description || "–"}
+                  </td>
+                  <td style={{ padding: "6px" }}>{uom || "–"}</td>
+                  <td style={{ padding: "6px" }}>{actualCount || "–"}</td>
+                  <td style={{ padding: "6px" }}>{damaged || "–"}</td>
+                  <td style={{ padding: "6px" }}>{disposal || "–"}</td>
+                  <td style={{ padding: "6px" }}>{goodInventory || "–"}</td>
+                  <td style={{ padding: "6px" }}>{remarks || "–"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      ) : (
+        <p style={{ padding: "10px" }}>
+          No data found in Google Sheet
+          <br />
+          <small style={{ color: "#888" }}>
+            (Ensure tab name is “CREATIVE INVENTORY (2)” and data exists from
+            A8 downward)
+          </small>
+        </p>
+      )}
+    </div>
+  </div>
+);
+
+
+
+
+
+
+  // === MAIN RETURN ===
   return (
     <div className="sales-manager-dashboard">
       <div className="dashboard-header">
         <div className="dashboard-header-inner">
           <h1>Creatives Department Dashboard</h1>
-          <button onClick={onLogout} className="logout-btn header-logout">
-            Logout
-          </button>
+          <div>
+            <button
+              onClick={fetchGoogleSheetData}
+              className="action-btn"
+              style={{ marginRight: "10px" }}
+            >
+              View Google Sheets Data
+            </button>
+            <button onClick={onLogout} className="logout-btn header-logout">
+              Logout
+            </button>
+          </div>
         </div>
       </div>
+
       <div className="dashboard-content">
         {showForm ? (
           renderCreateForm()
@@ -577,6 +696,7 @@ function CreativeDashboard({ onLogout }) {
           <>
             {renderContractsTable()}
             {renderRequestsTable()}
+            {showSheetData && renderGoogleSheetTable()}
           </>
         )}
         {selectedContract && renderDetailsModal()}
