@@ -133,3 +133,31 @@
 
 
 
+.inventory-inputs-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.inventory-inputs-vertical input,
+.inventory-inputs-vertical textarea {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.inventory-inputs-vertical button {
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.inventory-inputs-vertical button:hover {
+  background-color: #0f5ec7;
+}
