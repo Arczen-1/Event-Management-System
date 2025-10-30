@@ -35,7 +35,9 @@ function App() {
       setMessage(data.message);
       
       if (res.ok) {
+        localStorage.setItem("user", JSON.stringify(data.user));
         setCurrentUser(data.user);
+        
         if (data.user.role === 'Admin') {
           setCurrentView("admin");
         } else if (data.user.role === 'Sales') {

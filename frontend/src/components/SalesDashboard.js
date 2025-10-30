@@ -340,6 +340,53 @@ function SalesDashboard({ onLogout, user }) {
                         >
                           Edit
                         </button>
+                        <button
+                          className="btn-primary small"
+                          enabled={(() => {
+                            const fullContract = fullContracts.find(c => c._id === contract.id);
+                            if (!fullContract) return true;
+                            const errors = validateContractFullyFilled(fullContract);
+                            return errors.length > 0;
+                          })()}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              // First, fetch the full contract data
+                              const fetchRes = await fetch(`http://localhost:5000/contracts/${contract.id}`);
+                              const fetchData = await fetchRes.json();
+                              if (!fetchRes.ok) throw new Error("Failed to fetch contract");
+                              const contractData = fetchData.contract;
+                              // Validate if fully filled
+                              const validationErrors = validateContractFullyFilled(contractData);
+                              if (validationErrors.length > 0) {
+                                alert("Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n"));
+                                return;
+                              }
+                              // Now send for approval
+                              const res = await fetch(`http://localhost:5000/contracts/${contract.id}/send-for-approval`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" }
+                              });
+                              const data = await res.json();
+                              if (res.ok) {
+                                // Update the contract status in the local state
+                                setContracts(prevContracts =>
+                                  prevContracts.map(c =>
+                                    c.id === contract.id
+                                      ? { ...c, status: "For Approval" }
+                                      : c
+                                  )
+                                );
+                              } else {
+                                alert(data.message || "Failed to send for approval");
+                              }
+                            } catch (error) {
+                              alert("Failed to send for approval. Please try again.");
+                            }
+                          }}
+                        >
+                          Send for Approval
+                        </button>
                       </div>
                     )}
                     {contract.status === "Rejected" && (

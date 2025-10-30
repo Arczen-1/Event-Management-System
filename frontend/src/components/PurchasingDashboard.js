@@ -1,8 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./DepartmentDashboard.css";
 
 function PurchasingDashboard({ onLogout }) {
-  const [page, setPage] = useState(1);
+  const [requests, setRequests] = useState([]);
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/fabrication-requests");
+      const data = await res.json();
+      setRequests(data || []);
+    } catch (err) {
+      console.error("Error fetching fabrication requests:", err);
+    }
+  };
+
+  fetch("http://localhost:5000/fabrication-requests")
+  .then(res => res.json())
+  .catch(err => console.error(err));
+
   return (
     <div className="department-dashboard">
       <div className="dashboard-header">
@@ -11,31 +30,41 @@ function PurchasingDashboard({ onLogout }) {
           <button onClick={onLogout} className="logout-btn header-logout">Logout</button>
         </div>
       </div>
+
       <div className="dashboard-content">
         <div className="contracts-table-container">
           <div className="table-header">
-            <h3>Contracts</h3>
-            <div className="pager">
-              <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))}>←</button>
-              <span className="page-indicator">Page {page}</span>
-              <button className="pager-btn" onClick={() => setPage(page + 1)}>→</button>
-            </div>
+            <h3>Incoming Fabrication Requests</h3>
           </div>
-          <div className="contracts-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Contract Name</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="no-contracts">
-                  <td colSpan="2">No contracts available</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Requestor</th>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Remarks</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.length === 0 ? (
+                <tr><td colSpan="6">No requests received yet.</td></tr>
+              ) : (
+                requests.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.user?.name}</td>
+                    <td>{r.item}</td>
+                    <td>{r.quantity}</td>
+                    <td>{r.remarks || "—"}</td>
+                    <td>{new Date(r.date).toLocaleDateString()}</td>
+                    <td>{r.status || "Pending"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -43,6 +72,3 @@ function PurchasingDashboard({ onLogout }) {
 }
 
 export default PurchasingDashboard;
-
-
-
