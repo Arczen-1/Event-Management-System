@@ -368,7 +368,7 @@ function SalesDashboard({ onLogout, user }) {
                         </button>
                         <button
                           className="btn-primary small"
-                          disabled={(() => {
+                          enabled={(() => {
                             const fullContract = fullContracts.find(c => c._id === contract.id);
                             if (!fullContract) return true;
                             const errors = validateContractFullyFilled(fullContract);

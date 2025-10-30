@@ -52,6 +52,7 @@ app.post("/login", async (req, res) => {
     // If not admin, check regular users (only approved ones can login)
     const user = await User.findOne({ username, status: "approved" })
     if (!user) return res.status(400).json({ message: "Invalid username or account not approved" })
+      
 
     const isMatch = await bcrypt.compare(password, user.password) // Compare password with hash
     if (!isMatch) return res.status(400).json({ message: "Invalid password" })
@@ -256,6 +257,7 @@ app.delete("/admin/delete-user/:userId", async (req, res) => {
 
 const { fetchMonitoringData, getSheetsClient, SPREADSHEET_ID } = require("./googleSheetsHelper");
 
+
 app.get("/monitoring", async (req, res) => {
   try {
     const data = await fetchMonitoringData();
@@ -264,6 +266,61 @@ app.get("/monitoring", async (req, res) => {
   } catch (err) {
     console.error("Error fetching monitoring data:", err);
     res.status(500).json({ error: "Failed to fetch monitoring data" });
+  }
+});
+
+app.get("/inventory", async (req, res) => {
+  try {
+    const sections = await fetchMonitoringData();
+
+    // Flatten your sheet rows into simple items list
+    // Assuming each "section" looks like: header: [...], rows: [[date, item, qty, ...], ...]
+    const items = sections.flatMap(section => 
+      section.rows.map(row => ({
+        itemName: row[0], 
+        quantity: row[2], 
+      }))
+    );
+
+    res.json(items);
+  } catch (err) {
+    console.error("Error fetching inventory:", err);
+    res.status(500).json({ message: "Error retrieving inventory from Google Sheets" });
+  }
+});
+
+// ==================== FABRICATION REQUEST ROUTES ====================
+
+const FabricationRequest = require("./models/fabricationRequest");
+
+// GET /fabrication-requests - fetch all requests
+app.get("/fabrication-requests", async (req, res) => {
+  try {
+    const requests = await FabricationRequest.find().sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (error) {
+    console.error("Error fetching fabrication requests:", error);
+    res.status(500).json({ message: "Server error while fetching fabrication requests" });
+  }
+});
+
+// POST /fabrication-requests - create new fabrication request
+app.post("/fabrication-requests", async (req, res) => {
+  try {
+     const { username, item, quantity, remarks } = req.body;
+
+    const newRequest = new FabricationRequest({
+      username,
+      item,
+      quantity,
+      remarks,
+    });
+
+    await newRequest.save();
+    res.status(201).json({ message: "Fabrication request created successfully", request: newRequest });
+  } catch (error) {
+    console.error("Error creating fabrication request:", error);
+    res.status(500).json({ message: "Server error while creating fabrication request" });
   }
 });
 
@@ -307,6 +364,106 @@ app.get("/inventory-movement", async (req, res) => {
   } catch (error) {
     console.error("Error fetching inventory movement data:", error);
     res.status(500).json({ error: "Failed to fetch inventory movement data" });
+  }
+});
+
+// ==================== CHECKLIST ROUTES ====================
+
+// GET /inventory/checklist - Verify that inventory items have valid quantities before approval
+app.get("/inventory/checklist", async (req, res) => {
+  try {
+    const sheets = await getSheetsClient();
+    const resp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: "'invty movement monitoring'!B:I",
+    });
+
+    let rows = resp.data.values || [];
+    rows = rows.filter(row => row.some(cell => cell && cell.trim() !== ""));
+
+    if (rows.length < 2) {
+      return res.status(400).json({ error: "No inventory data found" });
+    }
+
+    // Skip header row
+    const data = rows.slice(1).map((row) => ({
+      "Item Code": row[0],
+      "Item Description": row[1],
+      "UOM": row[2],
+      "On-hand (Start)": parseFloat(row[4] || 0),
+      "Quantity": parseFloat(row[5] || 0),
+      "Damages": parseFloat(row[6] || 0),
+      "On-hand (End)": parseFloat(row[7] || 0),
+    }));
+
+    // Validate checklist: ensure no negative end quantities, all required fields filled
+    const issues = data.filter(
+      item =>
+        !item["Item Code"] ||
+        item["On-hand (End)"] < 0 ||
+        isNaN(item["On-hand (Start)"]) ||
+        isNaN(item["Quantity"])
+    );
+
+    if (issues.length > 0) {
+      return res.status(400).json({
+        error: "Inventory checklist failed validation",
+        issues,
+      });
+    }
+
+    res.json({ message: "Inventory checklist passed", count: data.length });
+  } catch (error) {
+    console.error("Checklist validation error:", error);
+    res.status(500).json({ error: "Failed to check inventory checklist" });
+  }
+});
+
+
+const { google } = require("googleapis");
+const fs = require("fs");
+
+app.get("/stockroom-inventory", async (req, res) => {
+  try {
+    //Load credentials properly (recommended way)
+    const credentials = JSON.parse(fs.readFileSync("credentials.json"));
+    const auth = new google.auth.JWT({
+      email: credentials.client_email,
+      key: credentials.private_key,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    });
+
+    const sheets = google.sheets({ version: "v4", auth });
+
+    const SPREADSHEET_ID = "1C6wGegHlIRnubxcWnnQTskRj2UIHK7PuwI8IS42NG5M";
+
+    //Fetch the full range (A:Z is fine if you have many columns)
+    const range = "'CONSOLIDATED AUG'!D:F";
+
+    // Fetch data from sheet
+    const resp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
+    });
+
+    let rows = resp.data.values || [];
+    if (rows.length < 2) return res.json([]);
+
+    // Remove empty rows
+    rows = rows.filter(row => row.some(cell => cell && cell.trim() !== ""));
+
+    // First row should be headers, skip if they exist in sheet
+    const data = rows.slice(1).map((row) => ({
+      "ITEM DESCRIPTION": row[0] || "",
+      "UNIT": row[2] || "",
+    }));
+
+    console.log(`Loaded ${data.length} rows from Stockroom inventory`);
+    res.json(data);
+
+  } catch (error) {
+    console.error("Error fetching stockroom inventory data:", error);
+    res.status(500).json({ error: "Failed to fetch stockroom inventory data" });
   }
 });
 

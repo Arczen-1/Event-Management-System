@@ -756,7 +756,7 @@ const renderCalendarEventModal = () => (
                 <strong>Event Date:</strong> {reviewingContract.startDate}
               </div>
               <div className="detail-row">
-                <strong>Total Value:</strong> ₱{reviewingContract.value}
+                <strong>Price:</strong> ₱{reviewingContract.value}
               </div>
             </div>
           )}
