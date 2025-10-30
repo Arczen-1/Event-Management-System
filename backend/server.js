@@ -660,5 +660,478 @@ app.put("/profile/:username/password", async (req, res) => {
   }
 })
 
+// ==================== FINANCE ROUTES ====================
+
+// --- Get Finance Overview (total income + breakdown) ---
+app.get("/api/finance/overview/:filter", async (req, res) => {
+  try {
+    const { filter } = req.params;
+    const now = new Date();
+    let dateFilter = {};
+
+    if (filter === "day") {
+      const start = new Date(now.setHours(0, 0, 0, 0));
+      dateFilter = { updatedAt: { $gte: start } };
+    } else if (filter === "week") {
+      const start = new Date();
+      start.setDate(now.getDate() - now.getDay());
+      start.setHours(0, 0, 0, 0);
+      dateFilter = { updatedAt: { $gte: start } };
+    } else if (filter === "month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      dateFilter = { updatedAt: { $gte: start } };
+    } else if (filter === "year") {
+      const start = new Date(now.getFullYear(), 0, 1);
+      dateFilter = { updatedAt: { $gte: start } };
+    }
+
+    // Only count Paid finance records
+    const paidRecords = await Finance.find({
+      ...dateFilter,
+      status: "Paid",
+    }).populate("contractId", "page1.celebratorName page3.grandTotal");
+
+    const total = paidRecords.reduce(
+      (sum, r) => sum + (r.totalAmount || 0),
+      0
+    );
+
+    const breakdown = paidRecords.map((r) => ({
+      client: r.client,
+      amount: r.totalAmount,
+      date: r.date,
+      contractId: r.contractId?._id,
+    }));
+
+    res.json({ total, breakdown });
+  } catch (err) {
+    console.error("Finance overview error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Get Active Contracts for Finance Client Page ---
+app.get("/api/finance/clients", async (req, res) => {
+  try {
+    // Get only contracts approved by Accounting and not cancelled
+    const activeContracts = await Contract.find({
+      status: "Active",
+    })
+      .sort({ updatedAt: -1 })
+      .select(
+        "contractNumber page1.celebratorName page1.occasion page3.grandTotal status updatedAt"
+      );
+
+    res.json(activeContracts);
+  } catch (err) {
+    console.error("Finance clients error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Mark Contract as Paid ---
+app.put("/api/finance/mark-paid/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const contract = await Contract.findById(id);
+    if (!contract) return res.status(404).json({ message: "Contract not found" });
+
+    // Update contract to Paid
+    contract.status = "Paid";
+    await contract.save();
+
+    // Create/Update finance record
+    let finance = await Finance.findOne({ contractId: id });
+    const totalAmount =
+      Number(String(contract.page3?.grandTotal || "0").replace(/[^0-9.-]+/g, "")) || 0;
+
+    if (finance) {
+      finance.status = "Paid";
+      finance.totalAmount = totalAmount;
+      finance.date = new Date();
+      await finance.save();
+    } else {
+      finance = await Finance.create({
+        client: contract.page1?.celebratorName || "Unknown Client",
+        contractId: contract._id,
+        totalAmount,
+        status: "Paid",
+        items: [
+          {
+            name: contract.page1?.occasion || "Catering Service",
+            qty: 1,
+            price: totalAmount,
+          },
+        ],
+        date: new Date(),
+      });
+    }
+
+    res.json({ message: "Marked as paid successfully", contract, finance });
+  } catch (err) {
+    console.error("Finance mark paid error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+// ==================== ACCOUNTING ROUTES ====================
+// PUT /contracts/:id/accounting-approve - Approve a contract (Accounting only)
+// (Updated to create a Finance record when contract becomes Active)
+app.put("/contracts/:id/accounting-approve", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (contract.status !== "For Accounting Review") return res.status(400).json({ message: "Only contracts with 'For Accounting Review' status can be approved by Accounting" })
+
+    contract.status = "Active"
+    await contract.save()
+
+    // Create Finance record linked to this contract if not already existing
+    try {
+      const existing = await Finance.findOne({ contractId: contract._id })
+      if (!existing) {
+        const clientName = (contract.page1 && (contract.page1.celebratorName || contract.page1.representativeName)) || "Unknown Client"
+        const grand = parseFloat(contract.page3?.grandTotal) || 0
+        const paymentDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from approval
+        await Finance.create({
+          client: clientName,
+          contractId: contract._id,
+          totalAmount: grand,
+          items: contract.page3?.items || [], // optional; if you have items stored, include
+          status: "Unpaid",
+          paymentDueDate,
+        })
+      }
+    } catch (finErr) {
+      console.error("Failed to create finance record after contract activation:", finErr)
+      // don't fail the whole request — contract is approved regardless
+    }
+
+    res.json({ message: "Contract approved by Accounting and activated", contract })
+  } catch (error) {
+    console.error("Accounting approve contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// ==================== LOGISTICS ROUTES ====================
+
+// --- Get all active contracts for Logistics (for Contracts tab) ---
+app.get("/api/logistics/contracts", async (req, res) => {
+  try {
+    const contracts = await Contract.find({ status: "Active" });
+
+    const formattedContracts = contracts.map((c) => ({
+      _id: c._id,
+      name:
+        (c.page1 && (c.page1.contractName || c.page1.occasion)) ||
+        "Untitled Contract",
+      celebratorName: (c.page1 && c.page1.celebratorName) || "",
+      contractNumber: c.contractNumber,
+      page1: c.page1,
+      page2: c.page2,
+      page3: c.page3,
+    }));
+
+    res.json({ contracts: formattedContracts });
+  } catch (err) {
+    console.error("Error fetching logistics contracts:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+// --- Generate calendar view of truck bookings (for Calendar tab) ---
+app.get("/api/logistics/calendar", async (req, res) => {
+  try {
+    // Fetch all active contracts
+    const contracts = await Contract.find({ status: "Active" });
+
+    // Generate Google Calendar-style events based on event dates
+    const events = contracts
+      .filter((c) => c.page1?.eventDate)
+      .map((c) => ({
+        id: c._id,
+        title:
+          (c.page1?.occasion || c.page1?.contractName || "Catering Event") +
+          " - " +
+          (c.page1?.celebratorName || ""),
+        start: c.page1?.eventDate,
+        end: c.page1?.eventDate, // one-day event
+        color: "#1a73e8", // Google blue
+        description: `Venue: ${c.page1?.venue || "N/A"}\nAddress: ${
+          c.page1?.address || "N/A"
+        }\nTruck: ${c.page4?.truckAssigned || "Unassigned"}`,
+      }));
+
+    // use your own embedded Google Calendar URL
+    const calendarEmbedURL =
+      "https://calendar.google.com/calendar/embed?src=your_calendar_id%40group.calendar.google.com&ctz=Asia%2FManila";
+
+    // Return both the embed and event data
+    res.json({
+      calendarEmbedURL,
+      events,
+    });
+  } catch (err) {
+    console.error("Error fetching logistics calendar:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+// --- fetch single contract for modal view ---
+app.get("/api/logistics/contracts/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const contract = await Contract.findById(id);
+    if (!contract) {
+      return res.status(404).json({ message: "Contract not found" });
+    }
+    res.json({ contract });
+  } catch (err) {
+    console.error("Error fetching contract details:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ====== Mock Data for Trucks & Drivers ======
+let trucks = [
+  { id: 1, name: "Truck 1 - Toyota HiAce", assignedDates: [] },
+  { id: 2, name: "Truck 2 - Mitsubishi Canter", assignedDates: [] },
+];
+
+let drivers = [
+  { id: 1, name: "Juan Dela Cruz", assignedDates: [] },
+  { id: 2, name: "Maria Santos", assignedDates: [] },
+];
+
+// ====== Auto-Assign Available Truck & Driver ======
+function assignTruckAndDriver(date) {
+  const dateStr = new Date(date).toISOString().split("T")[0];
+
+  const availableTruck = trucks.find(
+    (t) => !t.assignedDates.includes(dateStr)
+  );
+  const availableDriver = drivers.find(
+    (d) => !d.assignedDates.includes(dateStr)
+  );
+
+  if (availableTruck && availableDriver) {
+    availableTruck.assignedDates.push(dateStr);
+    availableDriver.assignedDates.push(dateStr);
+    return { truck: availableTruck.name, driver: availableDriver.name };
+  }
+
+  return {
+    truck: availableTruck ? availableTruck.name : "No Truck Available",
+    driver: availableDriver ? availableDriver.name : "No Driver Available",
+  };
+}
+
+// ====== Fetch Assigned Bookings ======
+app.get("/api/logistics/bookings", async (req, res) => {
+  try {
+    const contracts = await Contract.find({ status: "Active" });
+
+    const bookings = contracts
+      .filter((c) => c.page1?.eventDate)
+      .map((c) => {
+        const assigned = assignTruckAndDriver(c.page1.eventDate);
+        return {
+          client: c.page1?.celebratorName || "Unknown",
+          venue: c.page1?.venue || "N/A",
+          date: c.page1?.eventDate,
+          truck: assigned.truck,
+          driver: assigned.driver,
+        };
+      });
+
+    res.json({ bookings });
+  } catch (err) {
+    console.error("Error fetching truck/driver bookings:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Get Best Route to Venue (for Leaflet Map) ---
+const axios = require("axios");
+ // make sure axios is imported at the top if not yet
+
+app.get("/api/logistics/route", async (req, res) => {
+  const { lat, lng } = req.query;
+
+  if (!lat || !lng) {
+    return res.status(400).json({ message: "Missing destination coordinates" });
+  }
+
+  const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImYxMGRiZjg5MGNlMjRmYzQ5MDdhYTA5ZDQzNzY1NTY2IiwiaCI6Im11cm11cjY0In0=";
+
+  // Starting point (e.g., your HQ or warehouse in Manila)
+  const start = [120.9842, 14.5995]; // [lng, lat]
+  const end = [parseFloat(lng), parseFloat(lat)];
+
+  try {
+    const routeRes = await axios.get(
+      `https://api.openrouteservice.org/v2/directions/driving-car`,
+      {
+        params: {
+          api_key: ORS_API_KEY,
+          start: `${start[0]},${start[1]}`,
+          end: `${end[0]},${end[1]}`,
+        },
+      }
+    );
+
+    const routeData = routeRes.data;
+
+    res.json({
+      route: routeData.features[0].geometry.coordinates,
+      summary: routeData.features[0].properties.summary,
+    });
+  } catch (err) {
+    console.error("Error fetching best route:", err.message);
+    res.status(500).json({ message: "Failed to calculate best route" });
+  }
+});
+
+// ==================== LINEN ROUTES ====================
+
+// const express = require("express");
+// const mongoose = require("mongoose");
+
+// ---------- LINEN INVENTORY SCHEMA ----------
+const LinenInventorySchema = new mongoose.Schema({
+  item: { type: String, required: true },
+  stock: { type: Number, required: true, default: 0 },
+  unit: { type: String, default: "pcs" },
+});
+
+const LinenInventory = mongoose.model("LinenInventory", LinenInventorySchema);
+
+// ---------- LINEN CHECKLIST SCHEMA ----------
+const LinenChecklistSchema = new mongoose.Schema({
+  contractId: { type: mongoose.Schema.Types.ObjectId, ref: "Contract" },
+  checklistItems: [
+    {
+      name: String,
+      checked: Boolean,
+    },
+  ],
+  dateSubmitted: { type: Date, default: Date.now },
+});
+
+const LinenChecklist = mongoose.model("LinenChecklist", LinenChecklistSchema);
+
+// ---------- REQUEST FORM SCHEMA ----------
+const LinenRequestSchema = new mongoose.Schema({
+  item: String,
+  quantity: Number,
+  reason: String,
+  status: { type: String, default: "Pending" }, // Pending, Approved, Denied
+  dateRequested: { type: Date, default: Date.now },
+});
+
+const LinenRequest = mongoose.model("LinenRequest", LinenRequestSchema);
+
+
+
+// ========== LINEN ROUTES ==========
+
+// --- Get all inventory items ---
+app.get("/api/linen/inventory", async (req, res) => {
+  try {
+    const inventory = await LinenInventory.find();
+    res.json({ inventory });
+  } catch (err) {
+    console.error("Error fetching linen inventory:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Add a new inventory item ---
+app.post("/api/linen/inventory", async (req, res) => {
+  try {
+    const { item, stock, unit } = req.body;
+    const newItem = new LinenInventory({ item, stock, unit });
+    await newItem.save();
+    res.json({ message: "Item added successfully", newItem });
+  } catch (err) {
+    console.error("Error adding inventory item:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Update stock count ---
+app.put("/api/linen/inventory/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stock } = req.body;
+    const updated = await LinenInventory.findByIdAndUpdate(
+      id,
+      { stock },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Item not found" });
+    res.json({ message: "Stock updated", updated });
+  } catch (err) {
+    console.error("Error updating stock:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Submit checklist for a contract ---
+app.post("/api/linen/checklist", async (req, res) => {
+  try {
+    const { contractId, checklistItems } = req.body;
+    const checklist = new LinenChecklist({ contractId, checklistItems });
+    await checklist.save();
+    res.json({ message: "Checklist submitted", checklist });
+  } catch (err) {
+    console.error("Error saving checklist:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Get checklist by contract ---
+app.get("/api/linen/checklist/:contractId", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const checklist = await LinenChecklist.findOne({ contractId });
+    res.json({ checklist });
+  } catch (err) {
+    console.error("Error fetching checklist:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Submit linen request to purchasing ---
+app.post("/api/linen/request", async (req, res) => {
+  try {
+    const { item, quantity, reason } = req.body;
+    const request = new LinenRequest({ item, quantity, reason });
+    await request.save();
+    res.json({ message: "Request submitted successfully", request });
+  } catch (err) {
+    console.error("Error submitting request:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Get all requests ---
+app.get("/api/linen/requests", async (req, res) => {
+  try {
+    const requests = await LinenRequest.find().sort({ dateRequested: -1 });
+    res.json({ requests });
+  } catch (err) {
+    console.error("Error fetching requests:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Start the server and listen on specified port
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
