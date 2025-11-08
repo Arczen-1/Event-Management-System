@@ -1594,22 +1594,24 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleAutoSave = async () => {
-    if (!existing) return; // Only auto-save for existing contracts
+  // CORRECTED VERSION for ContractForm.js
 
-    try {
-      const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page1: p1, page2: p2, page3: p3 }),
-      });
-      if (!res.ok) {
-        console.error("Auto-save failed");
-      }
-    } catch (error) {
-      console.error("Auto-save error:", error);
+const handleAutoSave = async () => {
+  if (!existing) return; // Only auto-save for existing contracts
+
+  try {
+    const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3 }),
+    });
+    if (!res.ok) {
+      console.error("Auto-save failed");
     }
-  };
+  } catch (error) {
+    console.error("Auto-save error:", error);
+  }
+};
 
   const handleSave = async (e) => {
     e.preventDefault();
