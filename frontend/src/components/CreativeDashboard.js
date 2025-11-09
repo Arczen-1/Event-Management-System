@@ -526,51 +526,187 @@ function CreativeDashboard({ onLogout }) {
     </div>
   );
 
-  const renderDetailsModal = () => (
+// === DROP-IN REPLACEMENT: renderDetailsModal ===
+const renderDetailsModal = () => {
+  const toTitle = (k = "") =>
+    String(k)
+      .replace(/([A-Z])/g, " $1")
+      .replace(/_/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/^./, (c) => c.toUpperCase());
+
+  const isPrimitive = (v) =>
+    v === null ||
+    v === undefined ||
+    typeof v === "string" ||
+    typeof v === "number" ||
+    typeof v === "boolean";
+
+  const renderValue = (v) => {
+    if (isPrimitive(v)) return String(v);
+    if (Array.isArray(v)) {
+      if (v.length === 0) return "—";
+      // array of primitives
+      if (v.every(isPrimitive)) return v.join(", ");
+      // array of objects → small table
+      const keys = Array.from(
+        new Set(v.flatMap((row) => Object.keys(row || {})))
+      ).slice(0, 8); // cap to avoid overly wide tables
+      return (
+        <div className="kv-table-wrapper">
+          <table className="kv-table">
+            <thead>
+              <tr>
+                {keys.map((k) => (
+                  <th key={k}>{toTitle(k)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {v.map((row, i) => (
+                <tr key={i}>
+                  {keys.map((k) => (
+                    <td key={k}>
+                      {isPrimitive(row?.[k])
+                        ? String(row?.[k] ?? "—")
+                        : JSON.stringify(row?.[k] ?? "—")}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    // nested object → render as sub grid
+    const entries = Object.entries(v || {});
+    if (entries.length === 0) return "—";
+    return (
+      <div className="kv-grid nested">
+        {entries.map(([k, val]) => (
+          <div key={k} className="kv-item">
+            <div className="kv-label">{toTitle(k)}</div>
+            <div className="kv-value">
+              {isPrimitive(val) ? String(val) : renderValue(val)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const Section = ({ title, data }) => {
+    const entries = Object.entries(data || {}).filter(
+      ([, v]) => !(v === undefined || v === null || String(v).trim?.() === "")
+    );
+    return (
+      <div className="details-section">
+        <h4>{title}</h4>
+        {entries.length === 0 ? (
+          <div className="empty">No data</div>
+        ) : (
+          <div className="kv-grid">
+            {entries.map(([k, v]) => (
+              <div key={k} className="kv-item">
+                <div className="kv-label">{toTitle(k)}</div>
+                <div className="kv-value">{renderValue(v)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
     <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Creative Contract Details</h3>
-          <button
-            className="close-btn"
-            onClick={() => setSelectedContract(null)}
-          >
+          <button className="close-btn" onClick={() => setSelectedContract(null)}>
             ×
           </button>
         </div>
+
         <div className="modal-body">
           {selectedContract && (
             <div className="contract-details contract-details-comprehensive">
+              {/* Top summary pulled from Sales */}
               <div className="detail-section">
-                <h4>Contract Information</h4>
-                <div className="detail-row">
-                  <strong>Contract Number:</strong>{" "}
-                  {selectedContract.contractNumber}
-                </div>
-                <div className="detail-row">
-                  <strong>Client:</strong>{" "}
-                  {selectedContract.page1?.client || "N/A"}
-                </div>
-                <div className="detail-row">
-                  <strong>Date of Event:</strong>{" "}
-                  {selectedContract.page1?.eventDate || "N/A"}
+                <h4>Summary</h4>
+                <div className="kv-grid">
+                  <div className="kv-item">
+                    <div className="kv-label">Contract Number</div>
+                    <div className="kv-value">
+                      {selectedContract.contractNumber || "—"}
+                    </div>
+                  </div>
+                  <div className="kv-item">
+                    <div className="kv-label">Status</div>
+                    <div className="kv-value">
+                      <span
+                        className={`status-pill ${
+                          (selectedContract.status || "draft")
+                            .toLowerCase()
+                            .replace(/\s+/g, "-")
+                        }`}
+                      >
+                        {selectedContract.status || "Draft"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="kv-item">
+                    <div className="kv-label">Client</div>
+                    <div className="kv-value">
+                      {selectedContract.page1?.client ||
+                        selectedContract.page1?.celebratorName ||
+                        "—"}
+                    </div>
+                  </div>
+                  <div className="kv-item">
+                    <div className="kv-label">Event Date</div>
+                    <div className="kv-value">
+                      {selectedContract.page1?.eventDate || "—"}
+                    </div>
+                  </div>
+                  <div className="kv-item">
+                    <div className="kv-label">Contract Name</div>
+                    <div className="kv-value">
+                      {selectedContract.page1?.contractName ||
+                        selectedContract.page1?.occasion ||
+                        "—"}
+                    </div>
+                  </div>
+                  <div className="kv-item">
+                    <div className="kv-label">Grand Total</div>
+                    <div className="kv-value">
+                      {selectedContract.page3?.grandTotal ?? "—"}
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Full Sales forms, including creative details that live in any page */}
+              <Section title="Sales Form — Page 1" data={selectedContract.page1} />
+              <Section title="Sales Form — Page 2" data={selectedContract.page2} />
+              <Section title="Financials — Page 3" data={selectedContract.page3} />
             </div>
           )}
         </div>
-        {/* --- MODIFIED: Removed Approve/Reject buttons --- */}
+
         <div className="modal-actions">
-          <button
-            className="btn-secondary"
-            onClick={() => setSelectedContract(null)}
-          >
+          <button className="btn-secondary" onClick={() => setSelectedContract(null)}>
             Close
           </button>
         </div>
       </div>
     </div>
   );
+};
+
+
 
   const renderGoogleSheetTable = () => (
   <div className="contracts-table-container" style={{ marginTop: "30px" }}>
