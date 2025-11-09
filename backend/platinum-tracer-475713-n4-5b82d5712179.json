@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "platinum-tracer-475713-n4",
+  "private_key_id": "5b82d57121795f0aac1ab6ca750fb31a0c76f809",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDvnePk1iz+276D\nhVScsNxaCbf0CnZZVpvgu8oUH+HrTuCp8dgNsTRaNaVmg5QvMhuG++8/t0BrBNIC\nTkMZWVdhanMTUfPj9FkEpEHsvQsIKcVHZhqU2HEC/tfZYKBreGHw62XQ+w1HZBdU\nUpkYS6e99SuHw0ctqLCbq8FsOAq/Buj3hukCdhyRw7BgYCLd9t9iifYxldLvvUZ9\n4yXrj/qjvj3nyLxM713lARvPRP9DC8mbZHNHEndjBIgEukKRNqUqYZY4baJpil/g\nP/Ck3FZ3SB8/m4TON5KeAcphZN3RcGf94xfrBJoXSEOd5OWZ6MkNx0DKqz9Lkg47\nNWN2dmOXAgMBAAECggEANXyUE0+vqZAZnbgUZAmilkKXGlV/h3+queaRPB7FykXI\nJodCiAPnQL+61QBIAqT3uhDgneNk8L6ZtkQL/EuSEr+1QjnH7Dlt6XhU8uhb3w2b\n6M0k39bUmyuRuQc1p+euTR3uk1CG7UmtX3g0jlTM870XY222pL2D9qvHOEXmOC9/\nG7th2t7kjll1Zmcw849uHFKjC0Rp07qTHV7fVPREteJkiV1wWHAJesmByK3jBUUG\n+O5N/xyYXc2lthwCqOaUqIzUedrEX08YTpfa6+yQn39MM2BtVMZ0BABc8EMkZmUP\nc5NLYb847Cb/ApoLEcQ3oS4CqBLVjGtDLITAHExIgQKBgQD6AiU/oYf3zmBmMPuA\nAjagpeuldqByStleun+kInwXaTfmgvXeBUfdUXzNnq02x7BadEt2bO2bLUpFd5br\n12Fu8GW6Ya2Rk6dLxYPst5y/AVN6Si9kJ990sfz18uwBjeT7hCTK8nHd5IiHGqeP\nGQFuFcu9MQtw+fIzzArFLL89wQKBgQD1W/1qD6HNqf7vQp1dATpqLMJyBBkuCHkJ\n59ucdSy1L05IfQ+YuLqzXOI3FlT5sAwa0sw3/jwtu6aiUBHX5CR1DCBqKu+gGjta\nSGe/DXlUk55gjxMK8maXtd5rY3+fAZk3TQ3apWexM7Z+afyl5uu0rn2tmO7kiexw\nKeejAxAnVwKBgBxomAD2AvRGsC+Mi1eNaNWyZOeFZk/2b2LTQGPPQ1iJrT91TCjx\nYqwkcVEQIdCiukhdBKItWIaUi+b+4thjvf+UM4sNRGLRa2YxyH7ikl4l8W1o9p+j\n5EFnZD4yX10B2a424tNo30V+jYEEp1ucVMxEj8UsyIcK79mw6txi7ExBAoGBAORZ\n4vYM6mgAqNWAx/hBJl6enbGDgvPGyu+fLFLm8t8F0fPBAP0AIDLCZX8jd56SbBGi\n0pHiOZvOo304zAKDwDJ3QMvOfgohn8+cx4GWRq+iW6o+PljX1QepKgIELkiMMk63\nlgdCHclb+aKZfZvh2MjmBO3GAcANZVHWjlC2jxgtAoGBAK+PB2QH0XIPNQsqkbeI\nu24n1BjvlLK3xj8ioBBWtcv5adI5RMz+KidhFag9MRiryKxHydhkavzI9rZV2BwF\nAEenw7oTKbWH/OrvzXODQbTxV07s5p8mbTeXJP6UBaK+iaSGfozn1tjUZjh2n3ft\ndM01894hDquLliHS4qzJTEwe\n-----END PRIVATE KEY-----\n",
+  "client_email": "catering@platinum-tracer-475713-n4.iam.gserviceaccount.com",
+  "client_id": "112914840414755579075",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/catering%40platinum-tracer-475713-n4.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
