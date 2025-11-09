@@ -1,109 +1,49 @@
 const { google } = require("googleapis");
-const path = require("path");
-const fs = require("fs");
 
-// ==================== GOOGLE AUTH CLIENT ====================
 async function getSheetsClient() {
-  try {
-    const possiblePaths = [
-      path.resolve(__dirname, "platinum-tracer-475713-n4-5b82d5712179.json"),
-      path.resolve(__dirname, "../platinum-tracer-475713-n4-5b82d5712179.json"),
-      path.resolve(__dirname, "../../platinum-tracer-475713-n4-5b82d5712179.json"),
-    ];
-
-    const keyPath = possiblePaths.find((p) => fs.existsSync(p));
-    if (!keyPath) throw new Error("Google service account key not found in any path.");
-
-    const auth = new google.auth.GoogleAuth({
-      keyFile: keyPath,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-    });
-
-    const client = await auth.getClient();
-    return google.sheets({ version: "v4", auth: client });
-  } catch (err) {
-    console.error("❌ Google Sheets auth error:", err.message);
-    throw err;
-  }
+  const auth = new google.auth.GoogleAuth({
+    keyFile: "credentials.json", // download this from Google Cloud
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+  });
+  const client = await auth.getClient();
+  return google.sheets({ version: "v4", auth: client });
 }
 
-// ==================== CONFIG ====================
-const SPREADSHEET_ID = "18SWu5EY7DGgUuqCUEOcpjxp-t-vlYpfWPalGRsVdVT8";
-const TARGET_TAB = "CREATIVE INVENTORY (2)";
-const RANGE = `${TARGET_TAB}!A6:Z`; // include headers (row 6–7 in your sheet)
+const SPREADSHEET_ID = "1cZhXx1MgHczqTguePFD0lTWWEksCrMpJAFhzIY0u1CM";
+const RANGE = "Sheet1!A:Z"; // if the tab is literally "Sheet1"
+ // tab name + range
 
-// ==================== FETCH + FORMAT ====================
-async function fetchCreativeSheetData() {
-  try {
-    const sheets = await getSheetsClient();
-    const resp = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: RANGE,
-    });
+async function fetchMonitoringData() {
+  const sheets = await getSheetsClient();
+  const resp = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: "Sheet1!A:Z",  // ✅ make sure "Sheet1" matches your actual tab name
+  });
 
-    let rows = resp.data.values || [];
-    if (!rows.length) return [];
+  const rows = resp.data.values || [];
+  let sections = [];
+  let currentSection = { header: [], rows: [] };
 
-    // === Identify header row ===
-    const headerIndex = rows.findIndex((r) =>
-      r.join(" ").toUpperCase().includes("ITEM DESCRIPTION")
-    );
-    if (headerIndex === -1) {
-      console.warn("⚠️ Header row not found, returning raw data");
-      return rows;
+  rows.forEach((row) => {
+    // detect header row (if it contains "DATE" and "ONHAND")
+    if (row.includes("DATE") && row.includes("ONHAND")) {
+      // save previous section if it exists
+      if (currentSection.rows.length > 0) sections.push(currentSection);
+      currentSection = { header: row, rows: [] };
+    } else if (row.length > 0) {
+      currentSection.rows.push(row);
     }
+  });
 
-    const headers = rows[headerIndex].map((h) => h.trim());
-    const dataRows = rows.slice(headerIndex + 1);
+  // push the last section
+  if (currentSection.rows.length > 0) sections.push(currentSection);
 
-    // === Parse grouped sections ===
-    const structured = [];
-    let currentSection = null;
-
-    for (const row of dataRows) {
-      const clean = row.map((v) => (v ? v.toString().trim() : ""));
-      const [itemNo, description, uom, actual, damaged, disposal, good, remarks] = clean;
-
-      const isSectionHeader =
-        description &&
-        !itemNo &&
-        !uom &&
-        !actual &&
-        !damaged &&
-        !disposal &&
-        !good &&
-        !remarks;
-
-      if (isSectionHeader) {
-        currentSection = { section: description, items: [] };
-        structured.push(currentSection);
-      } else if (currentSection && description) {
-        currentSection.items.push({
-          "Item No.": itemNo || "",
-          "Item Description": description || "",
-          UOM: uom || "",
-          "Actual Count": actual || "",
-          "Damage / For Repair": damaged || "",
-          "For Disposal": disposal || "",
-          "Good Inventory": good || "",
-          Remarks: remarks || "",
-        });
-      }
-    }
-
-    return {
-      headers: headers,
-      grouped: structured,
-    };
-  } catch (err) {
-    console.error("❌ Error fetching Google Sheets data:", err.message);
-    throw err;
-  }
+  return sections;
 }
 
-// ==================== EXPORTS ====================
-module.exports = {
+
+
+module.exports = { 
   getSheetsClient,
-  fetchCreativeSheetData,
-  SPREADSHEET_ID,
-};
+  fetchMonitoringData,
+  SPREADSHEET_ID   };
