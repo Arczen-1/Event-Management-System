@@ -3,6 +3,21 @@ import "./SalesDashboard.css";
 import ContractForm from "./ContractForm";
 import Profile from "./Profile";
 
+function validateContractFullyFilled(contract) {
+  const errors = [];
+
+  // Example validation for page1
+  if (!contract.page1 || !contract.page1.contractName) errors.push("Contract Name is missing");
+  if (!contract.page1 || !contract.page1.celebratorName) errors.push("Client/Celebrator Name is missing");
+  if (!contract.page1 || !contract.page1.eventDate) errors.push("Event Date is missing");
+
+  // Example validation for page3 (financials)
+  if (!contract.page3 || !contract.page3.grandTotal) errors.push("Grand Total is missing");
+
+  return errors;
+}
+
+
 function SalesDashboard({ onLogout, user }) {
   const [contracts, setContracts] = useState([]);
   const [fullContracts, setFullContracts] = useState([]);

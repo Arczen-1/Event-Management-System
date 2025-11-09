@@ -17,7 +17,7 @@ app.use(cors()) // Enable CORS for all routes (allows frontend to connect)
 app.use(express.json()) // Parse JSON request bodies
 
 // MongoDB database connection
-mongoose.connect("mongodb://127.0.0.1:27017/testdb") // Connect to local MongoDB instance
+mongoose.connect("mongodb+srv://CapIT2467:CAPSTONE67@capstone.a1edsw6.mongodb.net/?appName=CAPSTONE") // Connect to local MongoDB instance
 
 // Database connection event handlers
 const db = mongoose.connection

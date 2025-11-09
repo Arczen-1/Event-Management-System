@@ -621,7 +621,7 @@ useEffect(() => {
   e.preventDefault();
 
   const requestData = {
-    username: user?.username,     // ✅ matches your schema
+    username: user?.username,    
     item: newRequest.item,
     quantity: newRequest.quantity,
     remarks: newRequest.remarks,
