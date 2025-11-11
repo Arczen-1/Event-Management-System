@@ -4,31 +4,15 @@ const fs = require("fs");
 
 // ==================== GOOGLE AUTH CLIENT ====================
 async function getSheetsClient() {
-  try {
-    const possiblePaths = [
-      path.resolve(__dirname, "platinum-tracer-475713-n4-5b82d5712179.json"),
-      path.resolve(__dirname, "../platinum-tracer-475713-n4-5b82d5712179.json"),
-      path.resolve(__dirname, "../../platinum-tracer-475713-n4-5b82d5712179.json"),
-    ];
-
-    const keyPath = possiblePaths.find((p) => fs.existsSync(p));
-    if (!keyPath) throw new Error("Google service account key not found in any path.");
-
-    const auth = new google.auth.GoogleAuth({
-      keyFile: keyPath,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-    });
-
-    const client = await auth.getClient();
-    return google.sheets({ version: "v4", auth: client });
-  } catch (err) {
-    console.error("❌ Google Sheets auth error:", err.message);
-    throw err;
-  }
+  const auth = new google.auth.GoogleAuth({
+    keyFile: "credentials.json", // download this from Google Cloud
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+  });
+  const client = await auth.getClient();
+  return google.sheets({ version: "v4", auth: client });
 }
-
 // ==================== CONFIG ====================
-const SPREADSHEET_ID = "18SWu5EY7DGgUuqCUEOcpjxp-t-vlYpfWPalGRsVdVT8";
+const SPREADSHEET_ID = "1KD-4498UGe-EZHkA3PLunYHoXAbUmdBzj-SzUvBMS28";
 const TARGET_TAB = "CREATIVE INVENTORY (2)";
 const RANGE = `${TARGET_TAB}!A6:Z`; // include headers (row 6–7 in your sheet)
 
