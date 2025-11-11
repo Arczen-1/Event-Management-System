@@ -495,19 +495,345 @@ app.get("/contracts/creative", async (req, res) => {
   }
 });
 
-// Get a single contract by ID
+// Helper to build the next contract number with monthly reset.
+// Format: YYYY/MM/DD-XXXX where XXXX is 4-digit sequence reset monthly.
+async function generateNextContractNumber(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const key = `${year}/${month}`
+
+  // Atomically increment the counter for this month
+  const counter = await Counter.findOneAndUpdate(
+    { key },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  )
+
+  const seq = String(counter.seq).padStart(4, "0")
+  return `${year}${month}${day}-${seq}`
+}
+
+// GET /contracts/next-number - Preview the next contract number (no write besides counter)
+app.get("/contracts/next-number", async (req, res) => {
+  try {
+    // Use a sessionless peek without increment? Requirement says increases unless deleted,
+    // but we need stability. We'll increment only on creation, so here we simulate next
+    // by reading current seq. If none, next is 0001.
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, "0")
+    const key = `${year}/${month}`
+    const doc = await Counter.findOne({ key })
+    const nextSeq = String(((doc && doc.seq) || 0) + 1).padStart(4, "0")
+    const day = String(now.getDate()).padStart(2, "0")
+    res.json({ nextNumber: `${year}${month}${day}-${nextSeq}` })
+  } catch (error) {
+    console.error("Next number error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// POST /contracts - Create a new contract with auto-generated number
+app.post("/contracts", async (req, res) => {
+  try {
+    const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, pageBuffet = {}, page3 = {} } = req.body
+
+    // If status is "For Approval", validate required fields
+    if (status === "For Approval") {
+      const tempContract = { page1, page2, pageBuffet, page3 };
+      const validationErrors = validateContractForApproval(tempContract);
+      if (validationErrors.length > 0) {
+        return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
+      }
+    }
+
+    const contractNumber = await generateNextContractNumber(new Date())
+
+    const contract = await Contract.create({
+      contractNumber,
+      department,
+      status,
+      page1,
+      page2,
+      pageBuffet,
+      page3,
+    })
+
+    res.json({ message: "Contract created", contract })
+  } catch (error) {
+    console.error("Create contract error:", error)
+    if (error.code === 11000) {
+      // Rare race: regenerate and retry once
+      try {
+        const contractNumber = await generateNextContractNumber(new Date())
+        const { department = "Sales", status = "Draft", page1 = {}, page2 = {}, pageBuffet = {}, page3 = {} } = req.body
+        // Re-validate if needed
+        if (status === "For Approval") {
+          const tempContract = { page1, page2, pageBuffet, page3 };
+          const validationErrors = validateContractForApproval(tempContract);
+          if (validationErrors.length > 0) {
+            return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
+          }
+        }
+        const contract = await Contract.create({ contractNumber, department, status, page1, page2, pageBuffet, page3 })
+        return res.json({ message: "Contract created", contract })
+      } catch (err2) {
+        console.error("Retry create contract error:", err2)
+      }
+    }
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// GET /contracts/:id - Fetch full contract details
 app.get("/contracts/:id", async (req, res) => {
   try {
-    const { id } = req.params;
-    const contract = await Contract.findById(id);
-    if (!contract) return res.status(404).json({ message: "Contract not found" });
-    res.json({ contract });
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid contract id" })
+    }
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    res.json({ contract })
   } catch (error) {
-    console.error("Fetch single contract error:", error);
-    res.status(500).json({ message: "Failed to fetch contract details" });
+    console.error("Get contract error:", error)
+    res.status(500).json({ message: "Server error" })
   }
-});
+})
 
+// GET /contracts - List contracts (basic, newest first)
+app.get("/contracts", async (req, res) => {
+  try {
+    const contracts = await Contract.find({}).sort({ createdAt: -1 })
+    res.json({ contracts })
+  } catch (error) {
+    console.error("List contracts error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// PUT /contracts/:id - Update a contract (allowed while Draft or Rejected)
+app.put("/contracts/:id", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const { page1 = {}, page2 = {}, pageBuffet = {}, page3 = {}, status, rejectionReason } = req.body
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (!["Draft", "Rejected"].includes(contract.status)) return res.status(400).json({ message: "Only Draft or Rejected contracts can be edited" })
+
+    // Update the fields
+    contract.page1 = page1
+    contract.page2 = page2
+    contract.pageBuffet = pageBuffet
+    contract.page3 = page3
+    if (rejectionReason !== undefined) contract.rejectionReason = rejectionReason
+
+    // If status is being set to "For Approval", validate required fields
+    if (status === "For Approval") {
+      const validationErrors = validateContractForApproval(contract);
+      if (validationErrors.length > 0) {
+        return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
+      }
+      contract.status = status
+    } else if (status) {
+      contract.status = status
+    }
+
+    await contract.save()
+    res.json({ message: "Contract updated", contract })
+  } catch (error) {
+    console.error("Update contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// PUT /contracts/:id/approve - Approve a contract (Sales Manager only)
+app.put("/contracts/:id/approve", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (contract.status !== "For Approval") return res.status(400).json({ message: "Only contracts with 'For Approval' status can be approved" })
+    
+    contract.status = "For Accounting Review"
+    await contract.save()
+    res.json({ message: "Contract approved and sent to Accounting", contract })
+  } catch (error) {
+    console.error("Approve contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+app.put("/contracts/:id/reject", async (req, res) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+    console.log("Received reject request for ID:", id); // Debug log
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.log("Invalid ObjectId format for ID:", id); // Debug log
+      return res.status(400).json({ message: "Invalid contract id" })
+    }
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    console.log(`Reject request for contract ${id} with current status: '${contract.status}'`)  // Added quotes for debug
+    if (contract.status.trim().toLowerCase() !== "for approval") return res.status(400).json({ message: "Only contracts with 'For Approval' status can be rejected" })
+
+    contract.status = "Rejected"
+    contract.rejectionReason = reason || ""
+    await contract.save()
+    res.json({ message: "Contract rejected and status set to Rejected", contract })
+  } catch (error) {
+    console.error("Reject contract error:", error)
+    res.status(500).json({ message: "Server error: " + error.message })  // More detailed error message
+  }
+})
+
+// PUT /contracts/:id/accounting-approve - Approve a contract (Accounting only)
+app.put("/contracts/:id/accounting-approve", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (contract.status !== "For Accounting Review") return res.status(400).json({ message: "Only contracts with 'For Accounting Review' status can be approved by Accounting" })
+    
+    contract.status = "Active"
+    await contract.save()
+    res.json({ message: "Contract approved by Accounting and activated", contract })
+  } catch (error) {
+    console.error("Accounting approve contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// PUT /contracts/:id/accounting-reject - Reject a contract (Accounting only)
+app.put("/contracts/:id/accounting-reject", async (req, res) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid contract id" })
+    const contract = await Contract.findById(id)
+    if (!contract) return res.status(404).json({ message: "Not found" })
+    if (contract.status !== "For Accounting Review") return res.status(400).json({ message: "Only contracts with 'For Accounting Review' status can be rejected by Accounting" })
+
+    contract.status = "For Approval"
+    contract.rejectionReason = reason || ""
+    await contract.save()
+    res.json({ message: "Contract rejected by Accounting and returned to Sales Manager", contract })
+  } catch (error) {
+    console.error("Accounting reject contract error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
+
+// Helper function to validate contract for approval (only required fields with asterisks)
+const validateContractForApproval = (contract) => {
+  const errors = [];
+  const p1 = contract.page1 || {};
+  const p2 = contract.page2 || {};
+  const p3 = contract.page3 || {};
+
+  // Required fields in page1
+  const requiredP1Fields = [
+    'celebratorName', 'representativeName', 'representativeRelationship', 'representativeEmail', 'representativeAddress', 'representativeMobile',
+    'coordinatorName', 'coordinatorMobile', 'coordinatorEmail', 'coordinatorAddress', 'eventDate', 'occasion', 'serviceStyle', 'venue', 'hall', 'address',
+    'arrivalOfGuests', 'ingressTime', 'cocktailTime', 'servingTime', 'totalVIP', 'totalRegular', 'totalGuests', 'themeSetup', 'colorMotif',
+    'vipTableType', 'vipTableSeats', 'vipTableQuantity', 'regularTableType', 'regularTableSeats', 'regularTableQuantity',
+    'vipUnderliner', 'vipNapkin', 'guestUnderliner', 'guestNapkin'
+  ];
+  requiredP1Fields.forEach(field => {
+    if (!p1[field] || !p1[field].trim()) {
+      errors.push(`Page 1 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    }
+  });
+
+  // Email validations for required emails
+  const validateEmail = (email) => {
+    if (email.toUpperCase() === "N/A") return true;
+    return email.includes("@gmail.com") || email.includes("@yahoo.com");
+  };
+  if (p1.representativeEmail && !validateEmail(p1.representativeEmail)) {
+    errors.push("Page 1 - Representative email must end with @gmail.com or @yahoo.com");
+  }
+  if (p1.coordinatorEmail && !validateEmail(p1.coordinatorEmail)) {
+    errors.push("Page 1 - Coordinator email must end with @gmail.com or @yahoo.com");
+  }
+
+  // Phone validations for required phones
+  if (p1.representativeMobile && p1.representativeMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.representativeMobile)) {
+    errors.push("Page 1 - Representative mobile must be 11 digits or N/A");
+  }
+  if (p1.coordinatorMobile && p1.coordinatorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.coordinatorMobile)) {
+    errors.push("Page 1 - Coordinator mobile must be 11 digits or N/A");
+  }
+
+  // Required fields in page2 (chairs)
+  const requiredP2Fields = ['chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs'];
+  requiredP2Fields.forEach(field => {
+    if (!p2[field] || !p2[field].trim()) {
+      errors.push(`Page 2 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    }
+  });
+
+  // Check chairs sum
+  const sum = (parseInt(p2.chairsMonoblock) || 0) + (parseInt(p2.chairsTiffany) || 0) + (parseInt(p2.chairsCrystal) || 0) +
+              (parseInt(p2.chairsRustic) || 0) + (parseInt(p2.chairsKiddie) || 0) + (parseInt(p2.premiumChairs) || 0);
+  const total = parseInt(p2.totalChairs) || 0;
+  if (sum !== total) {
+    errors.push(`Page 2 - The total number of chairs entered (${sum}) must equal the Total Chairs (${total}).`);
+  }
+
+  // Check at least one knowUs
+  const knowUsFields = ['knowUsWebsite', 'knowUsFacebook', 'knowUsInstagram', 'knowUsFlyers', 'knowUsBillboard', 'knowUsWordOfMouth',
+                        'knowUsVenueReferral', 'knowUsRepeatClient', 'knowUsBridalFair', 'knowUsFoodTasting', 'knowUsCelebrityReferral', 'knowUsOthers'];
+  const hasKnowUs = knowUsFields.some(field => p2[field]);
+  if (!hasKnowUs) {
+    errors.push("Page 2 - At least one 'How did you know our company' option must be selected");
+  }
+
+  // Required fields in page3
+  const requiredP3Fields = ['pricePerPlate'];
+  requiredP3Fields.forEach(field => {
+    if (!p3[field] || !p3[field].trim()) {
+      errors.push(`Page 3 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    }
+  });
+
+  return errors;
+};
+
+// PUT /contracts/:id/send-for-approval - Send a contract for approval
+app.put("/contracts/:id/send-for-approval", async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid contract id" })
+    }
+    const contract = await Contract.findById(id)
+    if (!contract) {
+      return res.status(404).json({ message: "Not found" })
+    }
+    if (contract.status !== "Draft") {
+      return res.status(400).json({ message: "Only Draft contracts can be sent for approval" })
+    }
+
+    // Validate that the contract is fully filled
+    const validationErrors = validateContractFullyFilled(contract);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ message: "Contract must be fully filled before sending for approval:\n\n" + validationErrors.join("\n") });
+    }
+
+    contract.status = "For Approval"
+    await contract.save()
+    res.json({ message: "Contract sent for approval", contract })
+  } catch (error) {
+    console.error("Send for approval error:", error)
+    res.status(500).json({ message: "Server error" })
+  }
+})
 // ==================== CREATIVE REQUEST ROUTES ====================
 
 // Get all creative requests
