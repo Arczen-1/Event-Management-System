@@ -2269,7 +2269,8 @@ const handleAutoSave = async () => {
           <input value={p2.totalChairs} readOnly />
         </div>
       </div>
-      
+
+      {errors.chairsSum && <div className="validation-error">{errors.chairsSum}</div>}
       <div className="form-row four">
         <div className="form-group">
           <label>Monoblock <span className="required-asterisk">*</span></label>
@@ -2300,6 +2301,8 @@ const handleAutoSave = async () => {
             onChange={(e) => setP2({...p2, chairsTiffany: e.target.value})} 
           />
         </div>
+
+        
         
         <div className="form-group">
           <label>Premium <span className="required-asterisk">*</span></label>
@@ -2311,6 +2314,8 @@ const handleAutoSave = async () => {
           />
         </div>
       </div>
+
+      
       
       {/* Removed Chairs Remarks */}
 
