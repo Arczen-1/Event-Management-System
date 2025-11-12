@@ -1,3 +1,131 @@
+/* Color Motif Styles - Selected Only in Dropdown */
+.color-motif-container {
+  width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: "Aileron", sans-serif;
+    box-sizing: border-box;
+}
+
+.color-input-simple {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: "Aileron", sans-serif;
+  background-color: white;
+  cursor: pointer;
+}
+
+.color-input-simple:focus {
+  border-color: #410d1d;
+  outline: none;
+}
+
+.color-select-placeholder {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.color-dropdown-selected {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-top: 4px;
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.selected-colors-section {
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f9f9f9;
+}
+
+.selected-colors-label {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.selected-colors-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.color-tag {
+  display: flex;
+  align-items: center;
+  background-color: #410d1d;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.color-tag-remove {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+}
+
+.color-tag-remove:hover {
+  background-color: rgba(255,255,255,0.2);
+}
+
+.color-options-section {
+  padding: 8px 0;
+}
+
+.color-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.color-option:hover {
+  background-color: #f5f5f5;
+}
+
+.color-option:last-child {
+  border-bottom: none;
+}
+
+.color-option:disabled {
+  color: #999;
+  cursor: not-allowed;
+  background-color: #f9f9f9;
+}
+
+.color-count {
+  font-size: 12px;
+  color: #6c757d;
+  margin-top: 4px;
+  text-align: right;
+}
 .contract-form {
   background: white;
   border-radius: 12px;
@@ -650,4 +778,5 @@
   .buffet-select-label {
     display: none;
   }
+  
 }

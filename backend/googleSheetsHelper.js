@@ -25,15 +25,18 @@ async function fetchMonitoringData() {
   let currentSection = { header: [], rows: [] };
 
   rows.forEach((row) => {
-    // detect header row (if it contains "DATE" and "ONHAND")
-    if (row.includes("DATE") && row.includes("ONHAND")) {
-      // save previous section if it exists
-      if (currentSection.rows.length > 0) sections.push(currentSection);
-      currentSection = { header: row, rows: [] };
-    } else if (row.length > 0) {
-      currentSection.rows.push(row);
-    }
-  });
+  // detect header row for either monitoring sheet or inventory sheet
+  if (
+    (row.includes("DATE") && row.includes("ONHAND")) ||
+    (row.includes("Item ID") && row.includes("Item Name"))
+  ) {
+    // save previous section if it exists
+    if (currentSection.rows.length > 0) sections.push(currentSection);
+    currentSection = { header: row, rows: [] };
+  } else if (row.length > 0) {
+    currentSection.rows.push(row);
+  }
+});
 
   // push the last section
   if (currentSection.rows.length > 0) sections.push(currentSection);
