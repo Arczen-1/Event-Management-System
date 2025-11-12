@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "./DepartmentDashboard.css";
+import "./SalesManagerDashboard.css"; // pull in the same button styles as CreativeDashboard
 
 // ---- Helpers (no hooks deps) ----
 const isSentToPurchasing = (s) =>
@@ -328,22 +329,24 @@ function PurchasingDashboard({ onLogout }) {
     );
   };
 
-  // Separate actions cell
+  // Actions cell — match CreativeDashboard styling
   const ActionCell = ({ row }) => {
     const bStatus = String(row?.budget?.status || "").toLowerCase();
     const isPending = bStatus === "pending";
+    const isBusy = loadingActionId === row._id;
+
     return (
-      <div className="budget-actions" style={{ display: "flex", gap: 8 }}>
+      <div className="btn-group">
         <button
-          disabled={!isPending || loadingActionId === row._id}
-          className="btn btn-approve"
+          disabled={!isPending || isBusy}
+          className="btn-approve"
           onClick={() => openApproveModal(row)}
         >
-          {loadingActionId === row._id ? "Saving..." : "Approve"}
+          {isBusy ? "Saving..." : "Approve"}
         </button>
         <button
-          disabled={!isPending || loadingActionId === row._id}
-          className="btn btn-reject"
+          disabled={!isPending || isBusy}
+          className="btn-reject"
           onClick={() => openRejectModal(row)}
         >
           Reject

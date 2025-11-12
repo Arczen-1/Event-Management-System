@@ -10,6 +10,22 @@ const MaterialSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// --- Budget Schema (NEW) ---
+const BudgetSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ["Pending", "Approved", "Rejected"],
+      default: "Pending",
+    },
+    amount: { type: Number, default: null },
+    notes: { type: String, default: "" }, // approval notes or reject reason
+    requestRef: { type: mongoose.Schema.Types.Mixed, default: null }, // optional reference to source row/id
+    source: { type: String, default: "creative" }, // "creative" | "fabrication"
+  },
+  { _id: false }
+);
+
 // --- Creative Request Schema ---
 const CreativeRequestSchema = new mongoose.Schema(
   {
@@ -38,9 +54,16 @@ const CreativeRequestSchema = new mongoose.Schema(
     contractName: { type: String, default: "" },
     client: { type: String, default: "" },
     contractNo: { type: String, default: "" },
-    rejectionReason: { type: String, default: "" }, // Added rejection reason support
+
+    // Store explicit reject reason at the top level for convenience in other pages
+    rejectionReason: { type: String, default: "" },
+
+    // Window of work
     startDate: { type: Date },
     endDate: { type: Date },
+
+    // --- Purchasing / Budget block (NEW) ---
+    budget: { type: BudgetSchema, default: () => ({}) },
   },
   { timestamps: true }
 );

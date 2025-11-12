@@ -58,8 +58,7 @@ function CreativeManagerDashboard({ onLogout }) {
       let arr = [];
       if (Array.isArray(data)) arr = data;
       else if (Array.isArray(data.requests)) arr = data.requests;
-      else if (Array.isArray(data.creativeRequests))
-        arr = data.creativeRequests;
+      else if (Array.isArray(data.creativeRequests)) arr = data.creativeRequests;
       else if (data.request) arr = [data.request];
       setCreativeRequests(arr);
     } catch (err) {
@@ -72,7 +71,7 @@ function CreativeManagerDashboard({ onLogout }) {
   const fetchGoogleSheetData = async () => {
     try {
       const res = await fetch("http://localhost:5000/api/sheets/creative");
-      const data = await res.json();
+    const data = await res.json();
       setSheetData(data.data || []);
       setShowSheetData(true);
     } catch (err) {
@@ -126,7 +125,7 @@ function CreativeManagerDashboard({ onLogout }) {
     }
   };
 
-  // === REJECT REQUEST ===
+  // === REJECT REQUEST (by Creative Manager) ===
   const handleRejectSubmit = async () => {
     if (!reviewingRequest) return;
     try {
@@ -141,10 +140,15 @@ function CreativeManagerDashboard({ onLogout }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to reject");
 
+      // Locally reflect the preferred display label
       setCreativeRequests((prev) =>
         prev.map((r) =>
           r._id === reviewingRequest._id
-            ? { ...r, status: "Rejected", rejectionReason: rejectReason }
+            ? {
+                ...r,
+                status: "Rejected by Creative Manager",
+                rejectionReason: rejectReason,
+              }
             : r
         )
       );
@@ -265,6 +269,7 @@ function CreativeManagerDashboard({ onLogout }) {
     </div>
   );
 
+  // --- Filtering (same tabs as before) ---
   const getFilteredRequests = () => {
     switch (activeTab) {
       case "for-approval":
@@ -282,6 +287,35 @@ function CreativeManagerDashboard({ onLogout }) {
   const countSentToPurchasing = creativeRequests.filter(
     (r) => r.status === "Sent to Purchasing"
   ).length;
+
+  // --- Display label logic (unchanged) ---
+  const displayStatus = (r = {}) => {
+    const raw = String(r.status || "");
+
+    // CM rejection
+    if (raw === "Rejected" || raw === "Rejected by Creative Manager") {
+      return "Rejected by Creative Manager";
+    }
+
+    // Purchasing rejection rendered off budget.status
+    const budgetStatus = String(r?.budget?.status || "").toLowerCase();
+    if (raw === "Sent to Purchasing" && budgetStatus === "rejected") {
+      return "Rejected by Purchasing";
+    }
+
+    // Accounting rejection (future-proof)
+    if (raw === "Rejected by Accounting") {
+      return "Rejected by Accounting";
+    }
+    if (
+      raw === "Sent to Accounting" &&
+      String(r?.accounting?.status || "").toLowerCase() === "rejected"
+    ) {
+      return "Rejected by Accounting";
+    }
+
+    return raw || "—";
+  };
 
   const statusClass = (s = "") => s.toLowerCase().replace(/\s+/g, "-");
   const sectionStyle = { marginTop: "28px" };
@@ -405,45 +439,66 @@ function CreativeManagerDashboard({ onLogout }) {
                     <td colSpan="7">No creative requests found</td>
                   </tr>
                 ) : (
-                  filteredRequests.map((r, idx) => (
-                    <tr key={r._id || idx}>
-                      <td>{r.requestName}</td>
-                      <td>{r.contractNo}</td>
-                      <td>{r.client}</td>
-                      <td style={{ maxWidth: 240, whiteSpace: "pre-wrap" }}>
-                        {r.materials
-                          ?.map((m) => `${m.name} (${m.quantity})`)
-                          .join("\n")}
-                      </td>
-                      <td>{r.dueDate?.slice(0, 10)}</td>
-                      <td>
-                        <span className={`status ${statusClass(r.status)}`}>
-                          {r.status}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="btn-group">
-                          <button
-                            className="btn-delete"
-                            onClick={() => handleDeleteRequest(r._id)}
-                          >
-                            Delete
-                          </button>
-                          {r.status === "For Approval" && (
-                            <button
-                              className="btn-review"
-                              onClick={() => {
-                                setReviewingRequest(r);
-                                setShowReviewModal(true);
-                              }}
-                            >
-                              Review
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  filteredRequests.map((r, idx) => {
+                    const label = displayStatus(r);
+                    const rawStatus = String(r.status || "");
+                    // 🔒 Lock behavior identical to CreativeDashboard: lock whenever raw is "Sent to Purchasing"
+                    const isLocked = rawStatus === "Sent to Purchasing";
+
+                    return (
+                      <tr key={r._id || idx}>
+                        <td>{r.requestName}</td>
+                        <td>{r.contractNo}</td>
+                        <td>{r.client}</td>
+                        <td style={{ maxWidth: 240, whiteSpace: "pre-wrap" }}>
+                          {r.materials
+                            ?.map((m) => `${m.name} (${m.quantity})`)
+                            .join("\n")}
+                        </td>
+                        <td>{r.dueDate?.slice(0, 10)}</td>
+                        <td>
+                          <span className={`status ${statusClass(label)}`}>
+                            {label}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="btn-group">
+                            {isLocked ? (
+                              <span
+                                style={{
+                                  color: "#666",
+                                  fontStyle: "italic",
+                                  fontSize: "13px",
+                                }}
+                              >
+                                Locked (Sent to Purchasing)
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  className="btn-delete"
+                                  onClick={() => handleDeleteRequest(r._id)}
+                                >
+                                  Delete
+                                </button>
+                                {r.status === "For Approval" && (
+                                  <button
+                                    className="btn-review"
+                                    onClick={() => {
+                                      setReviewingRequest(r);
+                                      setShowReviewModal(true);
+                                    }}
+                                  >
+                                    Review
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

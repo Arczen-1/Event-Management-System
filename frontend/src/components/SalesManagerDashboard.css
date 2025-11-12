@@ -619,3 +619,45 @@
   color: #555;
   padding: 30px;
 }
+
+/* ==== Creative Requests: status badges (CM section) ==== */
+.status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid transparent;
+}
+
+/* --- RED for all "Rejected ..." labels --- */
+.status.rejected,
+.status.rejected-by-creative-manager,
+.status.rejected-by-purchasing,
+.status.rejected-by-accounting {
+  background: #e53935;   /* red */
+  color: #ffffff;
+  border-color: #c62828;
+}
+
+/* --- GREEN for accepted/forwarded states --- */
+.status.sent-to-purchasing,
+.status.sent-to-accounting,
+.status.active,
+.status.approved,
+.status.accepted,
+.status.for-accounting-review { /* in case you surface this state as 'accepted to accounting' */
+  background: #2e7d32;  /* green */
+  color: #ffffff;
+  border-color: #1b5e20;
+}
+
+/* --- Optional: neutral/yellow for pending states --- */
+.status.for-approval,
+.status.pending,
+.status.draft {
+  background: #f6c344;  /* soft amber */
+  color: #442c00;
+  border-color: #d6a62a;
+}

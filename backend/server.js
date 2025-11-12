@@ -847,6 +847,18 @@ app.get("/creativeRequests", async (req, res) => {
   }
 });
 
+// Alias: some clients fetch /creative-requests (hyphen) instead of /creativeRequests (camel)
+app.get("/creative-requests", async (req, res) => {
+  try {
+    const requests = await CreativeRequest.find().sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (error) {
+    console.error("Fetch creative-requests alias error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 // ✅ Create a new creative request (for "Submit Request")
 app.post("/creativeRequests", async (req, res) => {
   try {
@@ -955,6 +967,112 @@ app.delete("/creativeRequests/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to delete creative request" });
   }
 });
+
+// ==================== PURCHASING ROUTES (Budget Decisions) ====================
+
+// Helper: pick model by source field from the UI ("creative" | "fabrication")
+function getModelAndProjectionBySource(source) {
+  if (String(source).toLowerCase() === "creative") {
+    return { Model: CreativeRequest, proj: {} };
+  }
+  // default to FabricationRequest
+  return { Model: require("./models/fabricationRequest"), proj: {} };
+}
+
+/**
+ * Approve budget
+ * Body: { id, source: "creative" | "fabrication", amount: number, notes?: string }
+ * Effects:
+ *  - status = "Sent to Accounting"   (UI maps Approved -> "Sent to Accounting")
+ *  - budget.status = "Approved"
+ *  - budget.amount = amount
+ *  - budget.notes = notes || ""
+ *  - rejectionReason cleared
+ */
+app.patch("/purchasing/budget/approve", async (req, res) => {
+  try {
+    const { id, source, amount, notes } = req.body;
+
+    if (!id || !source || isNaN(Number(amount))) {
+      return res.status(400).json({ message: "id, source, and valid amount are required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid id format" });
+    }
+
+    const { Model } = getModelAndProjectionBySource(source);
+
+    // IMPORTANT:
+    // Do NOT change the top-level status here.
+    // Keep it as "Sent to Purchasing" so your UI's Incoming list still shows it.
+    // Only update the budget fields + clear any previous rejection reason.
+    const updated = await Model.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "budget.status": "Approved",
+          "budget.amount": Number(amount),
+          "budget.notes": notes || "",
+          rejectionReason: "",
+        },
+      },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: "Request not found" });
+    res.json({ message: "Budget approved", request: updated });
+  } catch (error) {
+    console.error("Purchasing approve error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/**
+ * Reject budget
+ * Body: { id, source: "creative" | "fabrication", notes?: string }
+ * Effects:
+ *  - status = "Rejected"
+ *  - budget.status = "Rejected"
+ *  - budget.notes = notes || ""
+ *  - rejectionReason = notes || ""
+ */
+app.patch("/purchasing/budget/reject", async (req, res) => {
+  try {
+    const { id, source, notes } = req.body;
+
+    if (!id || !source) {
+      return res.status(400).json({ message: "id and source are required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid id format" });
+    }
+
+    const { Model } = getModelAndProjectionBySource(source);
+
+    // Do NOT change the top-level status.
+    // Keep it as "Sent to Purchasing" so it stays in the Incoming list.
+    const updated = await Model.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "budget.status": "Rejected",
+          "budget.notes": notes || "",
+          rejectionReason: notes || "",
+        },
+      },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: "Request not found" });
+    res.json({ message: "Budget rejected", request: updated });
+  } catch (error) {
+    console.error("Purchasing reject error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 
 // ==================== GOOGLE SHEETS ROUTE ====================
 app.get("/api/sheets/creative", async (req, res) => {
