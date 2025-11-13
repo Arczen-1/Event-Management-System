@@ -266,9 +266,203 @@ app.delete("/admin/delete-user/:userId", async (req, res) => {
     res.status(500).json({ message: "Server error: " + error.message })
   }
 })
+// Banquet Staff Routes
+app.get('/banquet/staff-assignments', async (req, res) => {
+  try {
+    // This would fetch from a staff_assignments collection
+    const assignments = await db.collection('staff_assignments').find({}).toArray();
+    res.json({ success: true, assignments });
+  } catch (error) {
+    console.error('Get staff assignments error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch staff assignments' });
+  }
+});
+
+app.get('/banquet/equipment-requests', async (req, res) => {
+  try {
+    // This would fetch from an equipment_requests collection
+    const requests = await db.collection('equipment_requests').find({}).toArray();
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('Get equipment requests error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch equipment requests' });
+  }
+});
+
+app.put('/banquet/assignments/:id/complete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.collection('staff_assignments').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: 'completed', completedAt: new Date() } }
+    );
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+    
+    res.json({ success: true, message: 'Assignment marked as complete' });
+  } catch (error) {
+    console.error('Mark assignment complete error:', error);
+    res.status(500).json({ success: false, message: 'Failed to mark assignment as complete' });
+  }
+});
+
+app.post('/banquet/equipment-requests', async (req, res) => {
+  try {
+    const { eventId, equipment, requestedBy } = req.body;
+    
+    const requestData = {
+      eventId: new ObjectId(eventId),
+      equipment,
+      requestedBy,
+      status: 'pending',
+      requestDate: new Date()
+    };
+    
+    const result = await db.collection('equipment_requests').insertOne(requestData);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Equipment request submitted',
+      request: { _id: result.insertedId, ...requestData }
+    });
+  } catch (error) {
+    console.error('Create equipment request error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create equipment request' });
+  }
+});
 
 // ==================== FINANCE/INVOICE ROUTES ====================
+// If you already have this:
+// Change it to:
+const { MongoClient, ObjectId } = require('mongodb');
+// In server.js - make sure this route exists
+app.post('/finance/invoices', async (req, res) => {
+  try {
+    const {
+      contractId,
+      invoiceNumber,
+      contractNumber,
+      client,
+      issueDate,
+      dueDate,
+      items,
+      totalAmount,
+      status
+    } = req.body;
 
+    console.log("Received invoice data:", req.body);
+
+    // Validate required fields
+    if (!contractId || !invoiceNumber || !totalAmount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: contractId, invoiceNumber, or totalAmount'
+      });
+    }
+
+    // Check if invoice number already exists
+    const existingInvoice = await db.collection('invoices')
+      .findOne({ invoiceNumber });
+    
+    if (existingInvoice) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice number already exists'
+      });
+    }
+
+    const invoiceData = {
+      contractId: new ObjectId(contractId), // Convert to ObjectId
+      invoiceNumber,
+      contractNumber,
+      client,
+      issueDate: new Date(issueDate),
+      dueDate: new Date(dueDate),
+      items: items || [],
+      totalAmount: parseFloat(totalAmount),
+      status: status || 'pending',
+      createdAt: new Date(),
+      paidDate: null
+    };
+
+    console.log("Inserting invoice:", invoiceData);
+
+    const result = await db.collection('invoices').insertOne(invoiceData);
+
+    res.status(201).json({
+      success: true,
+      message: 'Invoice created successfully',
+      invoice: {
+        _id: result.insertedId,
+        ...invoiceData
+      }
+    });
+
+  } catch (error) {
+    console.error('Create invoice error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create invoice'
+    });
+  }
+});
+// Add finance department data route
+app.get('/admin/department-data/finance', async (req, res) => {
+  try {
+    // Get financial statistics
+    const invoices = await db.collection('invoices').find({}).toArray();
+    
+    const totalRevenue = invoices
+      .filter(inv => inv.status === 'paid')
+      .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+    
+    const pendingRevenue = invoices
+      .filter(inv => inv.status === 'pending')
+      .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+
+    const paidInvoices = invoices.filter(inv => inv.status === 'paid').length;
+    const unpaidInvoices = invoices.filter(inv => inv.status === 'pending').length;
+    
+    const overdueInvoices = invoices.filter(inv => 
+      inv.status === 'pending' && new Date(inv.dueDate) < new Date()
+    ).length;
+
+    // Get active contracts count
+    const activeContracts = await db.collection('contracts')
+      .find({ 
+        $or: [
+          { status: "Active" },
+          { status: "For Accounting Review" }
+        ]
+      })
+      .toArray();
+
+    const financeData = {
+      totalRevenue,
+      pendingRevenue,
+      paidCount: paidInvoices,
+      unpaidCount: unpaidInvoices,
+      overdueCount: overdueInvoices,
+      activeContractsCount: activeContracts.length,
+      description: "Financial management and invoice tracking system"
+    };
+
+    res.json({
+      success: true,
+      data: financeData,
+      description: "Financial management and invoice tracking system"
+    });
+
+  } catch (error) {
+    console.error('Finance department data error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch finance department data'
+    });
+  }
+});
 // Get all invoices
 app.get('/finance/invoices', async (req, res) => {
   try {
