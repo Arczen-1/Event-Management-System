@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./DepartmentDashboard.css";
+import "./s.css";
 
 function WarehouseDashboard({ onLogout }) {
   const [contracts, setContracts] = useState([]);
@@ -59,7 +59,7 @@ useEffect(() => {
 
   const fetchContracts = async () => {
     try {
-      const res = await fetch("http://localhost:5000/contracts");
+      const res = await fetch("http://localhost:3000/contracts");
       const data = await res.json();
       if (res.ok) {
         setContracts(
@@ -743,19 +743,49 @@ useEffect(() => {
 
   // ------------------- Render -------------------
   return (
+
     <div className="department-dashboard">
-      <div className="dashboard-header">
-        <div className="dashboard-header-inner">
-          <h1>Warehouse Dashboard</h1>
-          <div className="header-nav">
-            <button className={`nav-btn ${activeView === "contracts" ? "active" : ""}`} onClick={() => setActiveView("contracts")}>Active Contracts</button>
-            <button className={`nav-btn ${activeView === "inventory" ? "active" : ""}`} onClick={() => setActiveView("inventory")}>Inventory Monitoring</button>
-            <button className={`nav-btn ${activeView === "monitoring" ? "active" : ""}`} onClick={() => setActiveView("monitoring")}>Inventory</button>
-            <button className={`nav-btn ${activeView === "fabrication" ? "active" : ""}`} onClick={() => setActiveView("fabrication")}>Fabrication Report</button>
-          </div>
-          <button onClick={onLogout} className="logout-btn header-logout">Logout</button>
-        </div>
+  {/* Left Sidebar */}
+  <div className="dashboard-sidebar">
+    {/* Title Header */}
+    <div className="accreditation-header">
+      <h1>WAREHOUSE</h1>
+      <h2>Dashboard</h2>
+    </div>
+    
+    <div className="header-nav">
+      {/* Contracts Section */}
+      <div className="nav-section">
+        <div className="section-title">Contracts</div>
+        <button className={`nav-btn ${activeView === "contracts" ? "active" : ""}`} onClick={() => setActiveView("contracts")}>
+          Active Contracts
+        </button>
       </div>
+      
+      {/* Management Section */}
+      <div className="nav-section">
+        <div className="section-title">Inventory Management</div>
+        <button className={`nav-btn ${activeView === "inventory" ? "active" : ""}`} onClick={() => setActiveView("inventory")}>
+          Inventory Monitoring
+        </button>
+        <button className={`nav-btn ${activeView === "monitoring" ? "active" : ""}`} onClick={() => setActiveView("monitoring")}>
+          Inventory
+        </button>
+      </div>
+      
+      {/* Reports Section */}
+      <div className="nav-section">
+        <div className="section-title">Reports</div>
+        <button className={`nav-btn ${activeView === "fabrication" ? "active" : ""}`} onClick={() => setActiveView("fabrication")}>
+          Fabrication Report
+        </button>
+      </div>
+    </div>
+    
+    <div className="sidebar-footer">
+      <button onClick={onLogout} className="logout-btn">Logout</button>
+    </div>
+  </div>
 
       <div className="dashboard-content">
         {activeView === "contracts" && renderContractsTable()}

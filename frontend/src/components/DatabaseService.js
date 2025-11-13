@@ -1,5 +1,7 @@
 // DatabaseService.js
-const SHEET_ID = 'z';
+const SHEET_ID = '17n0-GRnQWhQVDme94Uz3E0WOru_nP8AMH2v3QhEL9rQ';
+const SHEET_W = '1QF9QcRZkac50kZjVsMjVcESozR8m2M2yX4TxQ4UvLCk';
+const SHEET_C = '1kPPmbaAkafCTfnybVKEKExrY4G0roIjyMfSBtQ6fOs4';
 
 // Fallback data in case Google Sheets is unavailable
 const FALLBACK_DATA = {
@@ -138,6 +140,53 @@ export const DatabaseService = {
     }
   },
 
+  async fetchDataWarehouse(sheetName) {
+    try {
+      const sheetUrl = `https://docs.google.com/spreadsheets/d/${SHEET_W}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+      const response = await fetch(sheetUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      const json = JSON.parse(text.substring(47).slice(0, -2));
+      
+      return json.table.rows.map((row, index) => ({
+        id: row.c[0]?.v || index + 1,
+        name: row.c[1]?.v || '',
+        category: row.c[2]?.v || sheetName
+      }));
+    } catch (error) {
+      console.warn(`Error fetching ${sheetName}, using fallback data:`, error);
+      return FALLBACK_DATA[this.getFallbackKey(sheetName)] || [];
+    }
+  },
+
+  async fetchDataCreatives(sheetName) {
+    try {
+      const sheetUrl = `https://docs.google.com/spreadsheets/d/${SHEET_C}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+      const response = await fetch(sheetUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      const json = JSON.parse(text.substring(47).slice(0, -2));
+      
+      return json.table.rows.map((row, index) => ({
+        id: row.c[0]?.v || index + 1,
+        name: row.c[1]?.v || '',
+        category: row.c[2]?.v || sheetName
+      }));
+    } catch (error) {
+      console.warn(`Error fetching ${sheetName}, using fallback data:`, error);
+      return FALLBACK_DATA[this.getFallbackKey(sheetName)] || [];
+    }
+  },
+
+
   getFallbackKey(sheetName) {
     const keyMap = {
       'Theme_Setups': 'themeSetups',
@@ -157,28 +206,48 @@ export const DatabaseService = {
     return this.fetchData('Theme_Setups');
   },
 
+   async getNapkin() {
+    return this.fetchData('Table Napkin');
+  },
+
   async getUnderliners() {
-    return this.fetchData('Underliners');
+    return this.fetchData('Table Cloth');
   },
 
   async getToppers() {
-    return this.fetchData('Toppers');
+    return this.fetchData('Topper');
   },
 
-  async getFlowerArrangements() {
-    return this.fetchData('Flower_Arrangements');
+  async getBackdrop() {
+    return this.fetchDataCreatives('Backdrop');
   },
 
-  async getCenterpieces() {
-    return this.fetchData('Centerpieces');
+  async getFlowers() {
+    return this.fetchDataCreatives('Flowers');
   },
 
-  async getCakeTableArrangements() {
-    return this.fetchData('Cake_Table_Arrangements');
+  async getDecor() {
+    return this.fetchDataWarehouse('Decor');
   },
 
   async getChairs() {
     return this.fetchData('Chairs');
+  },
+
+  async getEntrance() {
+    return this.fetchDataCreatives('Entrance');
+  },
+
+  async getStaging() {
+    return this.fetchDataWarehouse('Staging');
+  },
+  
+  async getEquipments() {
+    return this.fetchDataWarehouse('Audio & Lighting');
+  },
+
+  async getMiscellaneous() {
+    return this.fetchDataWarehouse('Miscellaneous');
   },
 
   async getSpecialRequirements() {

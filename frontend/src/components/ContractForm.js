@@ -478,13 +478,13 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     premiumChairs: "0",
     totalChairs: "",
     chairsRemarks: "",
-    flowerBackdrop: "",
-    flowerGuestCenterpiece: "",
-    flowerVipCenterpiece: "",
-    flowerCakeTable: "",
-    flowerRemarks: "",
-    cakeNameCode: "",
-    cakeFlavor: "",
+    backdrop: "",
+    flower: "",
+    decor: "",
+    equipment: "",
+    staging: "",
+    miscellaneous: "",
+    entrance: "",
     cakeSupplier: "",
     cakeSpecifications: "",
     celebratorsCar: "",
@@ -492,18 +492,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     soundSystem: "",
     tent: "",
     celebratorsChair: "",
-    knowUsWebsite: false,
-    knowUsFacebook: false,
-    knowUsInstagram: false,
-    knowUsFlyers: false,
-    knowUsBillboard: false,
-    knowUsWordOfMouth: false,
-    knowUsVenueReferral: false,
-    knowUsRepeatClient: false,
-    knowUsBridalFair: false,
-    knowUsFoodTasting: false,
-    knowUsCelebrityReferral: false,
-    knowUsOthers: false,
   });
 
   // Page 3 fields (Buffet)
@@ -1713,7 +1701,7 @@ const handleAutoSave = async () => {
           onCreated({
             id: data.contract._id,
             contractNumber: data.contract.contractNumber,
-            name: p1.contractName || p1.occasion || "Contract",
+            name: p1.occasion || "Contract",
             client: p1.celebratorName || "",
             value: p3.grandTotal || "",
             startDate: p1.eventDate || "",
@@ -1743,12 +1731,17 @@ const handleAutoSave = async () => {
 
   const [dbOptions, setDbOptions] = useState({
     themeSetups: [],
+    napkins: [],
     underliners: [],
     toppers: [],
-    flowerArrangements: [],
-    centerpieces: [],
-    cakeTableArrangements: [],
+    backdrop: [],
+    flowers: [],
+    decor: [],
     chairs: [],
+    entrance: [],
+    staging: [],
+    equipments: [],
+    miscellaneous: [],
     specialRequirements: [],
     colors: ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Pink', 'Orange', 'White', 'Black', 'Gold', 'Silver']
   });
@@ -1759,34 +1752,49 @@ const handleAutoSave = async () => {
       try {
         const [
           themeSetups,
+          napkins,
           underliners,
           toppers,
-          flowerArrangements,
-          centerpieces,
-          cakeTableArrangements,
+          backdrop,
+          flowers,
+          decor,
           chairs,
-          specialRequirements
+          entrance,
+          staging,
+          equipments,
+          miscellaneous,
+          specialRequirements,
         ] = await Promise.all([
           DatabaseService.getThemeSetups(),
+          DatabaseService.getNapkin(),
           DatabaseService.getUnderliners(),
           DatabaseService.getToppers(),
-          DatabaseService.getFlowerArrangements(),
-          DatabaseService.getCenterpieces(),
-          DatabaseService.getCakeTableArrangements(),
+          DatabaseService.getBackdrop(),
+          DatabaseService.getFlowers(),
+          DatabaseService.getDecor(),
           DatabaseService.getChairs(),
+          DatabaseService.getEntrance(),
+          DatabaseService.getStaging(),
+          DatabaseService.getEquipments(),
+          DatabaseService.getMiscellaneous(),
           DatabaseService.getSpecialRequirements()
         ]);
 
         setDbOptions(prev => ({
           ...prev,
           themeSetups,
+          napkins,
           underliners,
           toppers,
-          flowerArrangements,
-          centerpieces,
-          cakeTableArrangements,
+          backdrop,
+          flowers,
+          decor,
           chairs,
-          specialRequirements
+          entrance,
+          staging,
+          equipments,
+          miscellaneous,
+          specialRequirements,
         }));
       } catch (error) {
         console.error('Error loading database options:', error);
@@ -1798,115 +1806,115 @@ const handleAutoSave = async () => {
 
 
   // Updated renderPage1 function
-  const renderPage1 = () => (
-    <div className="page">
-      <div className="form-row">
-      </div>
+const renderPage1 = () => (
+  <div className="page">
+    <div className="form-row">
+    </div>
 
-      <h4>Celebrator</h4>
-      <div className="form-row two">
-        <div className="form-group"><label>
-  Celebrator/Corporate Name 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.celebratorName} onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} onBlur={handleAutoSave} /></div>
-        <div className="form-group"><label>Email Address</label><input value={p1.celebratorEmail} onChange={(e)=>setP1({...p1, celebratorEmail:e.target.value})} className={errors.celebratorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorEmail}</div></div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group"><label>Address</label><input value={p1.celebratorAddress} onChange={(e)=>setP1({...p1, celebratorAddress:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.celebratorLandline} onChange={(e)=>setP1({...p1, celebratorLandline:e.target.value})} className={errors.celebratorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorLandline}</div></div>
-        <div className="form-group"><label>Mobile No.</label><input value={p1.celebratorMobile} onChange={(e)=>setP1({...p1, celebratorMobile:e.target.value})} className={errors.celebratorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorMobile}</div></div>
-      </div>
+    <h4>Celebrator</h4>
+    <div className="form-row two">
+      <div className="form-group"><label>
+        Celebrator/Corporate Name 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.celebratorName} onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} onBlur={handleAutoSave} /></div>
+      <div className="form-group"><label>Email Address</label><input value={p1.celebratorEmail} onChange={(e)=>setP1({...p1, celebratorEmail:e.target.value})} className={errors.celebratorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorEmail}</div></div>
+    </div>
+    <div className="form-row three">
+      <div className="form-group"><label>Address</label><input value={p1.celebratorAddress} onChange={(e)=>setP1({...p1, celebratorAddress:convertToUppercase(e.target.value)})} /></div>
+      <div className="form-group"><label>Landline No.</label><input value={p1.celebratorLandline} onChange={(e)=>setP1({...p1, celebratorLandline:e.target.value})} className={errors.celebratorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorLandline}</div></div>
+      <div className="form-group"><label>Mobile No.</label><input value={p1.celebratorMobile} onChange={(e)=>setP1({...p1, celebratorMobile:e.target.value})} className={errors.celebratorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorMobile}</div></div>
+    </div>
 
-      <h4>Representative</h4>
-      <div className="form-row two">
-        <div className="form-group"><label>
-  Name 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeName} onChange={(e)=>setP1({...p1, representativeName:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>
-  Relationship 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeRelationship} onChange={(e)=>setP1({...p1, representativeRelationship:convertToUppercase(e.target.value)})} /></div>
-      </div>
-      <div className="form-row three">
-        <div className="form-group"><label>
-  Email Address 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeEmail} onChange={(e)=>setP1({...p1, representativeEmail:e.target.value})} className={errors.representativeEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeEmail}</div></div>
-        <div className="form-group"><label>
-  Address 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeAddress} onChange={(e)=>setP1({...p1, representativeAddress:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.representativeLandline} onChange={(e)=>setP1({...p1, representativeLandline:e.target.value})} className={errors.representativeLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeLandline}</div></div>
-        </div>
-      <div className="form-row two">
-        <div className="form-group"><label>
-  Mobile No. 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.representativeMobile} onChange={(e)=>setP1({...p1, representativeMobile:e.target.value})} className={errors.representativeMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeMobile}</div></div>
-      </div>
+    <h4>Representative</h4>
+    <div className="form-row two">
+      <div className="form-group"><label>
+        Name 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.representativeName} onChange={(e)=>setP1({...p1, representativeName:convertToUppercase(e.target.value)})} /></div>
+      <div className="form-group"><label>
+        Relationship 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.representativeRelationship} onChange={(e)=>setP1({...p1, representativeRelationship:convertToUppercase(e.target.value)})} /></div>
+    </div>
+    <div className="form-row three">
+      <div className="form-group"><label>
+        Email Address 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.representativeEmail} onChange={(e)=>setP1({...p1, representativeEmail:e.target.value})} className={errors.representativeEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeEmail}</div></div>
+      <div className="form-group"><label>
+        Address 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.representativeAddress} onChange={(e)=>setP1({...p1, representativeAddress:convertToUppercase(e.target.value)})} /></div>
+      <div className="form-group"><label>Landline No.</label><input value={p1.representativeLandline} onChange={(e)=>setP1({...p1, representativeLandline:e.target.value})} className={errors.representativeLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeLandline}</div></div>
+    </div>
+    <div className="form-row two">
+      <div className="form-group"><label>
+        Mobile No. 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.representativeMobile} onChange={(e)=>setP1({...p1, representativeMobile:e.target.value})} className={errors.representativeMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeMobile}</div></div>
+    </div>
 
-      <h4>Coordinator </h4>
-      <div className="form-row three">
-        <div className="form-group"><label>
-  Coordinator Name 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.coordinatorName} onChange={(e)=>setP1({...p1, coordinatorName:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>
-  Mobile No. 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.coordinatorMobile} onChange={(e)=>setP1({...p1, coordinatorMobile:e.target.value})} className={errors.coordinatorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorMobile}</div></div>
-        <div className="form-group"><label>Landline No.</label><input value={p1.coordinatorLandline} onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} className={errors.coordinatorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorLandline}</div></div>
+    <h4>Coordinator </h4>
+    <div className="form-row three">
+      <div className="form-group"><label>
+        Coordinator Name 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.coordinatorName} onChange={(e)=>setP1({...p1, coordinatorName:convertToUppercase(e.target.value)})} /></div>
+      <div className="form-group"><label>
+        Mobile No. 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.coordinatorMobile} onChange={(e)=>setP1({...p1, coordinatorMobile:e.target.value})} className={errors.coordinatorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorMobile}</div></div>
+      <div className="form-group"><label>Landline No.</label><input value={p1.coordinatorLandline} onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} className={errors.coordinatorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorLandline}</div></div>
+    </div>
+    <div className="form-row two">
+      <div className="form-group"><label>
+        Email Address 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.coordinatorEmail} onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} className={errors.coordinatorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorEmail}</div></div>
+      <div className="form-group"><label>
+        Address 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.coordinatorAddress} onChange={(e)=>setP1({...p1, coordinatorAddress:convertToUppercase(e.target.value)})} /></div>
+    </div>
+    
+    <h4>Event Details</h4>
+    <div className="form-row three">
+      <div className="form-group"><label>
+        Date of Event
+        <span className="required-asterisk">*</span>
+      </label><input type="date" value={p1.eventDate} onChange={(e)=>setP1({...p1, eventDate:e.target.value})} onBlur={handleAutoSave} className={errors.eventDate ? 'invalid-input' : ''} /><div className="validation-error">{errors.eventDate}</div></div>
+      <div className="form-group">
+        <label>
+          Occasion
+          <span className="required-asterisk">*</span>
+        </label>
+        <select value={p1.occasion} onChange={(e)=>setP1({...p1, occasion:e.target.value})}>
+          <option value="">Select Occasion</option>
+          <option value="BIRTHDAY">Birthday</option>
+          <option value="DEBUT">Debut</option>
+          <option value="SPECIAL OCCASION">Special Occasion</option>
+          <option value="CORPORATE">Corporate</option>
+          <option value="WEDDINGS">Weddings</option>
+        </select>
       </div>
-      <div className="form-row two">
-        <div className="form-group"><label>
-  Email Address 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.coordinatorEmail} onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} className={errors.coordinatorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorEmail}</div></div>
-        <div className="form-group"><label>
-  Address 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.coordinatorAddress} onChange={(e)=>setP1({...p1, coordinatorAddress:convertToUppercase(e.target.value)})} /></div>
+      <div className="form-group">
+        <label>
+          Service Style
+          <span className="required-asterisk">*</span>
+        </label>
+        <select value={p1.serviceStyle} onChange={(e)=>setP1({...p1, serviceStyle:e.target.value})}>
+          <option value="">Select Service Style</option>
+          <option value="Buffet">Buffet</option>
+          <option value="Signature Plated">Signature Plated</option>
+        </select>
       </div>
-      
-      <h4>Event Details</h4>
-      <div className="form-row three">
-        <div className="form-group"><label>
-  Date of Event
-  <span className="required-asterisk">*</span>
-</label><input type="date" value={p1.eventDate} onChange={(e)=>setP1({...p1, eventDate:e.target.value})} onBlur={handleAutoSave} className={errors.eventDate ? 'invalid-input' : ''} /><div className="validation-error">{errors.eventDate}</div></div>
-        <div className="form-group">
-          <label>
-  Occasion
-  <span className="required-asterisk">*</span>
-</label>
-          <select value={p1.occasion} onChange={(e)=>setP1({...p1, occasion:e.target.value})}>
-            <option value="">Select Occasion</option>
-            <option value="BIRTHDAY">Birthday</option>
-            <option value="DEBUT">Debut</option>
-            <option value="SPECIAL OCCASION">Special Occasion</option>
-            <option value="CORPORATE">Corporate</option>
-            <option value="WEDDINGS">Weddings</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>
-  Service Style
-  <span className="required-asterisk">*</span>
-</label>
-          <select value={p1.serviceStyle} onChange={(e)=>setP1({...p1, serviceStyle:e.target.value})}>
-            <option value="">Select Service Style</option>
-            <option value="Buffet">Buffet</option>
-            <option value="Signature Plated">Signature Plated</option>
-          </select>
-        </div>
-      </div>
+    </div>
     <div className="form-row four">
       <div className="form-group">
         <label>
-  Venue
-  <span className="required-asterisk">*</span>
-</label>
+          Venue
+          <span className="required-asterisk">*</span>
+        </label>
         <select
           value={p1.venue}
           onChange={(e) => {
@@ -1932,9 +1940,9 @@ const handleAutoSave = async () => {
       </div>
       <div className="form-group">
         <label>
-  Hall
-  <span className="required-asterisk">*</span>
-</label>
+          Hall
+          <span className="required-asterisk">*</span>
+        </label>
         {p1.venue === "OTHERS" ? (
           <input
             value={p1.hall}
@@ -1949,11 +1957,6 @@ const handleAutoSave = async () => {
               if (p1.venue && VENUES[p1.venue]) {
                 const pax = VENUES[p1.venue].halls[hall] || 0;
                 setMaxPax(pax);
-                // Remove alert and rely on error message display instead
-                // const totalGuestsNum = parseInt(p1.totalGuests) || 0;
-                // if (totalGuestsNum > pax) {
-                //   alert(`Warning: The selected hall cannot accommodate the total number of guests (${totalGuestsNum}). Maximum pax is ${pax}.`);
-                // }
               }
             }}
           >
@@ -1967,14 +1970,14 @@ const handleAutoSave = async () => {
         )}
       </div>
       <div className="form-group"><label>
-  Address
-  <span className="required-asterisk">*</span>
-</label><input value={p1.address} onChange={(e)=>setP1({...p1, address:convertToUppercase(e.target.value)})} /></div>
+        Address
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.address} onChange={(e)=>setP1({...p1, address:convertToUppercase(e.target.value)})} /></div>
       <div className="form-group">
         <label>
-  Arrival of Guests
-  <span className="required-asterisk">*</span>
-</label>
+          Arrival of Guests
+          <span className="required-asterisk">*</span>
+        </label>
         <input
           value={p1.arrivalOfGuests}
           onChange={(e) => setP1({...p1, arrivalOfGuests: validateTimeField(e.target.value)})}
@@ -1989,9 +1992,9 @@ const handleAutoSave = async () => {
     <div className="form-row three">
       <div className="form-group">
         <label>
-  Ingress Time 
-  <span className="required-asterisk">*</span>
-</label>
+          Ingress Time 
+          <span className="required-asterisk">*</span>
+        </label>
         <input
           value={p1.ingressTime}
           onChange={(e) => setP1({ ...p1, ingressTime: validateTimeField(e.target.value) })}
@@ -2004,20 +2007,21 @@ const handleAutoSave = async () => {
       </div>
       <div className="form-group">
         <label>
-  Cocktail Time 
-  <span className="required-asterisk">*</span>
-</label>
+          Cocktail Time 
+          <span className="required-asterisk">*</span>
+        </label>
         <input
           value={p1.cocktailTime}
           readOnly
           placeholder="HH:MM AM/PM or N/A"
+          className="readonly-input"
         />
       </div>
       <div className="form-group">
         <label>
-  Serving Time 
-  <span className="required-asterisk">*</span>
-</label>
+          Serving Time 
+          <span className="required-asterisk">*</span>
+        </label>
         <input
           value={p1.servingTime}
           onChange={(e) => setP1({ ...p1, servingTime: validateTimeField(e.target.value) })}
@@ -2029,499 +2033,411 @@ const handleAutoSave = async () => {
         )}
       </div>
     </div>
-      <div className="form-row three">
-        <div className="form-group"><label>
-  VIP 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.totalVIP} onChange={(e) => {
-          const vipValue = e.target.value;
-          setP1((prev) => {
-            const newTotalVIP = vipValue;
-            const newTotalRegular = prev.totalRegular;
-            let newTotalGuests = prev.totalGuests;
-            if (newTotalVIP && newTotalRegular) {
-              const vipNum = parseInt(newTotalVIP) || 0;
-              const regularNum = parseInt(newTotalRegular) || 0;
-              newTotalGuests = (vipNum + regularNum).toString();
-            }
-            return { ...prev, totalVIP: newTotalVIP, totalGuests: newTotalGuests };
-          });
-        }} /></div>
-        <div className="form-group"><label>
-  Regular 
-  <span className="required-asterisk">*</span>
-</label><input value={p1.totalRegular} onChange={(e) => {
-          const regularValue = e.target.value;
-          setP1((prev) => {
-            const newTotalRegular = regularValue;
-            const newTotalVIP = prev.totalVIP;
-            let newTotalGuests = prev.totalGuests;
-            if (newTotalVIP && newTotalRegular) {
-              const vipNum = parseInt(newTotalVIP) || 0;
-              const regularNum = parseInt(newTotalRegular) || 0;
-              newTotalGuests = (vipNum + regularNum).toString();
-            }
-            return { ...prev, totalRegular: newTotalRegular, totalGuests: newTotalGuests };
-          });
-        }} /></div>
-        <div className="form-group">
-          <label>
-  Total No. of Guests 
-  <span className="required-asterisk">*</span>
-</label>
-          <input value={p1.totalGuests} readOnly className={errors.totalGuests ? 'invalid-input' : ''} />
-          {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
-        </div>
+    <div className="form-row three">
+      <div className="form-group"><label>
+        VIP 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.totalVIP} onChange={(e) => {
+        const vipValue = e.target.value;
+        setP1((prev) => {
+          const newTotalVIP = vipValue;
+          const newTotalRegular = prev.totalRegular;
+          let newTotalGuests = prev.totalGuests;
+          if (newTotalVIP && newTotalRegular) {
+            const vipNum = parseInt(newTotalVIP) || 0;
+            const regularNum = parseInt(newTotalRegular) || 0;
+            newTotalGuests = (vipNum + regularNum).toString();
+          }
+          return { ...prev, totalVIP: newTotalVIP, totalGuests: newTotalGuests };
+        });
+      }} /></div>
+      <div className="form-group"><label>
+        Regular 
+        <span className="required-asterisk">*</span>
+      </label><input value={p1.totalRegular} onChange={(e) => {
+        const regularValue = e.target.value;
+        setP1((prev) => {
+          const newTotalRegular = regularValue;
+          const newTotalVIP = prev.totalVIP;
+          let newTotalGuests = prev.totalGuests;
+          if (newTotalVIP && newTotalRegular) {
+            const vipNum = parseInt(newTotalVIP) || 0;
+            const regularNum = parseInt(newTotalRegular) || 0;
+            newTotalGuests = (vipNum + regularNum).toString();
+          }
+          return { ...prev, totalRegular: newTotalRegular, totalGuests: newTotalGuests };
+        });
+      }} /></div>
+      <div className="form-group">
+        <label>
+          Total No. of Guests 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input value={p1.totalGuests} readOnly className={`readonly-input ${errors.totalGuests ? 'invalid-input' : ''}`} />
+        {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
       </div>
-
-      <h4>Set Up</h4>
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Theme Set-up <span className="required-asterisk">*</span></label>
-          <select 
-            value={p1.themeSetup} 
-            onChange={(e) => setP1({...p1, themeSetup: e.target.value})}
-          >
-            <option value="">Select Theme Setup</option>
-            {dbOptions.themeSetups.map(theme => (
-              <option key={theme.id} value={theme.name}>{theme.name}</option>
-            ))}
-          </select>
-        </div>
-      
-        <div className="form-group">
-         <label>Color Motif <span className="required-asterisk">*</span></label>
-<div className="color-motif-container">
-  <div style={{position: 'relative'}}>
-    <div 
-      className="color-input-text"
-      onClick={() => setIsColorDropdownOpen(!isColorDropdownOpen)}
-    >
-      {p1.colorMotif?.split(',').filter(color => color.trim() !== '').length > 0 
-        ? p1.colorMotif?.split(',').filter(color => color.trim() !== '').join(', ')
-        : 'Click to choose colors (max 8)'
-      }
     </div>
+
+    <h4>Set Up</h4>
+    <div className="form-row two">
+      <div className="form-group">
+        <label>Theme Set-up <span className="required-asterisk">*</span></label>
+        <select 
+          value={p1.themeSetup} 
+          onChange={(e) => setP1({...p1, themeSetup: e.target.value})}
+        >
+          <option value="">Select Theme Setup</option>
+          {dbOptions.themeSetups.map(theme => (
+            <option key={theme.id} value={theme.name}>{theme.name}</option>
+          ))}
+        </select>
+      </div>
     
-    {isColorDropdownOpen && (
-      <div className="color-dropdown-selected">
-        {/* Selected colors section */}
-        <div className="selected-colors-section">
-          <div className="selected-colors-label">SELECTED:</div>
-          <div className="selected-colors-tags">
-            {p1.colorMotif?.split(',').filter(color => color.trim() !== '').length > 0 ? (
-              p1.colorMotif?.split(',').filter(color => color.trim() !== '').map((color, index) => (
-                <span key={index} className="color-tag">
-                  {color}
-                  <button 
-                    type="button"
-                    className="color-tag-remove"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const currentColors = p1.colorMotif?.split(',').filter(c => c.trim() !== '');
-                      const newColors = currentColors.filter((_, i) => i !== index);
-                      setP1({...p1, colorMotif: newColors.join(',')});
-                    }}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))
-            ) : (
-              <span style={{color: '#999', fontSize: '12px'}}>No colors selected</span>
+      <div className="form-group">
+        <label>Color Motif <span className="required-asterisk">*</span></label>
+        <div className="color-motif-container">
+          <div style={{position: 'relative'}}>
+            <div 
+              className="color-input-text"
+              onClick={() => setIsColorDropdownOpen(!isColorDropdownOpen)}
+            >
+              {p1.colorMotif?.split(',').filter(color => color.trim() !== '').length > 0 
+                ? p1.colorMotif?.split(',').filter(color => color.trim() !== '').join(', ')
+                : 'Click to choose colors (max 8)'
+              }
+            </div>
+            
+            {isColorDropdownOpen && (
+              <div className="color-dropdown-selected">
+                <div className="selected-colors-section">
+                  <div className="selected-colors-label">SELECTED:</div>
+                  <div className="selected-colors-tags">
+                    {p1.colorMotif?.split(',').filter(color => color.trim() !== '').length > 0 ? (
+                      p1.colorMotif?.split(',').filter(color => color.trim() !== '').map((color, index) => (
+                        <span key={index} className="color-tag">
+                          {color}
+                          <button 
+                            type="button"
+                            className="color-tag-remove"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const currentColors = p1.colorMotif?.split(',').filter(c => c.trim() !== '');
+                              const newColors = currentColors.filter((_, i) => i !== index);
+                              setP1({...p1, colorMotif: newColors.join(',')});
+                            }}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span style={{color: '#999', fontSize: '12px'}}>No colors selected</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="color-options-section">
+                  {dbOptions.colors.map(color => (
+                    <div
+                      key={color}
+                      className="color-option"
+                      onClick={() => {
+                        if (p1.colorMotif?.split(',').filter(c => c.trim() !== '').length < 8 && 
+                            !p1.colorMotif?.includes(color)) {
+                          const currentColors = p1.colorMotif?.split(',').filter(c => c.trim() !== '');
+                          const newColors = [...currentColors, color];
+                          setP1({...p1, colorMotif: newColors.join(',')});
+                        }
+                      }}
+                      style={{
+                        opacity: p1.colorMotif?.includes(color) ? 0.5 : 1,
+                        cursor: p1.colorMotif?.includes(color) ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {color}
+                      {p1.colorMotif?.includes(color) && ' '}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
+            <div className="color-count">
+              {p1.colorMotif?.split(',').filter(color => color.trim() !== '').length || 0}/8 colors selected
+            </div>
           </div>
         </div>
-        
-        {/* Available color options */}
-        <div className="color-options-section">
-          {dbOptions.colors.map(color => (
-            <div
-              key={color}
-              className="color-option"
-              onClick={() => {
-                if (p1.colorMotif?.split(',').filter(c => c.trim() !== '').length < 8 && 
-                    !p1.colorMotif?.includes(color)) {
-                  const currentColors = p1.colorMotif?.split(',').filter(c => c.trim() !== '');
-                  const newColors = [...currentColors, color];
-                  setP1({...p1, colorMotif: newColors.join(',')});
-                }
-              }}
-              style={{
-                opacity: p1.colorMotif?.includes(color) ? 0.5 : 1,
-                cursor: p1.colorMotif?.includes(color) ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {color}
-              {p1.colorMotif?.includes(color) && ' '}
-            </div>
-          ))}
-        </div>
       </div>
-    )}
-    <div className="color-count">
-    {p1.colorMotif?.split(',').filter(color => color.trim() !== '').length || 0}/8 colors selected
-  </div>
-  </div>
-  
-  
-</div>
-        </div>
-      </div>
-
-      <div className="form-row four">
-        {/* VIP Table Configuration - unchanged */}
-      </div>
-
-      <div className="form-row three">
-        <div className="form-group">
-          <label>VIP Underliner <span className="required-asterisk">*</span></label>
-          <select 
-            value={p1.vipUnderliner} 
-            onChange={(e) => setP1({...p1, vipUnderliner: e.target.value})}
-          >
-            <option value="">Select VIP Underliner</option>
-            {dbOptions.underliners.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>VIP Topper</label>
-          <select 
-            value={p1.vipTopper} 
-            onChange={(e) => setP1({...p1, vipTopper: e.target.value})}
-          >
-            <option value="">Select VIP Topper</option>
-            {dbOptions.toppers.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>VIP Napkin <span className="required-asterisk">*</span></label>
-          <select 
-            value={p1.vipNapkin} 
-            onChange={(e) => setP1({...p1, vipNapkin: e.target.value})}
-          >
-            <option value="">Select VIP Napkin Color</option>
-            {dbOptions.colors.map(color => (
-              <option key={color} value={color}>{color}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="form-row three">
-        <div className="form-group">
-          <label>Guest Underliner <span className="required-asterisk">*</span></label>
-          <select 
-            value={p1.guestUnderliner} 
-            onChange={(e) => setP1({...p1, guestUnderliner: e.target.value})}
-          >
-            <option value="">Select Guest Underliner</option>
-            {dbOptions.underliners.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>Guest Topper</label>
-          <select 
-            value={p1.guestTopper} 
-            onChange={(e) => setP1({...p1, guestTopper: e.target.value})}
-          >
-            <option value="">Select Guest Topper</option>
-            {dbOptions.toppers.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>Guest Napkin <span className="required-asterisk">*</span></label>
-          <select 
-            value={p1.guestNapkin} 
-            onChange={(e) => setP1({...p1, guestNapkin: e.target.value})}
-          >
-            <option value="">Select Guest Napkin Color</option>
-            {dbOptions.colors.map(color => (
-              <option key={color} value={color}>{color}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      
-      {/* Removed Setup Remarks */}
     </div>
-  );
 
-  // Updated renderPage2 function
-  const renderPage2 = () => (
-    <div className="page">
-      <h4>Chairs</h4>
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Total Chairs <span className="required-asterisk">*</span></label>
-          <input value={p2.totalChairs} readOnly />
-        </div>
-      </div>
+    {/* VIP Table Configuration - unchanged */}
+    <div className="form-row four">
+      {/* ... existing VIP table configuration ... */}
+    </div>
 
-      {errors.chairsSum && <div className="validation-error">{errors.chairsSum}</div>}
-      <div className="form-row four">
-        <div className="form-group">
-          <label>Monoblock <span className="required-asterisk">*</span></label>
-          <input 
-            type="number" 
-            min="0"
-            value={p2.chairsMonoblock} 
-            onChange={(e) => setP2({...p2, chairsMonoblock: e.target.value})} 
-          />
-        </div>
-        
-        <div className="form-group">
-          <label>Rustic <span className="required-asterisk">*</span></label>
-          <input 
-            type="number" 
-            min="0"
-            value={p2.chairsRustic} 
-            onChange={(e) => setP2({...p2, chairsRustic: e.target.value})} 
-          />
-        </div>
-        
-        <div className="form-group">
-          <label>Tiffany <span className="required-asterisk">*</span></label>
-          <input 
-            type="number" 
-            min="0"
-            value={p2.chairsTiffany} 
-            onChange={(e) => setP2({...p2, chairsTiffany: e.target.value})} 
-          />
-        </div>
-
-        
-        
-        <div className="form-group">
-          <label>Premium <span className="required-asterisk">*</span></label>
-          <input 
-            type="number" 
-            min="0"
-            value={p2.premiumChairs} 
-            onChange={(e) => setP2({...p2, premiumChairs: e.target.value})} 
-          />
-        </div>
-      </div>
-
-      
-      
-      {/* Removed Chairs Remarks */}
-
-      <h4>Flower Arrangement</h4>
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Backdrop</label>
-          <select 
-            value={p2.flowerBackdrop} 
-            onChange={(e) => setP2({...p2, flowerBackdrop: e.target.value})}
-          >
-            <option value="">Select Flower Backdrop</option>
-            {dbOptions.flowerArrangements.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>VIP Centerpiece</label>
-          <select 
-            value={p2.flowerVipCenterpiece} 
-            onChange={(e) => setP2({...p2, flowerVipCenterpiece: e.target.value})}
-          >
-            <option value="">Select VIP Centerpiece</option>
-            {dbOptions.centerpieces.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Guest Centerpiece</label>
-          <select 
-            value={p2.flowerGuestCenterpiece} 
-            onChange={(e) => setP2({...p2, flowerGuestCenterpiece: e.target.value})}
-          >
-            <option value="">Select Guest Centerpiece</option>
-            {dbOptions.centerpieces.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>Cake Table</label>
-          <select 
-            value={p2.flowerCakeTable} 
-            onChange={(e) => setP2({...p2, flowerCakeTable: e.target.value})}
-          >
-            <option value="">Select Cake Table Arrangement</option>
-            {dbOptions.cakeTableArrangements.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
+    <div className="form-row three">
+      <div className="form-group">
+        <label>VIP Underliner <span className="required-asterisk">*</span></label>
+        <select 
+          value={p1.vipUnderliner} 
+          onChange={(e) => setP1({...p1, vipUnderliner: e.target.value})}
+        >
+          <option value="">Select VIP Underliner</option>
+          {dbOptions.underliners.map(item => (
+            <option key={item.id} value={item.name}>{item.name}</option>
+          ))}
+        </select>
       </div>
       
       <div className="form-group">
-        <label>Remarks</label>
-        <textarea 
-          value={p2.flowerRemarks} 
-          onChange={(e) => setP2({...p2, flowerRemarks: e.target.value})} 
+        <label>VIP Topper</label>
+        <select 
+          value={p1.vipTopper} 
+          onChange={(e) => setP1({...p1, vipTopper: e.target.value})}
+        >
+          <option value="">Select VIP Topper</option>
+          {dbOptions.toppers.map(item => (
+            <option key={item.id} value={item.name}>{item.name}</option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="form-group">
+        <label>VIP Napkin <span className="required-asterisk">*</span></label>
+        <select 
+          value={p1.vipNapkin} 
+          onChange={(e) => setP1({...p1, vipNapkin: e.target.value})}
+        >
+          <option value="">Select VIP Napkin Color</option>
+          {dbOptions.napkins.map(item => (
+            <option key={item.id} value={item.name}>{item.name}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <div className="form-row three">
+      <div className="form-group">
+        <label>Guest Underliner <span className="required-asterisk">*</span></label>
+        <select 
+          value={p1.guestUnderliner} 
+          onChange={(e) => setP1({...p1, guestUnderliner: e.target.value})}
+        >
+          <option value="">Select Guest Underliner</option>
+          {dbOptions.underliners.map(item => (
+            <option key={item.id} value={item.name}>{item.name}</option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="form-group">
+        <label>Guest Topper</label>
+        <select 
+          value={p1.guestTopper} 
+          onChange={(e) => setP1({...p1, guestTopper: e.target.value})}
+        >
+          <option value="">Select Guest Topper</option>
+          {dbOptions.toppers.map(item => (
+            <option key={item.id} value={item.name}>{item.name}</option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="form-group">
+        <label>Guest Napkin <span className="required-asterisk">*</span></label>
+        <select 
+          value={p1.guestNapkin} 
+          onChange={(e) => setP1({...p1, guestNapkin: e.target.value})}
+        >
+          <option value="">Select Guest Napkin Color</option>
+          {dbOptions.napkins.map(item => (
+            <option key={item.id} value={item.name}>{item.name}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  </div>
+);
+
+// Updated renderPage2 function
+const renderPage2 = () => (
+  <div className="page">
+    <h4>Chairs</h4>
+    <div className="form-row two">
+      <div className="form-group">
+        <label>Total Chairs <span className="required-asterisk">*</span></label>
+        <input value={p2.totalChairs} readOnly className="readonly-input" />
+      </div>
+    </div>
+
+    {errors.chairsSum && <div className="validation-error">{errors.chairsSum}</div>}
+    <div className="form-row four">
+      <div className="form-group">
+        <label>Monoblock <span className="required-asterisk">*</span></label>
+        <input 
+          type="number" 
+          min="0"
+          value={p2.chairsMonoblock} 
+          onChange={(e) => setP2({...p2, chairsMonoblock: e.target.value})} 
+        />
+      </div>
+      
+      <div className="form-group">
+        <label>Rustic <span className="required-asterisk">*</span></label>
+        <input 
+          type="number" 
+          min="0"
+          value={p2.chairsRustic} 
+          onChange={(e) => setP2({...p2, chairsRustic: e.target.value})} 
+        />
+      </div>
+      
+      <div className="form-group">
+        <label>Tiffany <span className="required-asterisk">*</span></label>
+        <input 
+          type="number" 
+          min="0"
+          value={p2.chairsTiffany} 
+          onChange={(e) => setP2({...p2, chairsTiffany: e.target.value})} 
         />
       </div>
 
-      <h4>Other Special Requirements</h4>
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Cake Name/Code</label>
-          <select 
-            value={p2.cakeNameCode} 
-            onChange={(e) => setP2({...p2, cakeNameCode: e.target.value})}
-          >
-            <option value="">Select Cake</option>
-            {dbOptions.specialRequirements
-              .filter(item => item.category === 'Cake')
-              .map(item => (
-                <option key={item.id} value={item.name}>{item.name}</option>
-              ))
-            }
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>Flavor</label>
-          <select 
-            value={p2.cakeFlavor} 
-            onChange={(e) => setP2({...p2, cakeFlavor: e.target.value})}
-          >
-            <option value="">Select Flavor</option>
-            {dbOptions.specialRequirements
-              .filter(item => item.category === 'Flavor')
-              .map(item => (
-                <option key={item.id} value={item.name}>{item.name}</option>
-              ))
-            }
-          </select>
-        </div>
+      <div className="form-group">
+        <label>Premium <span className="required-asterisk">*</span></label>
+        <input 
+          type="number" 
+          min="0"
+          value={p2.premiumChairs} 
+          onChange={(e) => setP2({...p2, premiumChairs: e.target.value})} 
+        />
       </div>
-      
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Supplier</label>
-          <select 
-            value={p2.cakeSupplier} 
-            onChange={(e) => setP2({...p2, cakeSupplier: e.target.value})}
-          >
-            <option value="">Select Supplier</option>
-            {dbOptions.specialRequirements
-              .filter(item => item.category === 'Supplier')
-              .map(item => (
-                <option key={item.id} value={item.name}>{item.name}</option>
-              ))
-            }
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>Cake Specifications</label>
-          <input 
-            value={p2.cakeSpecifications} 
-            onChange={(e) => setP2({...p2, cakeSpecifications: e.target.value})} 
-          />
-        </div>
-      </div>
-      
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Celebrator's Car</label>
-          <select 
-            value={p2.celebratorsCar} 
-            onChange={(e) => setP2({...p2, celebratorsCar: e.target.value})}
-          >
-            <option value="">Select Car Service</option>
-            {dbOptions.specialRequirements
-              .filter(item => item.category === 'Transportation')
-              .map(item => (
-                <option key={item.id} value={item.name}>{item.name}</option>
-              ))
-            }
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>Emcee</label>
-          <input 
-            value={p2.emcee} 
-            onChange={(e) => setP2({...p2, emcee: e.target.value})} 
-            placeholder="Enter emcee name"
-          />
-        </div>
-      </div>
-      
-      <div className="form-row two">
-        <div className="form-group">
-          <label>Sound System</label>
-          <select 
-            value={p2.soundSystem} 
-            onChange={(e) => setP2({...p2, soundSystem: e.target.value})}
-          >
-            <option value="">Select Sound System</option>
-            {dbOptions.specialRequirements
-              .filter(item => item.category === 'Audio Visual')
-              .map(item => (
-                <option key={item.id} value={item.name}>{item.name}</option>
-              ))
-            }
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label>Tent</label>
-          <select 
-            value={p2.tent} 
-            onChange={(e) => setP2({...p2, tent: e.target.value})}
-          >
-            <option value="">Select Tent</option>
-            {dbOptions.specialRequirements
-              .filter(item => item.category === 'Tent')
-              .map(item => (
-                <option key={item.id} value={item.name}>{item.name}</option>
-              ))
-            }
-          </select>
-        </div>
+    </div>
+
+    <h4>Creatives</h4>
+    <div className="form-row two">
+      <div className="form-group">
+        <label>Backdrop</label>
+        <select 
+          value={p2.backdrop} 
+          onChange={(e) => setP2({...p2, backdrop: e.target.value})}
+        >
+          <option value="">Select Backdrop</option>
+          {dbOptions.backdrop.map(item => (
+            <option key={item.id} value={item.name}>{item.name}</option>
+          ))}
+        </select>
       </div>
       
       <div className="form-group">
-        <label>Celebrator's Chair</label>
+        <label>Flowers</label>
         <select 
-          value={p2.celebratorsChair} 
-          onChange={(e) => setP2({...p2, celebratorsChair: e.target.value})}
+          value={p2.flower} 
+          onChange={(e) => setP2({...p2, flower: e.target.value})}
         >
-          <option value="">Select Celebrator's Chair</option>
-          {dbOptions.specialRequirements
-            .filter(item => item.category === 'Chairs')
-            .map(item => (
+          <option value="">Select Flowers</option>
+          {dbOptions.flowers.map(item => (
+            <option key={item.id} value={item.name}>{item.name}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+    
+    <div className="form-row two">
+      <div className="form-group">
+        <label>Decor</label>
+        <select 
+          value={p2.decor} 
+          onChange={(e) => setP2({...p2, decor: e.target.value})}
+        >
+          <option value="">Select Decor</option>
+          {dbOptions.decor.map(item => (
+            <option key={item.id} value={item.name}>{item.name}</option>
+          ))}
+        </select>
+      </div>
+      
+    </div>
+    
+    <div className="form-group">
+      <label>Remarks</label>
+      <textarea 
+        value={p2.flowerRemarks} 
+        onChange={(e) => setP2({...p2, flowerRemarks: e.target.value})} 
+      />
+    </div>
+
+    <h4>Special Requirements</h4>
+    <div className="form-row two">
+      <div className="form-group">
+        <label>Entrance</label>
+        <select 
+          value={p2.entrance} 
+          onChange={(e) => setP2({...p2, entrance: e.target.value})}
+        >
+          <option value="">Select Entrance</option>
+          {dbOptions.entrance.map(item => (
               <option key={item.id} value={item.name}>{item.name}</option>
             ))
           }
         </select>
       </div>
-    </div>  );
+      
+      <div className="form-group">
+        <label>Staging</label>
+        <select 
+          value={p2.staging} 
+          onChange={(e) => setP2({...p2, staging: e.target.value})}
+        >
+          <option value="">Staging</option>
+          {dbOptions.staging.map(item => (
+              <option key={item.id} value={item.name}>{item.name}</option>
+            ))
+          }
+        </select>
+      </div>
+    </div>
+    
+    <div className="form-row two">
+      <div className="form-group">
+        <label>Equipments</label>
+        <select 
+          value={p2.equipment} 
+          onChange={(e) => setP2({...p2, equipment: e.target.value})}
+        >
+          <option value="">Select Equipments</option>
+          {dbOptions.equipments.map(item => (
+              <option key={item.id} value={item.name}>{item.name}</option>
+            ))
+          }
+        </select>
+      </div>
+      
+      <div className="form-group">
+        <label>Miscellaneous</label>
+        <select 
+          value={p2.miscellaneous} 
+          onChange={(e) => setP2({...p2, miscellaneous: e.target.value})}
+        >
+          <option value="">Select Miscellaneous</option>
+          {dbOptions.miscellaneous.map(item => (
+              <option key={item.id} value={item.name}>{item.name}</option>
+            ))
+          }
+        </select>
+      </div>
+    </div>
+    
+    <div className="form-row two">
+      <div className="form-group">
+        <label>Emcee</label>
+        <input 
+          value={p2.emcee} 
+          onChange={(e) => setP2({...p2, emcee: e.target.value})} 
+          placeholder="Enter emcee name"
+        />
+      </div>
+    </div>
+  </div>
+);
     
   const renderPage3 = () => {
   if (p1.serviceStyle !== "Buffet") return null;

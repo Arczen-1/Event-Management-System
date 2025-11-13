@@ -1,4 +1,15 @@
-/* Color Motif Styles - Selected Only in Dropdown */
+.readonly-input {
+  background-color: lightgray;
+  color: #666;
+  cursor: not-allowed;
+  border-color: #ddd;
+}
+
+.readonly-input:focus {
+  outline: none;
+  border-color: #ddd;
+  box-shadow: none;
+}
 .color-motif-container {
   width: 100%;
     padding: 12px;

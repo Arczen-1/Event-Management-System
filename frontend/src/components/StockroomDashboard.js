@@ -108,17 +108,45 @@ const fetchContracts = async () => {
  return (
 
     <div className="department-dashboard">
-      <div className="dashboard-header">
-        <div className="dashboard-header-inner">
-          <h1>Stockroom Dashboard</h1>
-          <div className="header-nav">
-            <button className={`nav-btn ${activeView === "contracts" ? "active" : ""}`} onClick={() => setActiveView("contracts")}>Active Contracts</button>
-            <button className={`nav-btn ${activeView === "inventory" ? "active" : ""}`} onClick={() => setActiveView("inventory")}>Inventory</button>
-            <button className={`nav-btn ${activeView === "fabrication" ? "active" : ""}`} onClick={() => setActiveView("fabrication")}>Fabrication Report</button>
-          </div>
-          <button onClick={onLogout} className="logout-btn header-logout">Logout</button>
-        </div>
+  {/* Left Sidebar */}
+  <div className="dashboard-sidebar">
+    {/* Title Header */}
+    <div className="accreditation-header">
+      <h1>STOCKROOM</h1>
+      <h2>Dashboard</h2>
+    </div>
+    
+    <div className="header-nav">
+      {/* Contracts Section */}
+      <div className="nav-section">
+        <div className="section-title">CONTRACTS</div>
+        <button className={`nav-btn ${activeView === "contracts" ? "active" : ""}`} onClick={() => setActiveView("contracts")}>
+          Active Contracts
+        </button>
       </div>
+      
+      {/* Inventory Section */}
+      <div className="nav-section">
+        <div className="section-title">INVENTORY</div>
+        <button className={`nav-btn ${activeView === "inventory" ? "active" : ""}`} onClick={() => setActiveView("inventory")}>
+          Inventory
+        </button>
+      </div>
+      
+      {/* Reports Section */}
+      <div className="nav-section">
+        <div className="section-title">REPORTS</div>
+        <button className={`nav-btn ${activeView === "fabrication" ? "active" : ""}`} onClick={() => setActiveView("fabrication")}>
+          Fabrication Report
+        </button>
+      </div>
+    </div>
+    
+    <div className="sidebar-footer">
+      <button onClick={onLogout} className="logout-btn">Logout</button>
+    </div>
+  </div>
+
 
     <div className="dashboard-content">
       {/* Active Contracts */}

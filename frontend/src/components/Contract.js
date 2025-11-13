@@ -85,18 +85,6 @@ const ContractSchema = new mongoose.Schema(
       celebratorsChair: { type: String, default: "" },
       remarks: { type: String, default: "" },
       others: { type: String, default: "" },
-      knowUsWebsite: { type: Boolean, default: false },
-      knowUsFacebook: { type: Boolean, default: false },
-      knowUsInstagram: { type: Boolean, default: false },
-      knowUsFlyers: { type: Boolean, default: false },
-      knowUsBillboard: { type: Boolean, default: false },
-      knowUsWordOfMouth: { type: Boolean, default: false },
-      knowUsVenueReferral: { type: Boolean, default: false },
-      knowUsRepeatClient: { type: Boolean, default: false },
-      knowUsBridalFair: { type: Boolean, default: false },
-      knowUsFoodTasting: { type: Boolean, default: false },
-      knowUsCelebrityReferral: { type: Boolean, default: false },
-      knowUsOthers: { type: Boolean, default: false }
     },
 
     page3: {

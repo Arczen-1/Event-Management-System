@@ -7,7 +7,7 @@ function validateContractFullyFilled(contract) {
   const errors = [];
 
   // Example validation for page1
-  if (!contract.page1 || !contract.page1.contractName) errors.push("Contract Name is missing");
+  if (!contract.page1 || !contract.page1.occasion) errors.push("Contract Name is missing");
   if (!contract.page1 || !contract.page1.celebratorName) errors.push("Client/Celebrator Name is missing");
   if (!contract.page1 || !contract.page1.eventDate) errors.push("Event Date is missing");
 
@@ -234,7 +234,7 @@ function SalesDashboard({ onLogout, user }) {
   const renderContractsTable = () => (
     <div className="contracts-table-container">
       <div className="table-header">
-        <h3>My Contracts</h3>
+        <h3>Contracts</h3>
         <button
           className="action-btn primary"
           onClick={() => setShowCreateForm(true)}
@@ -475,6 +475,7 @@ function SalesDashboard({ onLogout, user }) {
               <Section title="Page 1" data={selectedContract.page1} />
               <Section title="Page 2" data={selectedContract.page2} />
               <Section title="Page 3" data={selectedContract.page3} />
+              
             </>
           );
         })()}
@@ -512,25 +513,48 @@ function SalesDashboard({ onLogout, user }) {
   );
 
   return (
-    <div className="sales-dashboard">
-      <div className="dashboard-header">
-        <div className="dashboard-header-inner">
-          <div className="header-left">
-            <h1>Sales Dashboard</h1>
-            <nav className="nav-bar">
-              <button className="nav-btn" onClick={() => { setShowCreateForm(false); setEditExisting(null); setShowProfile(false); setSelectedContract(null); }}>
-                Contracts
-              </button>
-              <button className="nav-btn" onClick={() => { setShowProfile(true); setShowCreateForm(false); setEditExisting(null); setSelectedContract(null); }}>
-                Profile
-              </button>
-              <button className="nav-btn logout-btn" onClick={onLogout}>
-                Log Out
-              </button>
-            </nav>
-          </div>
-        </div>
+  <div className="department-dashboard">
+  {/* Left Sidebar */}
+  <div className="dashboard-sidebar">
+    {/* Title Header */}
+    <div className="accreditation-header">
+      <h1>SALES</h1>
+      <h2>Dashboard</h2>
+    </div>
+    
+    <div className="header-nav">
+      {/* Contracts Section */}
+      <div className="nav-section">
+        <div className="section-title">NAVIGATION</div>
+        <button 
+          className={`nav-btn ${!showCreateForm && !editExisting && !showProfile && !selectedContract ? "active" : ""}`} 
+          onClick={() => { 
+            setShowCreateForm(false); 
+            setEditExisting(null); 
+            setShowProfile(false); 
+            setSelectedContract(null); 
+          }}
+        >
+          Contracts
+        </button>
+        <button 
+          className={`nav-btn ${showProfile ? "active" : ""}`} 
+          onClick={() => { 
+            setShowProfile(true); 
+            setShowCreateForm(false); 
+            setEditExisting(null); 
+            setSelectedContract(null); 
+          }}
+        >
+          Profile
+        </button>
       </div>
+    </div>
+    
+    <div className="sidebar-footer">
+      <button onClick={onLogout} className="logout-btn">Logout</button>
+    </div>
+  </div>
 
       <div className="dashboard-content">
         {showProfile ? (

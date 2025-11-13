@@ -1,117 +1,290 @@
-.admin-dashboard {
+.department-dashboard {
   min-height: 100vh;
   background-color: #410d1d;
   font-family: "Aileron", sans-serif;
-}
-
-.dashboard-header {
-  background-color: white;
-  padding: 20px 40px;
-  display: block;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.dashboard-header-inner {
-  /* Stretch header content full width so title is truly leftmost */
-  width: 100%;
-  margin: 0; /* remove centering to use full width */
-  display: grid; /* Three zones: left title, center tabs, right logout */
-  grid-template-columns: auto 1fr auto; /* title | center spacer/nav | logout */
-  align-items: center;
-  gap: 16px;
-}
-
-/* Center the nav group within the header */
-.header-nav {
-  justify-self: center;
   display: flex;
-  gap: 10px;
-}
-
-/* Right align the logout button */
-.header-logout {
-  justify-self: end;
-}
-
-.dashboard-header h1 {
-  color: #410d1d;
-  font-size: 32px;
-  font-family: "Aileron Black", sans-serif;
   margin: 0;
+  padding: 0;
+}
+
+/* Reset body margins */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #410d1d;
+}
+
+/* Left Sidebar Navigation */
+.dashboard-sidebar {
+  width: 280px;
+  background-color: white;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+/* Accreditation Header */
+.accreditation-header {
+  background-color: white;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.accreditation-header h1 {
+  color: #410d1d;
+  font-size: 28px;
+  font-family: "Aileron Black", sans-serif;
+  margin: 0 0 8px 0;
+  letter-spacing: 1px;
+}
+
+.accreditation-header h2 {
+  color: #410d1d;
+  font-size: 16px;
+  font-family: "Aileron", sans-serif;
+  margin: 0;
+  font-weight: normal;
+  letter-spacing: 0.5px;
+}
+
+/* Navigation Menu */
+.header-nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 0;
+}
+
+.nav-section {
+  padding: 25px 0 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.nav-section:last-of-type {
+  border-bottom: none;
+}
+
+.section-title {
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 25px 15px 25px;
+  font-family: "Aileron", sans-serif;
+}
+
+.nav-btn {
+  background: transparent;
+  color: #410d1d;
+  border: none;
+  padding: 14px 25px;
+  cursor: pointer;
+  font-family: "Aileron", sans-serif;
+  text-align: left;
+  transition: all 0.3s ease;
+  font-size: 15px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin: 0;
+  border-radius: 0;
+}
+
+.nav-btn:hover {
+  background-color: #f8f9fa;
+  color: #410d1d;
+}
+
+.nav-btn.active {
+  background-color: #410d1d;
+  color: white;
+  border-right: 3px solid #fff;
+}
+
+/* Logout button at bottom left */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 20px;
+  border-top: 1px solid #eee;
+  background-color: #fafafa;
 }
 
 .logout-btn {
   background-color: #410d1d;
   color: white;
   border: none;
-  padding: 10px 20px;
-  font-size: 1rem;
+  padding: 14px 20px;
+  font-size: 15px;
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.3s;
   font-family: "Aileron", sans-serif;
+  width: 100%;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .logout-btn:hover {
   background-color: #5a1a2d;
+  transform: translateY(-1px);
 }
 
+/* Main content area */
 .dashboard-content {
-  padding: 40px;
-  max-width: 1200px;
-  margin: 0 auto;
+  flex: 1;
+  padding: 30px 40px;
+  margin-left: 280px;
+  width: calc(100% - 280px);
+  min-height: 100vh;
+  background-color: #410d1d;
+  box-sizing: border-box;
 }
 
-.main-navigation {
+/* ==================== DASHBOARD CARDS ==================== */
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-left: 4px solid #410d1d;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dashboard-card.highlight {
+  border-left-color: #e74c3c;
+  background: linear-gradient(135deg, #fff, #f8f9fa);
+}
+
+.card-icon {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.card-content h3 {
+  margin: 0 0 10px 0;
+  color: #410d1d;
+  font-size: 1.1rem;
+}
+
+.card-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #410d1d;
+  margin-bottom: 5px;
+}
+
+.card-label {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* ==================== DEPARTMENT VIEWS ==================== */
+.department-view {
+  background: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.view-header h2 {
+  color: #410d1d;
+  margin: 0;
+}
+
+.back-btn {
+  background: #410d1d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.back-btn:hover {
+  background: #5a1a2d;
+}
+
+/* ==================== USER MANAGEMENT STYLES ==================== */
+.user-management {
+  background: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.management-tabs {
   display: flex;
   gap: 10px;
-  margin-bottom: 30px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
 }
 
-.nav-btn {
-  background-color: white; /* default white background */
-  color: #410d1d; /* maroon text */
-  border: 2px solid #410d1d; /* maroon border */
-  padding: 12px 24px;
-  font-size: 1rem;
-  border-radius: 8px;
+.tab {
+  background: transparent;
+  color: #410d1d;
+  border: 2px solid #410d1d;
+  padding: 10px 20px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   font-family: "Aileron", sans-serif;
+  font-size: 14px;
 }
 
-.nav-btn:hover {
-  background-color: #faf6f7; /* subtle hover */
+.tab:hover {
+  background-color: #f8f9fa;
 }
 
-.nav-btn.active {
-  background-color: #410d1d; /* maroon */
-  color: white; /* white text when active */
-  border-color: #410d1d;
-}
-
-.main-dashboard h2 {
+.tab.active {
+  background-color: #410d1d;
   color: white;
-  font-size: 28px;
-  margin-bottom: 30px;
-  font-family: "Aileron Black", sans-serif;
 }
 
-.contracts-table-container {
-  background-color: white;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.users-table-container {
+  margin-top: 20px;
 }
 
-.table-header {
+.users-table-container .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-.table-header h3 {
+.users-table-container .table-header h3 {
   color: #410d1d;
   font-size: 20px;
   margin: 0;
@@ -128,15 +301,17 @@
   color: #410d1d;
   font-weight: bold;
   font-family: "Aileron", sans-serif;
+  font-size: 14px;
 }
 
 .filter-select {
   padding: 8px 12px;
   border: 1px solid #ccc;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 14px;
   font-family: "Aileron", sans-serif;
   background-color: white;
+  min-width: 150px;
 }
 
 .filter-select:focus {
@@ -145,112 +320,44 @@
   box-shadow: 0 0 0 2px rgba(65, 13, 29, 0.2);
 }
 
-.contracts-table {
-  overflow-x: auto;
-}
-
-.contracts-table table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: "Aileron", sans-serif;
-}
-
-.contracts-table th {
-  background-color: #410d1d;
-  color: white;
-  padding: 15px 12px;
-  text-align: left;
-  font-weight: bold;
-  font-family: "Aileron Black", sans-serif;
-}
-
-.contracts-table td {
-  padding: 15px 12px;
-  border-bottom: 1px solid #eee;
-  color: #333;
-}
-
-.contracts-table tr:hover {
-  background-color: #f8f9fa;
-}
-
-.contracts-table tr.no-contracts td {
-  text-align: center;
-  color: #666;
-  font-style: italic;
-  padding: 30px;
-}
-
-.action-btn {
-  padding: 12px 24px;
-  font-size: 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-family: "Aileron", sans-serif;
-  border: none;
-}
-
-.action-btn.primary {
-  background-color: #410d1d;
-  color: white;
-}
-
-.action-btn.primary:hover {
-  background-color: #5a1a2d;
-}
-
-.action-btn.secondary {
-  background-color: transparent;
-  color: white;
-  border: 2px solid white;
-}
-
-.action-btn.secondary:hover {
-  background-color: white;
-  color: #410d1d;
-}
-
-.user-management {
-  margin-top: 20px;
-}
-
-.management-tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 30px;
-}
-
-.users-table-container {
-  background-color: white;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
 .users-table {
   overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid #eee;
 }
 
 .users-table table {
   width: 100%;
   border-collapse: collapse;
   font-family: "Aileron", sans-serif;
+  font-size: 14px;
 }
 
 .users-table th {
   background-color: #410d1d;
   color: white;
-  padding: 15px 12px;
+  padding: 12px 10px;
   text-align: left;
   font-weight: bold;
   font-family: "Aileron Black", sans-serif;
+  font-size: 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.users-table th:last-child {
+  border-right: none;
 }
 
 .users-table td {
-  padding: 15px 12px;
+  padding: 12px 10px;
   border-bottom: 1px solid #eee;
   color: #333;
+  font-size: 14px;
+  border-right: 1px solid #f0f0f0;
+}
+
+.users-table td:last-child {
+  border-right: none;
 }
 
 .users-table tr:hover {
@@ -267,6 +374,7 @@
 .user-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .edit-btn,
@@ -274,12 +382,13 @@
 .approve-btn,
 .reject-btn {
   padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: 12px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
   font-family: "Aileron", sans-serif;
   border: none;
+  min-width: 60px;
 }
 
 .edit-btn {
@@ -318,71 +427,13 @@
   background-color: #c82333;
 }
 
-.tab {
-  background-color: transparent;
-  color: white;
-  border: 2px solid white;
-  padding: 12px 24px;
-  font-size: 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-family: "Aileron", sans-serif;
-}
-
-.tab:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.tab.active {
-  background-color: white;
-  color: #410d1d;
-}
-
-.users-section h3 {
-  color: white;
-  font-size: 24px;
-  margin-bottom: 20px;
-  font-family: "Aileron Black", sans-serif;
-}
-
-.users-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 20px;
-}
-
-.user-card {
-  background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
-}
-
-.user-card:hover {
-  transform: translateY(-2px);
-}
-
-.user-info h3 {
-  color: #410d1d;
-  font-size: 18px;
-  margin-bottom: 10px;
-  font-family: "Aileron Black", sans-serif;
-}
-
-.user-info p {
-  margin: 8px 0;
-  color: #555;
-  font-family: "Aileron", sans-serif;
-}
-
+/* Status badges */
 .status {
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: bold;
-  margin-left: 8px;
+  text-transform: uppercase;
 }
 
 .status.pending {
@@ -400,44 +451,7 @@
   color: #721c24;
 }
 
-.role-assignment {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #eee;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.role-select {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-family: "Aileron", sans-serif;
-}
-
-.assign-btn {
-  background-color: #410d1d;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  font-size: 0.9rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  font-family: "Aileron", sans-serif;
-}
-
-.assign-btn:hover:not(:disabled) {
-  background-color: #5a1a2d;
-}
-
-.assign-btn:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
+/* Message styles */
 .message {
   background-color: white;
   padding: 15px;
@@ -461,15 +475,7 @@
   color: #721c24;
 }
 
-.no-users {
-  color: white;
-  text-align: center;
-  font-size: 1.1rem;
-  font-family: "Aileron", sans-serif;
-  margin-top: 40px;
-}
-
-/* Modal Styles */
+/* ==================== MODAL STYLES ==================== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -548,7 +554,8 @@
 }
 
 .save-btn,
-.cancel-btn {
+.cancel-btn,
+.approve-btn-modal {
   padding: 10px 20px;
   font-size: 1rem;
   border-radius: 6px;
@@ -595,4 +602,138 @@
 .cancel-btn:hover {
   background-color: #410d1d;
   color: white;
+}
+
+/* ==================== OTHER DEPARTMENT VIEWS ==================== */
+.finance-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.finance-card {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 20px;
+  text-align: center;
+  border-left: 4px solid #28a745;
+}
+
+.finance-card h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.finance-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #410d1d;
+}
+
+.calendar-placeholder {
+  text-align: center;
+  padding: 40px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 2px dashed #ddd;
+}
+
+.calendar-placeholder h3 {
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.calendar-placeholder p {
+  color: #999;
+  margin: 0;
+}
+
+/* Recent Activity */
+.recent-activity {
+  background: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+.activity-list {
+  margin-top: 15px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  font-size: 1.2rem;
+  margin-right: 15px;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-text {
+  display: block;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.activity-time {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    width: 220px;
+  }
+  
+  .dashboard-content {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+    padding: 20px;
+  }
+  
+  .dashboard-cards {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  
+  .user-actions {
+    flex-direction: column;
+  }
+  
+  .management-tabs {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .department-dashboard {
+    flex-direction: column;
+  }
+  
+  .dashboard-sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    padding: 0;
+  }
+  
+  .dashboard-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 15px;
+  }
 }

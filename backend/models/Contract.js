@@ -66,13 +66,13 @@ const ContractSchema = new mongoose.Schema(
       premiumChairs: { type: String, default: "" },
       totalChairs: { type: String, default: "" },
       chairsRemarks: { type: String, default: "" },
-      flowerBackdrop: { type: String, default: "" },
-      flowerGuestCenterpiece: { type: String, default: "" },
-      flowerVipCenterpiece: { type: String, default: "" },
-      flowerCakeTable: { type: String, default: "" },
-      flowerRemarks: { type: String, default: "" },
-      cakeNameCode: { type: String, default: "" },
-      cakeFlavor: { type: String, default: "" },
+      backdrop: { type: String, default: "" },
+      flower: { type: String, default: "" },
+      decor: { type: String, default: "" },
+      entrance: { type: String, default: "" },
+      staging: { type: String, default: "" },
+      equipment: { type: String, default: "" },
+      miscellaneous: { type: String, default: "" },
       cakeSupplier: { type: String, default: "" },
       cakeSpecifications: { type: String, default: "" },
       celebratorsCar: { type: String, default: "" },
@@ -80,18 +80,6 @@ const ContractSchema = new mongoose.Schema(
       soundSystem: { type: String, default: "" },
       tent: { type: String, default: "" },
       celebratorsChair: { type: String, default: "" },
-      knowUsWebsite: { type: Boolean, default: false },
-      knowUsFacebook: { type: Boolean, default: false },
-      knowUsInstagram: { type: Boolean, default: false },
-      knowUsFlyers: { type: Boolean, default: false },
-      knowUsBillboard: { type: Boolean, default: false },
-      knowUsWordOfMouth: { type: Boolean, default: false },
-      knowUsVenueReferral: { type: Boolean, default: false },
-      knowUsRepeatClient: { type: Boolean, default: false },
-      knowUsBridalFair: { type: Boolean, default: false },
-      knowUsFoodTasting: { type: Boolean, default: false },
-      knowUsCelebrityReferral: { type: Boolean, default: false },
-      knowUsOthers: { type: Boolean, default: false }
     },
 
     pageBuffet: {
@@ -154,6 +142,6 @@ const ContractSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-module.exports = mongoose.model("Contract", ContractSchema)
+module.exports = mongoose.model("Contract2", ContractSchema)
 
 

@@ -13,7 +13,7 @@ function FabricationDashboard({ onLogout }) {
 
   const fetchContracts = async () => {
     try {
-      const res = await fetch("http://localhost:5000/contracts");
+      const res = await fetch("http://localhost:3000/contracts");
       const data = await res.json();
       if (res.ok) {
         setContracts(

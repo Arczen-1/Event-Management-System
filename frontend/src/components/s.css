@@ -1,0 +1,538 @@
+.department-dashboard {
+  min-height: 100vh;
+  background-color: #410d1d;
+  font-family: "Aileron", sans-serif;
+  display: flex;
+  margin: 0;
+  padding: 0;
+}
+
+/* Reset body margins */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #410d1d;
+}
+
+/* Left Sidebar Navigation */
+.dashboard-sidebar {
+  width: 250px; /* Slightly reduced sidebar */
+  background-color: white;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+/* Accreditation Header */
+.accreditation-header {
+  background-color: white;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.accreditation-header h1 {
+  color: #410d1d;
+  font-size: 28px;
+  font-family: "Aileron Black", sans-serif;
+  margin: 0 0 8px 0;
+  letter-spacing: 1px;
+}
+
+.accreditation-header h2 {
+  color: #410d1d;
+  font-size: 16px;
+  font-family: "Aileron", sans-serif;
+  margin: 0;
+  font-weight: normal;
+  letter-spacing: 0.5px;
+}
+
+/* Navigation Menu */
+.header-nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 0;
+}
+
+.nav-section {
+  padding: 25px 0 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.nav-section:last-of-type {
+  border-bottom: none;
+}
+
+.section-title {
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 25px 15px 25px;
+border-bottom: 2px solid #410d1d;
+  font-family: "Aileron", sans-serif;
+}
+
+.nav-btn {
+  background: transparent;
+  color: #410d1d;
+  border: none;
+  padding: 14px 25px;
+  cursor: pointer;
+  font-family: "Aileron", sans-serif;
+  text-align: left;
+  transition: all 0.3s ease;
+  font-size: 15px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin: 0;
+  border-radius: 0;
+}
+
+.nav-btn:hover {
+  background-color: #f8f9fa;
+  color: #410d1d;
+}
+
+.nav-btn.active {
+  background-color: #410d1d;
+  color: white;
+  border-right: 3px solid #fff;
+}
+
+/* Checkbox-style indicator */
+.nav-btn::before {
+  content: "";
+  margin-right: 12px;
+  font-size: 16px;
+  color: #410d1d;
+  transition: all 0.3s ease;
+}
+
+.nav-btn.active::before {
+  content: "";
+  color: white;
+}
+
+.nav-btn:hover::before {
+  color: #410d1d;
+}
+
+.nav-btn.active:hover::before {
+  color: white;
+}
+
+/* Logout button at bottom left */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 20px;
+  border-top: 1px solid #eee;
+  background-color: #fafafa;
+}
+
+.logout-btn {
+  background-color: #410d1d;
+  color: white;
+  border: none;
+  padding: 14px 20px;
+  font-size: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-family: "Aileron", sans-serif;
+  width: 100%;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.logout-btn:hover {
+  background-color: #5a1a2d;
+  transform: translateY(-1px);
+}
+
+/* MAIN CONTENT AREA - WIDER */
+.dashboard-content {
+  flex: 1;
+  padding: 30px 40px; /* More horizontal padding */
+  margin-left: 250px; /* Reduced to account for smaller sidebar */
+  width: calc(100% - 250px); /* More space for content */
+  min-height: 100vh;
+  background-color: #410d1d;
+  box-sizing: border-box;
+  max-width: none; /* Remove any max-width restrictions */
+}
+
+/* WIDER TABLE CONTAINERS */
+.contracts-table-container,
+.fabrication-report-container {
+  background-color: white;
+  border-radius: 6px;
+  padding: 25px 30px; /* More horizontal padding */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 25px;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: none; /* Remove max-width restrictions */
+}
+
+/* Table header styles */
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.table-header h3 {
+  color: #410d1d;
+  font-size: 22px; /* Slightly larger */
+  margin: 0;
+  font-family: "Aileron Black", sans-serif;
+}
+
+/* Table actions */
+.table-actions {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-add {
+  background-color: #410d1d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Aileron", sans-serif;
+  font-size: 14px;
+}
+
+.btn-add:hover {
+  background-color: #5a1a2d;
+}
+
+/* WIDER TABLES WITH BETTER COLUMN DISTRIBUTION */
+.contracts-table,
+.inventory-table,
+.monitoring-table,
+.fabrication-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Aileron", sans-serif;
+  font-size: 14px;
+  table-layout: auto; /* Allow natural column sizing */
+}
+
+/* Optimize column widths for inventory table */
+.inventory-table th:nth-child(1), .inventory-table td:nth-child(1) { /* Item Code */
+  width: 80px;
+  min-width: 80px;
+}
+
+.inventory-table th:nth-child(2), .inventory-table td:nth-child(2) { /* Description */
+  width: auto;
+  min-width: 150px;
+}
+
+.inventory-table th:nth-child(3), .inventory-table td:nth-child(3) { /* UOM */
+  width: 70px;
+  min-width: 70px;
+}
+
+.inventory-table th:nth-child(4), .inventory-table td:nth-child(4), /* On-hand Start */
+.inventory-table th:nth-child(5), .inventory-table td:nth-child(5), /* Quantity */
+.inventory-table th:nth-child(6), .inventory-table td:nth-child(6), /* Damages */
+.inventory-table th:nth-child(7), .inventory-table td:nth-child(7) { /* On-hand End */
+  width: 100px;
+  min-width: 100px;
+  text-align: center;
+}
+
+.inventory-table th:nth-child(8), .inventory-table td:nth-child(8) { /* Actions */
+  width: 120px;
+  min-width: 120px;
+  text-align: center;
+}
+
+/* Table cell styles */
+.contracts-table th,
+.inventory-table th,
+.monitoring-table th,
+.fabrication-table th {
+  background-color: #410d1d;
+  color: white;
+  padding: 12px 10px;
+  text-align: left;
+  font-weight: bold;
+  font-family: "Aileron Black", sans-serif;
+  font-size: 14px;
+}
+
+.contracts-table td,
+.inventory-table td,
+.monitoring-table td,
+.fabrication-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #eee;
+  color: #333;
+  font-size: 14px;
+}
+
+.contracts-table tr:hover,
+.inventory-table tr:hover,
+.monitoring-table tr:hover,
+.fabrication-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Button styles */
+.btn-review, .btn-edit, .btn-delete {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Aileron", sans-serif;
+  margin: 2px;
+  font-size: 12px;
+}
+
+.btn-review {
+  background-color: #410d1d;
+  color: white;
+}
+
+.btn-edit {
+  background-color: #1a73e8;
+  color: white;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* ---------- FORM STYLES ---------- */
+.fabrication-form {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 1.5rem;
+}
+
+.fabrication-form .form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.fabrication-form .input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px; /* Wider form inputs */
+}
+
+.fabrication-form label {
+  font-weight: 600;
+  color: #410d1d;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.fabrication-form input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.95rem;
+  color: #410d1d;
+  background-color: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.fabrication-form input:focus {
+  outline: none;
+  border-color: #410d1d;
+  background-color: #fff;
+  box-shadow: 0 0 0 2px rgba(65, 13, 29, 0.15);
+}
+
+/* Quantity field */
+.fabrication-form .input-group.small {
+  max-width: 120px;
+}
+
+/* Submit button */
+.fabrication-form .btn-add {
+  margin-left: auto;
+  background-color: #410d1d;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.7rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.fabrication-form .btn-add:hover {
+  background-color: #5a1a2e;
+  transform: translateY(-1px);
+}
+
+.fabrication-table-wrapper {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.fabrication-table th,
+.fabrication-table td {
+  border: 1px solid #dcdcdc;
+  padding: 10px 12px;
+  text-align: left;
+  background-color: #fff;
+  color: #410d1d;
+}
+
+.fabrication-table th {
+  background-color: #f5f6f7 !important;
+  font-weight: 600;
+  color: #410d1d !important;
+}
+
+.fabrication-table tr:nth-child(even) td {
+  background-color: #fafafa !important;
+}
+
+.fabrication-table tr:hover td {
+  background-color: #f0f0f0 !important;
+}
+
+.fabrication-form select,
+.fabrication-form .select-input {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.95rem;
+  color: #410d1d;
+  background-color: #fafafa;
+  background-image: none;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fabrication-form input[readonly] {
+  background-color: lightgray !important;
+  color: #555;
+  cursor: not-allowed;
+  border: 1px solid #ccc !important;
+  border-radius: 4px;
+  padding: 8px;
+  opacity: 1;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .dashboard-sidebar {
+    width: 240px;
+  }
+  
+  .dashboard-content {
+    margin-left: 240px;
+    width: calc(100% - 240px);
+    padding: 25px 35px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .dashboard-sidebar {
+    width: 230px;
+  }
+  
+  .dashboard-content {
+    margin-left: 230px;
+    width: calc(100% - 230px);
+    padding: 20px 30px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    width: 220px;
+  }
+  
+  .dashboard-content {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+    padding: 20px;
+  }
+  
+  .contracts-table-container,
+  .fabrication-report-container {
+    padding: 20px;
+    border-radius: 4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .department-dashboard {
+    flex-direction: column;
+  }
+  
+  .dashboard-sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    padding: 0;
+  }
+  
+  .dashboard-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 15px;
+  }
+  
+  .header-nav {
+    flex-direction: column;
+  }
+  
+  .nav-section {
+    padding: 15px 0;
+  }
+  
+  .sidebar-footer {
+    padding: 15px;
+  }
+}
+
+/* Ensure no white gaps */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  background-color: #410d1d;
+  min-height: 100vh;
+}
+
+/* Fix for any potential white bars */
+* {
+  box-sizing: border-box;
+}

@@ -267,6 +267,397 @@ app.delete("/admin/delete-user/:userId", async (req, res) => {
   }
 })
 
+// ==================== FINANCE/INVOICE ROUTES ====================
+
+// Get all invoices
+app.get('/finance/invoices', async (req, res) => {
+  try {
+    const invoices = await db.collection('invoices').find({}).toArray();
+    
+    // Format the response
+    const formattedInvoices = invoices.map(invoice => ({
+      _id: invoice._id,
+      invoiceNumber: invoice.invoiceNumber,
+      contractId: invoice.contractId,
+      contractNumber: invoice.contractNumber,
+      client: invoice.client,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      items: invoice.items || [],
+      totalAmount: invoice.totalAmount,
+      status: invoice.status,
+      createdAt: invoice.createdAt,
+      paidDate: invoice.paidDate
+    }));
+
+    res.json({ 
+      success: true, 
+      invoices: formattedInvoices 
+    });
+  } catch (error) {
+    console.error('Get invoices error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch invoices' 
+    });
+  }
+});
+
+// Generate next invoice number
+app.get('/finance/invoices/generate-number', async (req, res) => {
+  try {
+    // Find the highest invoice number
+    const lastInvoice = await db.collection('invoices')
+      .find({})
+      .sort({ invoiceNumber: -1 })
+      .limit(1)
+      .toArray();
+
+    let nextNumber = 'INV-00001';
+    
+    if (lastInvoice.length > 0 && lastInvoice[0].invoiceNumber) {
+      const lastNumber = lastInvoice[0].invoiceNumber;
+      const numberPart = parseInt(lastNumber.split('-')[1]);
+      nextNumber = `INV-${String(numberPart + 1).padStart(5, '0')}`;
+    }
+
+    res.json({ 
+      success: true, 
+      invoiceNumber: nextNumber 
+    });
+  } catch (error) {
+    console.error('Generate invoice number error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to generate invoice number' 
+    });
+  }
+});
+
+// Create new invoice
+app.post('/finance/invoices', async (req, res) => {
+  try {
+    const {
+      contractId,
+      invoiceNumber,
+      contractNumber,
+      client,
+      issueDate,
+      dueDate,
+      items,
+      totalAmount,
+      status
+    } = req.body;
+
+    // Validate required fields
+    if (!contractId || !invoiceNumber || !totalAmount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields'
+      });
+    }
+
+    // Check if invoice number already exists
+    const existingInvoice = await db.collection('invoices')
+      .findOne({ invoiceNumber });
+    
+    if (existingInvoice) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice number already exists'
+      });
+    }
+
+    const invoiceData = {
+      contractId,
+      invoiceNumber,
+      contractNumber,
+      client,
+      issueDate,
+      dueDate,
+      items: items || [],
+      totalAmount: parseFloat(totalAmount),
+      status: status || 'pending',
+      createdAt: new Date(),
+      paidDate: null
+    };
+
+    const result = await db.collection('invoices').insertOne(invoiceData);
+
+    // Update contract to mark as invoiced
+    await db.collection('contracts').updateOne(
+      { _id: new ObjectId(contractId) },
+      { 
+        $set: { 
+          hasInvoice: true,
+          lastInvoiceDate: new Date()
+        } 
+      }
+    );
+
+    // Add to recent activity
+    await db.collection('recent_activity').insertOne({
+      type: 'invoice_created',
+      description: `Invoice ${invoiceNumber} created for ${client}`,
+      timestamp: new Date(),
+      user: 'System' // or get from auth if available
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Invoice created successfully',
+      invoice: {
+        _id: result.insertedId,
+        ...invoiceData
+      }
+    });
+
+  } catch (error) {
+    console.error('Create invoice error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create invoice'
+    });
+  }
+});
+
+// Mark invoice as paid
+app.put('/finance/invoices/:id/mark-paid', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.collection('invoices').updateOne(
+      { _id: new ObjectId(id) },
+      { 
+        $set: { 
+          status: 'paid',
+          paidDate: new Date()
+        } 
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found'
+      });
+    }
+
+    // Get the updated invoice to log activity
+    const updatedInvoice = await db.collection('invoices')
+      .findOne({ _id: new ObjectId(id) });
+
+    // Add to recent activity
+    await db.collection('recent_activity').insertOne({
+      type: 'invoice_paid',
+      description: `Invoice ${updatedInvoice.invoiceNumber} marked as paid`,
+      timestamp: new Date(),
+      user: 'System'
+    });
+
+    res.json({
+      success: true,
+      message: 'Invoice marked as paid successfully'
+    });
+
+  } catch (error) {
+    console.error('Mark invoice as paid error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark invoice as paid'
+    });
+  }
+});
+
+// Get invoice by ID
+app.get('/finance/invoices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const invoice = await db.collection('invoices')
+      .findOne({ _id: new ObjectId(id) });
+
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      invoice
+    });
+
+  } catch (error) {
+    console.error('Get invoice error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch invoice'
+    });
+  }
+});
+
+// Update invoice
+app.put('/finance/invoices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const result = await db.collection('invoices').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Invoice updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update invoice error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update invoice'
+    });
+  }
+});
+
+// Delete invoice
+app.delete('/finance/invoices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.collection('invoices').deleteOne(
+      { _id: new ObjectId(id) }
+    );
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Invoice deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete invoice error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete invoice'
+    });
+  }
+});
+
+// Get financial statistics
+app.get('/finance/statistics', async (req, res) => {
+  try {
+    const invoices = await db.collection('invoices').find({}).toArray();
+    
+    const totalRevenue = invoices
+      .filter(inv => inv.status === 'paid')
+      .reduce((sum, inv) => sum + inv.totalAmount, 0);
+    
+    const pendingRevenue = invoices
+      .filter(inv => inv.status === 'pending')
+      .reduce((sum, inv) => sum + inv.totalAmount, 0);
+
+    const paidInvoices = invoices.filter(inv => inv.status === 'paid').length;
+    const unpaidInvoices = invoices.filter(inv => inv.status === 'pending').length;
+    
+    const overdueInvoices = invoices.filter(inv => 
+      inv.status === 'pending' && new Date(inv.dueDate) < new Date()
+    ).length;
+
+    // Monthly revenue data for charts
+    const monthlyRevenue = {};
+    invoices
+      .filter(inv => inv.status === 'paid' && inv.paidDate)
+      .forEach(inv => {
+        const monthYear = new Date(inv.paidDate).toLocaleString('default', { 
+          month: 'short', 
+          year: 'numeric' 
+        });
+        monthlyRevenue[monthYear] = (monthlyRevenue[monthYear] || 0) + inv.totalAmount;
+      });
+
+    res.json({
+      success: true,
+      statistics: {
+        totalRevenue,
+        pendingRevenue,
+        paidInvoices,
+        unpaidInvoices,
+        overdueInvoices,
+        monthlyRevenue
+      }
+    });
+
+  } catch (error) {
+    console.error('Get financial statistics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch financial statistics'
+    });
+  }
+});
+
+// Get invoices for a specific contract
+app.get('/finance/contracts/:contractId/invoices', async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    const invoices = await db.collection('invoices')
+      .find({ contractId: new ObjectId(contractId) })
+      .toArray();
+
+    res.json({
+      success: true,
+      invoices
+    });
+  } catch (error) {
+    console.error('Get contract invoices error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch contract invoices'
+    });
+  }
+});
+
+// Get overdue invoices
+app.get('/finance/invoices/overdue', async (req, res) => {
+  try {
+    const overdueInvoices = await db.collection('invoices')
+      .find({ 
+        status: 'pending',
+        dueDate: { $lt: new Date() }
+      })
+      .toArray();
+
+    res.json({
+      success: true,
+      invoices: overdueInvoices
+    });
+  } catch (error) {
+    console.error('Get overdue invoices error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch overdue invoices'
+    });
+  }
+});
+
 // ==================== GOOGLE SHEETS HELPER ====================
 
 const { fetchMonitoringData, getSheetsClient, SPREADSHEET_ID } = require("./googleSheetsHelper");
@@ -480,6 +871,237 @@ app.get("/stockroom-inventory", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch stockroom inventory data" });
   }
 });
+// ==================== ADMIN DASHBOARD STATS ENDPOINTS ====================
+
+// GET /admin/dashboard-stats - Get comprehensive stats for admin dashboard
+app.get("/admin/dashboard-stats", async (req, res) => {
+  try {
+    // Get all contracts count
+    const totalContracts = await Contract.countDocuments();
+    
+    // Get active contracts count
+    const activeContracts = await Contract.countDocuments({ status: "Active" });
+    
+    // Get all users count
+    const totalUsers = await User.countDocuments({ status: "approved" });
+    
+    // Get pending approvals count
+    const pendingApprovals = await User.countDocuments({ status: "pending" });
+    
+    // Get inventory count from Google Sheets
+    let totalInventory = 0;
+    try {
+      const inventoryData = await fetchMonitoringData();
+      totalInventory = inventoryData.reduce((total, section) => total + section.rows.length, 0);
+    } catch (inventoryErr) {
+      console.error("Error fetching inventory data:", inventoryErr);
+      // Continue without inventory data
+    }
+
+    // Get recent activity (last 7 days)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const recentContracts = await Contract.countDocuments({ 
+      createdAt: { $gte: oneWeekAgo } 
+    });
+    
+    const recentUsers = await User.countDocuments({ 
+      createdAt: { $gte: oneWeekAgo },
+      status: "approved"
+    });
+
+    res.json({
+      totalContracts,
+      totalUsers,
+      totalInventory,
+      activeEvents: activeContracts,
+      pendingApprovals,
+      recentActivity: {
+        newContracts: recentContracts,
+        newUsers: recentUsers
+      }
+    });
+  } catch (error) {
+    console.error("Admin dashboard stats error:", error);
+    res.status(500).json({ message: "Server error fetching dashboard stats" });
+  }
+});
+
+// GET /admin/contracts-overview - Get contracts for admin contracts view
+app.get("/admin/contracts-overview", async (req, res) => {
+  try {
+    const contracts = await Contract.find()
+      .sort({ createdAt: -1 })
+      .select("contractNumber page1 page3 status createdAt")
+      .limit(50); // Limit to recent 50 contracts
+
+    const formattedContracts = contracts.map(contract => ({
+      id: contract._id,
+      name: (contract.page1 && (contract.page1.contractName || contract.page1.occasion)) || "Contract",
+      client: (contract.page1 && contract.page1.celebratorName) || "",
+      value: (contract.page3 && contract.page3.grandTotal) || "",
+      startDate: (contract.page1 && contract.page1.eventDate) || "",
+      status: contract.status,
+      contractNumber: contract.contractNumber,
+    }));
+
+    res.json({ contracts: formattedContracts });
+  } catch (error) {
+    console.error("Admin contracts overview error:", error);
+    res.status(500).json({ message: "Server error fetching contracts overview" });
+  }
+});
+
+// GET /admin/department-data/:department - Get data for specific department view
+app.get("/admin/department-data/:department", async (req, res) => {
+  try {
+    const { department } = req.params;
+    
+    switch (department.toLowerCase()) {
+      case "creative":
+        // Get creative requests data
+        const creativeRequests = await CreativeRequest.find()
+          .sort({ createdAt: -1 })
+          .limit(20);
+        res.json({ 
+          department: "Creative",
+          data: creativeRequests,
+          description: "Creative department requests and materials"
+        });
+        break;
+
+      case "warehouse":
+        // Get warehouse inventory data
+        try {
+          const inventoryData = await fetchMonitoringData();
+          res.json({
+            department: "Warehouse",
+            data: inventoryData,
+            description: "Warehouse inventory and stock management"
+          });
+        } catch (inventoryErr) {
+          res.json({
+            department: "Warehouse",
+            data: [],
+            description: "Warehouse inventory and stock management",
+            error: "Unable to fetch inventory data"
+          });
+        }
+        break;
+
+      case "linen":
+        // Get linen inventory data
+        const linenInventory = await LinenInventory.find();
+        res.json({
+          department: "Linen",
+          data: linenInventory,
+          description: "Linen inventory and management"
+        });
+        break;
+
+      case "finance":
+        // Get finance overview
+        const unpaidFinance = await Finance.countDocuments({ status: "Unpaid" });
+        const paidFinance = await Finance.countDocuments({ status: "Paid" });
+        const totalRevenue = await Finance.aggregate([
+          { $match: { status: "Paid" } },
+          { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+        ]);
+        
+        res.json({
+          department: "Finance",
+          data: {
+            unpaidCount: unpaidFinance,
+            paidCount: paidFinance,
+            totalRevenue: totalRevenue[0]?.total || 0
+          },
+          description: "Financial overview and revenue tracking"
+        });
+        break;
+
+      case "events":
+        // Get upcoming events (active contracts)
+        const upcomingEvents = await Contract.find({ status: "Active" })
+          .sort({ "page1.eventDate": 1 })
+          .select("contractNumber page1 page3")
+          .limit(20);
+        
+        res.json({
+          department: "Events",
+          data: upcomingEvents,
+          description: "Upcoming events and active contracts"
+        });
+        break;
+
+      default:
+        res.status(400).json({ message: "Invalid department specified" });
+    }
+  } catch (error) {
+    console.error(`Admin department data error for ${req.params.department}:`, error);
+    res.status(500).json({ message: "Server error fetching department data" });
+  }
+});
+
+// GET /admin/recent-activity - Get recent system activity
+app.get("/admin/recent-activity", async (req, res) => {
+  try {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    // Get recent contracts
+    const recentContracts = await Contract.find({
+      createdAt: { $gte: oneWeekAgo }
+    })
+    .sort({ createdAt: -1 })
+    .select("contractNumber page1 status createdAt")
+    .limit(10);
+
+    // Get recent user registrations
+    const recentUsers = await User.find({
+      createdAt: { $gte: oneWeekAgo },
+      status: "approved"
+    })
+    .sort({ createdAt: -1 })
+    .select("username fullName role createdAt")
+    .limit(10);
+
+    // Get recent creative requests
+    const recentCreativeRequests = await CreativeRequest.find({
+      createdAt: { $gte: oneWeekAgo }
+    })
+    .sort({ createdAt: -1 })
+    .select("requestName contractNo status createdAt")
+    .limit(10);
+
+    const activity = [
+      ...recentContracts.map(contract => ({
+        type: "contract",
+        icon: "📋",
+        text: `New contract created: ${contract.page1?.occasion || "Contract"}`,
+        time: contract.createdAt
+      })),
+      ...recentUsers.map(user => ({
+        type: "user",
+        icon: "👥",
+        text: `New user registered: ${user.fullName} (${user.role})`,
+        time: user.createdAt
+      })),
+      ...recentCreativeRequests.map(request => ({
+        type: "creative",
+        icon: "🎨",
+        text: `Creative request submitted: ${request.requestName}`,
+        time: request.createdAt
+      }))
+    ].sort((a, b) => new Date(b.time) - new Date(a.time))
+     .slice(0, 10); // Get top 10 most recent
+
+    res.json({ activity });
+  } catch (error) {
+    console.error("Admin recent activity error:", error);
+    res.status(500).json({ message: "Server error fetching recent activity" });
+  }
+});
 
 
 // ==================== CONTRACT ROUTES ====================
@@ -533,6 +1155,20 @@ app.get("/contracts/next-number", async (req, res) => {
     res.status(500).json({ message: "Server error" })
   }
 })
+
+function validateContractFullyFilled(contract) {
+  const errors = [];
+
+  // Example validation for page1
+  if (!contract.page1 || !contract.page1.occasion) errors.push("Contract Name is missing");
+  if (!contract.page1 || !contract.page1.celebratorName) errors.push("Client/Celebrator Name is missing");
+  if (!contract.page1 || !contract.page1.eventDate) errors.push("Event Date is missing");
+
+  // Example validation for page3 (financials)
+  if (!contract.page3 || !contract.page3.grandTotal) errors.push("Grand Total is missing");
+
+  return errors;
+}
 
 // POST /contracts - Create a new contract with auto-generated number
 app.post("/contracts", async (req, res) => {
