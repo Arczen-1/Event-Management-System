@@ -1,65 +1,57 @@
 import React, { useState, useEffect } from "react";
-import "./s.css";
+import "./DepartmentDashboard.css";
 
 function WarehouseDashboard({ onLogout }) {
   const [contracts, setContracts] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
   const [page, setPage] = useState(1);
-  const [activeView, setActiveView] = useState("contracts");
+  const [activeView, setActiveView] = useState("dashboard");
 
+  // Inventory state
   const [inventoryData, setInventoryData] = useState([]);
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
   const [inventoryModalMode, setInventoryModalMode] = useState("add");
   const [inventoryModalData, setInventoryModalData] = useState({});
-  const [inventoryEditingIndex, setInventoryEditingIndex] = useState(null);
+  const [inventoryEditingId, setInventoryEditingId] = useState(null);
+  const [currentInventoryDepartment, setCurrentInventoryDepartment] = useState("warehouse");
 
-  const [monitoringData, setMonitoringData] = useState([]);
-  const [monitoringModalOpen, setMonitoringModalOpen] = useState(false);
-  const [monitoringModalMode, setMonitoringModalMode] = useState("add");
-  const [monitoringModalData, setMonitoringModalData] = useState({});
-  const [monitoringEditingIndex, setMonitoringEditingIndex] = useState(null);
-  const [fabricationRequests, setFabricationRequests] = useState([]);
-  const [newRequest, setNewRequest] = useState({ name: "", item: "", quantity: "", remarks: "" });
-
-  const [inventoryPage, setInventoryPage] = useState(1);
-  const [monitoringPage, setMonitoringPage] = useState(1);
-  const [user, setUser] = useState(() => {
-  const stored = localStorage.getItem("user");
-  return stored ? JSON.parse(stored) : null;
+  // Fabrication request modal state
+  const [fabricationRequestModalOpen, setFabricationRequestModalOpen] = useState(false);
+  const [selectedItemForRequest, setSelectedItemForRequest] = useState(null);
+  const [fabricationRequestData, setFabricationRequestData] = useState({
+    quantity: "",
+    remarks: ""
   });
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+
+  // Other state
+  const [fabricationRequests, setFabricationRequests] = useState([]);
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem("user");
+    return stored ? JSON.parse(stored) : null;
+  });
   const [inventory, setInventory] = useState([]);
-  const [error, setError] = useState("");
-
-useEffect(() => {
-  fetch("http://localhost:5000/inventory")
-    .then(res => res.json())
-    .then(data => setInventory(data))
-    .catch(err => console.error("Error loading inventory:", err));
-}, []);
-
-  
-
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-     console.log("Loaded user:", storedUser);
-    if (storedUser) {
-      setUser(storedUser);
-    }
-  }, []);
-
+  const [message, setMessage] = useState("");
+  const [fabricationReport, setFabricationReport] = useState([]);
 
   // ------------------- Fetch Data -------------------
   useEffect(() => {
+    if (activeView === "dashboard") fetchDashboardData();
     if (activeView === "contracts") fetchContracts();
     if (activeView === "inventory") fetchInventory();
-    if (activeView === "monitoring") fetchMonitoring();
+    if (activeView === "fabrication-report") generateFabricationReport();
   }, [activeView]);
+
+  const fetchDashboardData = async () => {
+    await Promise.all([
+      fetchContracts(),
+      fetchInventory(),
+      fetchFabricationRequests()
+    ]);
+  };
 
   const fetchContracts = async () => {
     try {
-      const res = await fetch("http://localhost:3000/contracts");
+      const res = await fetch("http://localhost:5000/contracts");
       const data = await res.json();
       if (res.ok) {
         setContracts(
@@ -82,116 +74,503 @@ useEffect(() => {
     }
   };
 
-  const handleLogin = async (e) => {
-  e.preventDefault();
-
-  try {
-    const res = await fetch("http://localhost:5000/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      // Save only the actual user object, not the wrapper
-      localStorage.setItem("user", JSON.stringify(data.user)); 
-      setUser(data.user); 
-      alert("Login successful!");
-    } else {
-      alert(data.message || "Invalid credentials");
-    }
-  } catch (error) {
-    console.error("Login error:", error);
-    alert("An error occurred while logging in.");
-  }
-};
-
-  
-  const fetchInventory = async () => {
+  const fetchInventory = async (department = "warehouse") => {
     try {
-      const res = await fetch("http://localhost:5000/inventory-movement");
+      let url = "http://localhost:5000/inventory";
+      if (department) {
+        url = `http://localhost:5000/inventory?department=${department}`;
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
       setInventoryData(data);
     } catch (err) {
       console.error("Error fetching inventory data:", err);
+      setInventoryData([]);
     }
   };
 
-  const fetchMonitoring = async () => {
+  const fetchFabricationRequests = async () => {
     try {
-      const res = await fetch("http://localhost:5000/monitoring");
+      const res = await fetch("http://localhost:5000/fabrication-requests");
       const data = await res.json();
-      setMonitoringData(data);
+      setFabricationRequests(data || []);
     } catch (err) {
-      console.error("Error fetching monitoring data:", err);
+      console.error("Error fetching fabrication requests:", err);
     }
+  };
+
+  // ------------------- Inventory Analysis -------------------
+  const getStockStatus = (item) => {
+    const quantity = parseInt(item.Quantity) || 0;
+    if (quantity === 0) return { status: "out-of-stock", text: "Out of Stock", priority: 1 };
+    if (quantity <= 5) return { status: "low-stock", text: "Low Stock", priority: 2 };
+    return { status: "normal", text: "In Stock", priority: 3 };
+  };
+
+  const getLowStockItems = () => {
+    return inventoryData.filter(item => {
+      const { status } = getStockStatus(item);
+      return status === "low-stock" || status === "out-of-stock";
+    }).sort((a, b) => getStockStatus(a).priority - getStockStatus(b).priority);
+  };
+
+  const generateFabricationReport = () => {
+    const lowStockItems = getLowStockItems();
+    const report = lowStockItems.map(item => {
+      const quantity = parseInt(item.Quantity) || 0;
+      const suggestedQuantity = quantity === 0 ? 20 : 15; // Suggested restock quantity
+      
+      return {
+        ...item,
+        currentStock: quantity,
+        suggestedQuantity,
+        urgency: quantity === 0 ? "High" : "Medium",
+        requestType: "restock"
+      };
+    });
+    
+    setFabricationReport(report);
+  };
+
+  // ------------------- Fabrication Request Functions -------------------
+  const openFabricationRequestModal = (item) => {
+    setSelectedItemForRequest(item);
+    setFabricationRequestData({
+      quantity: item.suggestedQuantity.toString(),
+      remarks: `Restock request for ${item["Item Name"]}. Current stock: ${item.currentStock || 0}`
+    });
+    setFabricationRequestModalOpen(true);
+  };
+
+  const closeFabricationRequestModal = () => {
+    setFabricationRequestModalOpen(false);
+    setSelectedItemForRequest(null);
+    setFabricationRequestData({
+      quantity: "",
+      remarks: ""
+    });
+  };
+
+  const submitFabricationRequest = async (item, requestedQuantity, remarks = "") => {
+    try {
+      const requestData = {
+        username: user?.username,    
+        item: item["Item Name"],
+        itemId: item["Item Id"] || item._id,
+        quantity: requestedQuantity,
+        remarks: remarks || `Restock request for ${item["Item Name"]}. Current stock: ${item.Quantity || 0}`,
+        requestType: "restock",
+        status: "pending",
+        currentStock: item.Quantity || 0,
+        department: "warehouse"
+      };
+
+      const res = await fetch("http://localhost:5000/fabrication-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage(`Fabrication request for ${item["Item Name"]} submitted successfully!`);
+        fetchFabricationRequests();
+        return true;
+      } else {
+        setMessage("Error: " + data.message);
+        return false;
+      }
+    } catch (err) {
+      console.error("Error submitting fabrication request:", err);
+      setMessage("Server error while submitting request.");
+      return false;
+    }
+  };
+
+  const handleFabricationRequestSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedItemForRequest) return;
+
+    const success = await submitFabricationRequest(
+      selectedItemForRequest,
+      parseInt(fabricationRequestData.quantity),
+      fabricationRequestData.remarks
+    );
+
+    if (success) {
+      closeFabricationRequestModal();
+    }
+  };
+
+  const submitBulkFabricationRequests = async (items) => {
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const item of items) {
+      const success = await submitFabricationRequest(
+        item, 
+        item.suggestedQuantity, 
+        "Bulk restock request from fabrication report"
+      );
+      if (success) {
+        successCount++;
+      } else {
+        errorCount++;
+      }
+    }
+
+    setMessage(`Bulk request completed: ${successCount} successful, ${errorCount} failed`);
+  };
+
+  const downloadFabricationReport = () => {
+    const reportData = fabricationReport.map(item => ({
+      "Item ID": item["Item Id"] || item._id,
+      "Item Name": item["Item Name"],
+      "Category": item.Category,
+      "Current Stock": item.currentStock,
+      "Suggested Quantity": item.suggestedQuantity,
+      "Unit": item.Unit,
+      "Urgency": item.urgency,
+      "Request Type": item.requestType
+    }));
+
+    const csv = [
+      Object.keys(reportData[0]).join(","),
+      ...reportData.map(row => Object.values(row).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fabrication-restock-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    setMessage("Fabrication report downloaded successfully!");
   };
 
   // ------------------- Inventory CRUD -------------------
-  const openInventoryModal = (mode, data = {}, index = null) => {
+  const openInventoryModal = (mode, data = {}, id = null, department = "warehouse") => {
     setInventoryModalMode(mode);
     setInventoryModalData(data);
-    setInventoryEditingIndex(index);
+    setInventoryEditingId(id);
+    setCurrentInventoryDepartment(department);
     setInventoryModalOpen(true);
   };
 
   const closeInventoryModal = () => {
     setInventoryModalOpen(false);
     setInventoryModalData({});
-    setInventoryEditingIndex(null);
+    setInventoryEditingId(null);
   };
 
-  const saveInventoryItem = () => {
-    if (inventoryModalMode === "add") {
-      setInventoryData(prev => [...prev, inventoryModalData]);
-    } else if (inventoryModalMode === "edit") {
-      setInventoryData(prev =>
-        prev.map((item, idx) => idx === inventoryEditingIndex ? inventoryModalData : item)
-      );
-    }
-    closeInventoryModal();
-  };
+  const saveInventoryItem = async () => {
+    try {
+      const url = inventoryModalMode === "add" 
+        ? "http://localhost:5000/inventory" 
+        : `http://localhost:5000/inventory/${inventoryEditingId}`;
+      
+      const method = inventoryModalMode === "add" ? "POST" : "PUT";
+      
+      const itemData = {
+        ...inventoryModalData,
+        Department: currentInventoryDepartment,
+        Quantity: parseInt(inventoryModalData.Quantity) || 0
+      };
 
-  const deleteInventoryItem = (idx) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
-      setInventoryData(prev => prev.filter((_, index) => index !== idx));
-    }
-  };
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(itemData),
+      });
 
-  // ------------------- Monitoring CRUD -------------------
-  const openMonitoringModal = (mode, data = {}, index = null) => {
-    setMonitoringModalMode(mode);
-    setMonitoringModalData(data);
-    setMonitoringEditingIndex(index);
-    setMonitoringModalOpen(true);
-  };
+      const data = await res.json();
 
-  const closeMonitoringModal = () => {
-    setMonitoringModalOpen(false);
-    setMonitoringModalData({});
-    setMonitoringEditingIndex(null);
-  };
-
-  const saveMonitoringItem = () => {
-    if (monitoringModalMode === "add") {
-      setMonitoringData(prev => [...prev, monitoringModalData]);
-    } else if (monitoringModalMode === "edit") {
-      setMonitoringData(prev =>
-        prev.map((item, idx) => idx === monitoringEditingIndex ? monitoringModalData : item)
-      );
-    }
-    closeMonitoringModal();
-  };
-
-  const deleteMonitoringItem = (idx) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
-      setMonitoringData(prev => prev.filter((_, index) => index !== idx));
+      if (res.ok) {
+        setMessage(`Item ${inventoryModalMode === "add" ? "added" : "updated"} successfully!`);
+        fetchInventory(currentInventoryDepartment);
+        closeInventoryModal();
+      } else {
+        setMessage(data.message || "Error saving item");
+      }
+    } catch (err) {
+      console.error("Error saving inventory item:", err);
+      setMessage("Error saving item");
     }
   };
 
-  // ------------------- Render Tables -------------------
+  const deleteInventoryItem = async (id, department = "warehouse") => {
+    if (!window.confirm("Are you sure you want to delete this item?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/inventory/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setMessage("Item deleted successfully!");
+        fetchInventory(department);
+      } else {
+        setMessage("Error deleting item");
+      }
+    } catch (err) {
+      console.error("Error deleting inventory item:", err);
+      setMessage("Error deleting item");
+    }
+  };
+
+  // ====== RENDER FUNCTIONS ======
+  const renderDashboardView = () => {
+    const totalItems = inventoryData.length;
+    const lowStockItems = getLowStockItems();
+    const outOfStockItems = lowStockItems.filter(item => getStockStatus(item).status === "out-of-stock").length;
+    const lowStockCount = lowStockItems.filter(item => getStockStatus(item).status === "low-stock").length;
+    const pendingRequests = fabricationRequests.filter(req => req.status === 'pending').length;
+    const itemsPerPage = 10;
+    const startIndex = (page - 1) * itemsPerPage;
+    const paginatedContracts = contracts.slice(startIndex, startIndex + itemsPerPage);
+
+    return (
+      <div className="dashboard-view">
+
+        {/* Stats Overview */}
+        <div className="dashboard-cards">
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{totalItems}</div>
+              <div className="card-label">Total Items</div>
+            </div>
+          </div>
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{lowStockCount}</div>
+              <div className="card-label">Low Stock</div>
+            </div>
+          </div>
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{outOfStockItems}</div>
+              <div className="card-label">Out of Stock</div>
+            </div>
+          </div>
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{pendingRequests}</div>
+              <div className="card-label">Pending Requests</div>
+            </div>
+          </div>
+        </div>
+        <div className="contracts-table-container">
+        <div className="table-header">
+          <h3>Active Contracts</h3>
+          <div className="pager">
+            <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
+            <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
+            <button className="pager-btn" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(contracts.length / itemsPerPage)}>→</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Contract Name</th>
+              <th>Celebrator/Corporate Name</th>
+              <th>Contract No.</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedContracts.length === 0 ? (
+              <tr><td colSpan="4">No active contracts available</td></tr>
+            ) : (
+              paginatedContracts.map(c => (
+                <tr key={c.id}>
+                  <td>{c.name}</td>
+                  <td>{c.client}</td>
+                  <td>{c.contractNumber}</td>
+                  <td>
+                    <button className="btn-review" onClick={() => setSelectedContract(c.raw)}>View</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+        {/* Low Stock Alert Table */}
+        {lowStockItems.length > 0 && (
+          <div className="section-container">
+            <div className="section-header">
+              <h3>Items Needing for Requests ({lowStockItems.length})</h3>
+            </div>
+            <div className="low-stock-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Item Name</th>
+                    <th>Current Stock</th>
+                    <th>Status</th>
+                    <th>Category</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowStockItems.slice(0, 5).map((item, idx) => {
+                    const { status, text } = getStockStatus(item);
+                    const quantity = parseInt(item.Quantity) || 0;
+                    
+                    return (
+                      <tr key={item._id || idx} className={`stock-alert ${status}`}>
+                        <td className="item-name">{item["Item Name"]}</td>
+                        <td className="stock-quantity">{quantity}</td>
+                        <td>
+                          <span className={`status ${status}`}>
+                            {text}
+                          </span>
+                        </td>
+                        <td>{item.Category}</td>
+                        <td>
+                          <div className="action-buttons">
+                            <button 
+                              className="btn-primary small"
+                              onClick={() => openFabricationRequestModal({
+                                ...item,
+                                currentStock: quantity,
+                                suggestedQuantity: quantity === 0 ? 20 : 15
+                              })}
+                            >
+                              Request Restock
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {lowStockItems.length > 5 && (
+                <div className="view-all-link">
+                  <button 
+                    className="text-link" 
+                    onClick={() => setActiveView("fabrication-report")}
+                  >
+                    View All {lowStockItems.length} Items Needing Requests →
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderFabricationReportView = () => {
+    const lowStockItems = getLowStockItems();
+
+    return (
+      <div className="contracts-table-container">
+        <div className="table-header">
+          <h3>Request Item Report</h3>
+           {message && <div className="message success">{message}</div>}
+          <div className="table-actions">
+            <button 
+              className="btn-secondary" 
+              onClick={downloadFabricationReport}
+              disabled={fabricationReport.length === 0}
+            >
+              Download Report
+            </button>
+            <button 
+              className="btn-secondary" 
+              onClick={generateFabricationReport}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div className="report-summary">
+          <div className="summary-cards">
+            <div className="summary-card critical">
+              <div className="summary-value">
+                {fabricationReport.filter(item => item.urgency === "High").length}
+              </div>
+              <div className="summary-label">Critical (Out of Stock)</div>
+            </div>
+            <div className="summary-card warning">
+              <div className="summary-value">
+                {fabricationReport.filter(item => item.urgency === "Medium").length}
+              </div>
+              <div className="summary-label">Warning (Low Stock)</div>
+            </div>
+            <div className="summary-card total">
+              <div className="summary-value">{fabricationReport.length}</div>
+              <div className="summary-label">Total Items to Request</div>
+            </div>
+          </div>
+        </div>
+
+        {fabricationReport.length === 0 ? (
+          <div className="no-data">
+            <p>No items require fabrication requests at this time.</p>
+            <p>All inventory items are sufficiently stocked.</p>
+          </div>
+        ) : (
+          <table className="fabrication-report-table">
+            <thead>
+              <tr>
+                <th>Item ID</th>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Current Stock</th>
+                <th>Suggested Quantity</th>
+                <th>Unit</th>
+                <th>Urgency</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fabricationReport.map((item, idx) => (
+                <tr key={item._id || idx} className={`urgency-${item.urgency.toLowerCase()}`}>
+                  <td>{item["Item Id"] || item._id}</td>
+                  <td className="item-name">{item["Item Name"]}</td>
+                  <td>{item.Category}</td>
+                  <td className="current-stock">{item.currentStock}</td>
+                  <td className="suggested-quantity">{item.suggestedQuantity}</td>
+                  <td>{item.Unit}</td>
+                  <td>
+                    <span className={`urgency-badge ${item.urgency.toLowerCase()}`}>
+                      {item.urgency}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="action-buttons">
+                      <button 
+                        className="btn-primary small"
+                        onClick={() => openFabricationRequestModal(item)}
+                      >
+                        Request
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    );
+  };
+
   const renderContractsTable = () => {
     const itemsPerPage = 10;
     const startIndex = (page - 1) * itemsPerPage;
@@ -201,6 +580,11 @@ useEffect(() => {
       <div className="contracts-table-container">
         <div className="table-header">
           <h3>Active Contracts</h3>
+          <div className="pager">
+            <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
+            <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
+            <button className="pager-btn" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(contracts.length / itemsPerPage)}>→</button>
+          </div>
         </div>
         <table>
           <thead>
@@ -235,98 +619,269 @@ useEffect(() => {
   const renderInventoryTable = () => {
     return (
       <div className="contracts-table-container">
-        <div className="table-actions">
-          <button className="btn-add" onClick={() => openInventoryModal("add")}>Add Item</button>
+        <div className="table-header">
+          <h3>Warehouse Inventory Management</h3>
+          <div className="table-actions">
+            <button className="btn-add" onClick={() => openInventoryModal("add", {}, null, "warehouse")}>
+              Add New Item
+            </button>
+          </div>
         </div>
-        <h3>Inventory Monitoring</h3>
+        
         {inventoryData.length === 0 ? (
-          <p>No inventory data</p>
+          <div className="no-data">
+            <p>No inventory data found for warehouse.</p>
+            <button 
+              className="btn-primary" 
+              onClick={() => fetchInventory("warehouse")}
+            >
+              Refresh Data
+            </button>
+          </div>
         ) : (
           <table className="inventory-table">
             <thead>
               <tr>
-                <th>Item Code</th>
-                <th>Description</th>
-                <th>UOM</th>
-                <th>On-hand Start</th>
+                <th>Item ID</th>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Unit</th>
                 <th>Quantity</th>
-                <th>Damages</th>
-                <th>On-hand End</th>
+                <th>Stock Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {inventoryData.map((item, idx) => (
-                <tr key={idx}>
-                  <td>{item["Item Code"]}</td>
-                  <td>{item["Item Description"]}</td>
-                  <td>{item.UOM}</td>
-                  <td>{item["On-hand (Start)"]}</td>
-                  <td>{item.Quantity}</td>
-                  <td>{item.Damages}</td>
-                  <td>{item["On-hand (End)"]}</td>
-                  <td>
-                    <button className="btn-edit" onClick={() => openInventoryModal("edit", item, idx)}>Edit</button>
-                    <button className="btn-delete" onClick={() => deleteInventoryItem(idx)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
+              {inventoryData.map((item, idx) => {
+                const quantity = parseInt(item.Quantity) || 0;
+                const itemId = item["Item Id"] || item._id || `No ID-${idx}`;
+                const itemName = item["Item Name"] || "Unnamed Item";
+                const category = item.Category || "Uncategorized";
+                const unit = item.Unit || "pcs";
+                const { status, text } = getStockStatus(item);
+                
+                return (
+                  <tr key={item._id || idx}>
+                    <td>{itemId}</td>
+                    <td>{itemName}</td>
+                    <td>{category}</td>
+                    <td>{unit}</td>
+                    <td>{quantity}</td>
+                    <td>
+                      <span className={`status ${status}`}>
+                        {text}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button 
+                          className="btn-edit" 
+                          onClick={() => openInventoryModal("edit", item, item._id, "warehouse")}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          className="btn-delete" 
+                          onClick={() => deleteInventoryItem(item._id, "warehouse")}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
     );
-  };
+  };   
 
-  const renderMonitoringTable = () => {
-    return (
-      <div className="contracts-table-container">
-        <div className="table-actions">
-          <button className="btn-add" onClick={() => openMonitoringModal("add")}>Add Section</button>
-        </div>
-        <h3>Inventory Monitoring</h3>
-        {monitoringData.length === 0 ? (
-          <p>No monitoring data</p>
-        ) : monitoringData.map((section, idx) => (
-          <div key={idx} style={{ marginBottom: "2rem" }}>
-            <table className="monitoring-table">
-              <thead>
-                <tr>
-                  {section.header.map((h, i) => <th key={i}>{h}</th>)}
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {section.rows.map((row, rIdx) => (
-                  <tr key={rIdx}>
-                    {row.map((cell, cIdx) => <td key={cIdx}>{cell}</td>)}
-                    <td>
-                      <button className="btn-edit" onClick={() => openMonitoringModal("edit", section, idx)}>Edit</button>
-                      <button className="btn-delete" onClick={() => deleteMonitoringItem(idx)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+  const renderFabricationRequestModal = () => (
+    fabricationRequestModalOpen && selectedItemForRequest && (
+      <div className="modal-overlay" onClick={closeFabricationRequestModal}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>Create Restock Request</h3>
+            <button className="close-btn" onClick={closeFabricationRequestModal}>×</button>
           </div>
-        ))}
-      </div>
-    );
-  };
+          
+          <form onSubmit={handleFabricationRequestSubmit}>
+            <div className="modal-input-group">
+              <label>Requestor Name</label>
+              <input
+                type="text"
+                value={user?.username || ""}
+                readOnly
+              />
+            </div>
 
-  // ------------------- Modal JSX -------------------
+            <div className="modal-input-group">
+              <label>Item Name</label>
+              <input
+                type="text"
+                value={selectedItemForRequest["Item Name"]}
+                readOnly
+              />
+            </div>
+
+            <div className="modal-input-group">
+              <label>Current Stock</label>
+              <input
+                type="text"
+                value={selectedItemForRequest.currentStock}
+                readOnly
+              />
+            </div>
+
+            <div className="modal-input-group">
+              <label>Suggested Quantity</label>
+              <input
+                type="text"
+                value={selectedItemForRequest.suggestedQuantity}
+                readOnly
+              />
+            </div>
+
+            <div className="modal-input-group">
+              <label>Quantity Needed *</label>
+              <input
+                type="number"
+                min="1"
+                value={fabricationRequestData.quantity}
+                onChange={(e) => setFabricationRequestData(prev => ({ 
+                  ...prev, 
+                  quantity: e.target.value 
+                }))}
+                required
+              />
+            </div>
+
+            <div className="modal-input-group">
+              <label>Remarks (Optional)</label>
+              <textarea
+                value={fabricationRequestData.remarks}
+                onChange={(e) => setFabricationRequestData(prev => ({ 
+                  ...prev, 
+                  remarks: e.target.value 
+                }))}
+                placeholder="Additional information about this restock request..."
+                rows="3"
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button type="submit" className="btn-save">Submit Request</button>
+              <button type="button" className="btn-cancel" onClick={closeFabricationRequestModal}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  );
+
+  const renderDetailsModal = () => (
+    selectedContract && (
+      <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
+        <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>Contract Details - {selectedContract?.contractNumber}</h3>
+            <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
+          </div>
+          <div className="modal-body">
+            {selectedContract && (
+              <div className="contract-details">
+                <div className="detail-section">
+                  <h4>Contract Information</h4>
+                  <div className="detail-row">
+                    <strong>Contract Number:</strong> {selectedContract.contractNumber}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Venue:</strong> {selectedContract.page1?.venue || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
+                  </div>
+                </div>
+
+                <div className="detail-section">
+                  <h4>Event Timeline</h4>
+                  <div className="detail-row">
+                    <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Ingress Time:</strong> {selectedContract.page1?.ingressTime || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Cocktail Time:</strong> {selectedContract.page1?.cocktailTime || "N/A"}
+                  </div>
+                </div>
+
+                <div className="detail-section">
+                  <h4>Guest Breakdown</h4>
+                  <div className="detail-row">
+                    <strong>VIP Guests:</strong> {selectedContract.page1?.vipTableType || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Regular Guests:</strong> {selectedContract.page1?.regularTableType || "N/A"}
+                  </div>
+                </div>
+
+                {selectedContract.page3 && (
+                  <div className="detail-section">
+                    <h4>Menu Details</h4>
+                    {selectedContract.page3.cocktailHour && (
+                      <div className="detail-row">
+                        <strong>Cocktail Hour:</strong> {selectedContract.page3.cocktailHour}
+                      </div>
+                    )}
+                    {selectedContract.page3.mainEntree && (
+                      <div className="detail-row">
+                        <strong>Main Entrée:</strong> {selectedContract.page3.mainEntree}
+                      </div>
+                    )}
+                    {selectedContract.page3.dessert && (
+                      <div className="detail-row">
+                        <strong>Dessert:</strong> {selectedContract.page3.dessert}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="modal-actions">
+            <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
   const renderInventoryModal = () => (
     inventoryModalOpen && (
       <div className="modal-overlay" onClick={closeInventoryModal}>
         <div className="modal-content" onClick={e => e.stopPropagation()}>
-          <h3>{inventoryModalMode === "add" ? "Add Inventory Item" : "Edit Inventory Item"}</h3>
+          <h3>
+            {inventoryModalMode === "add" ? "Add Inventory Item" : "Edit Inventory Item"} - {currentInventoryDepartment}
+          </h3>
           <form onSubmit={(e) => { e.preventDefault(); saveInventoryItem(); }}>
-            {["Item Code","Item Description","UOM","On-hand (Start)","Quantity","Damages","On-hand (End)"].map(field => (
+            {["Item Id", "Item Name", "Category", "Unit", "Quantity"].map(field => (
               <div key={field} className="modal-input-group">
                 <label>{field}</label>
                 <input
                   value={inventoryModalData[field] || ""}
                   onChange={(e) => setInventoryModalData(prev => ({ ...prev, [field]: e.target.value }))}
+                  type={field === "Quantity" ? "number" : "text"}
                 />
               </div>
             ))}
@@ -340,463 +895,49 @@ useEffect(() => {
     )
   );
 
-  const renderMonitoringModal = () => (
-    monitoringModalOpen && (
-      <div className="modal-overlay" onClick={closeMonitoringModal}>
-        <div className="modal-content" onClick={e => e.stopPropagation()}>
-          <h3>{monitoringModalMode === "add" ? "Add Section" : "Edit Section"}</h3>
-          <form onSubmit={(e) => { e.preventDefault(); saveMonitoringItem(); }}>
-            <div className="modal-input-group">
-              <label>Header (comma-separated)</label>
-              <input
-                value={monitoringModalData.header?.join(", ") || ""}
-                onChange={(e) => setMonitoringModalData(prev => ({ ...prev, header: e.target.value.split(",").map(h => h.trim()) }))}
-              />
-            </div>
-            <div className="modal-actions">
-              <button type="submit" className="btn-save">Save</button>
-              <button type="button" className="btn-cancel" onClick={closeMonitoringModal}>Cancel</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )
-  );
-
-  const renderDetailsModal = () => (
-    <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
-      <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Contract Details - {selectedContract?.contractNumber}</h3>
-          <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
-        </div>
-        <div className="modal-body">
-          {selectedContract && (
-            <div className="contract-details-comprehensive">
-              {/* Contract Status */}
-              <div className="detail-section">
-                <div className="detail-row">
-                  <strong>Status:</strong>
-                  <span className={`status ${selectedContract.status?.toLowerCase().replace(' ', '-')}`}>
-                    {selectedContract.status}
-                  </span>
-                </div>
-                {selectedContract.rejectionReason && (
-                  <div className="detail-row">
-                    <strong>Rejection Reason:</strong> {selectedContract.rejectionReason}
-                  </div>
-                )}
-              </div>
-
-              {/* Client Information */}
-              <div className="detail-section">
-                <h4>Client Information</h4>
-                <div className="detail-grid">
-                  <div className="detail-row">
-                    <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Coordinator Name:</strong> {selectedContract.page1?.coordinatorName || "N/A"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Event Details */}
-              <div className="detail-section">
-                <h4>Event Details</h4>
-                <div className="detail-grid">
-                  <div className="detail-row">
-                    <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Occasion:</strong> {selectedContract.page1?.occasion || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Venue:</strong> {selectedContract.page1?.venue || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Hall:</strong> {selectedContract.page1?.hall || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
-                    {selectedContract.page1?.totalVIP && ` (VIP: ${selectedContract.page1.totalVIP}`}
-                    {selectedContract.page1?.totalRegular && `, Regular: ${selectedContract.page1.totalRegular})`}
-                  </div>
-                </div>
-              </div>
-
-              {/* Set-Up */}
-              <div className="detail-section">
-                <h4>Set-Up</h4>
-                <div className="detail-grid">
-                  <div className="detail-row">
-                    <strong>Theme Set-Up:</strong> {selectedContract.page1?.themeSetup || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Color Motif:</strong> {selectedContract.page1?.colorMotif || "N/A"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Flower Arrangement */}
-              <div className="detail-section">
-                <h4>Flower Arrangement</h4>
-                <div className="detail-grid">
-                  <div className="detail-row">
-                    <strong>Backdrop:</strong> {selectedContract.page2?.flowerBackdrop || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Guest Centerpiece:</strong> {selectedContract.page2?.flowerGuestCenterpiece || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>VIP Centerpiece:</strong> {selectedContract.page2?.flowerVipCenterpiece || "N/A"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Other Special Requirements */}
-              <div className="detail-section">
-                <h4>Other Special Requirements</h4>
-                <div className="detail-subsection">
-                  <h5>Cake Details</h5>
-                  <div className="detail-grid">
-                    <div className="detail-row">
-                      <strong>Cake Name/Code:</strong> {selectedContract.page2?.cakeNameCode || "N/A"}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Flavor:</strong> {selectedContract.page2?.cakeFlavor || "N/A"}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Supplier:</strong> {selectedContract.page2?.cakeSupplier || "N/A"}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Specifications:</strong> {selectedContract.page2?.cakeSpecifications || "N/A"}
-                    </div>
-                  </div>
-                </div>
-                <div className="detail-subsection">
-                  <h5>Additional Requirements</h5>
-                  <div className="detail-grid">
-                    <div className="detail-row">
-                      <strong>Celebrator's Car:</strong> {selectedContract.page2?.celebratorsCar || "N/A"}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Emcee:</strong> {selectedContract.page2?.emcee || "N/A"}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Sound System:</strong> {selectedContract.page2?.soundSystem || "N/A"}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Tent:</strong> {selectedContract.page2?.tent || "N/A"}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Celebrator's Chair:</strong> {selectedContract.page2?.celebratorsChair || "N/A"}
-                    </div>
-                  </div>
-                </div>
-                {(selectedContract.page2?.remarks || selectedContract.page2?.others) && (
-                  <div className="detail-subsection">
-                    <h5>Remarks & Other Requirements</h5>
-                    <div className="detail-row">
-                      <strong>Remarks:</strong> {selectedContract.page2?.remarks || "N/A"}
-                    </div>
-                    <div className="detail-row">
-                      <strong>Other Requirements:</strong> {selectedContract.page2?.others || "N/A"}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Menu Details */}
-              <div className="detail-section">
-                <h4>Menu Details</h4>
-                <div className="menu-details">
-                  {selectedContract.page3?.cocktailHour && (
-                    <div className="detail-row">
-                      <strong>Cocktail Hour:</strong>
-                      <div className="menu-text">{selectedContract.page3.cocktailHour}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.appetizer && (
-                    <div className="detail-row">
-                      <strong>Appetizer:</strong>
-                      <div className="menu-text">{selectedContract.page3.appetizer}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.soup && (
-                    <div className="detail-row">
-                      <strong>Soup:</strong>
-                      <div className="menu-text">{selectedContract.page3.soup}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.bread && (
-                    <div className="detail-row">
-                      <strong>Bread:</strong>
-                      <div className="menu-text">{selectedContract.page3.bread}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.salad && (
-                    <div className="detail-row">
-                      <strong>Salad:</strong>
-                      <div className="menu-text">{selectedContract.page3.salad}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.mainEntree && (
-                    <div className="detail-row">
-                      <strong>Main Entrée:</strong>
-                      <div className="menu-text">{selectedContract.page3.mainEntree}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.dessert && (
-                    <div className="detail-row">
-                      <strong>Dessert:</strong>
-                      <div className="menu-text">{selectedContract.page3.dessert}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.cakeName && (
-                    <div className="detail-row">
-                      <strong>Cake Name:</strong>
-                      <div className="menu-text">{selectedContract.page3.cakeName}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.kidsMeal && (
-                    <div className="detail-row">
-                      <strong>Kids Meal:</strong>
-                      <div className="menu-text">{selectedContract.page3.kidsMeal}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.crewMeal && (
-                    <div className="detail-row">
-                      <strong>Crew Meal:</strong>
-                      <div className="menu-text">{selectedContract.page3.crewMeal}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.drinksCocktail && (
-                    <div className="detail-row">
-                      <strong>Drinks at Cocktail:</strong>
-                      <div className="menu-text">{selectedContract.page3.drinksCocktail}</div>
-                    </div>
-                  )}
-                  {selectedContract.page3?.drinksMeal && (
-                    <div className="detail-row">
-                      <strong>Drinks at Meal:</strong>
-                      <div className="menu-text">{selectedContract.page3.drinksMeal}</div>
-                    </div>
-                  )}
-                  {(selectedContract.page3?.roastedPig || selectedContract.page3?.roastedCalf) && (
-                    <div className="detail-row">
-                      <strong>Special Items:</strong>
-                      <div className="menu-text">
-                        {selectedContract.page3.roastedPig && `Roasted Pig: ${selectedContract.page3.roastedPig}`}
-                        {selectedContract.page3.roastedPig && selectedContract.page3.roastedCalf && <br />}
-                        {selectedContract.page3.roastedCalf && `Roasted Calf: ${selectedContract.page3.roastedCalf}`}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  useEffect(() => {
-  fetchFabricationRequests();
-  }, []);
-
-  const fetchFabricationRequests = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/fabrication-requests");
-      const data = await res.json();
-      setFabricationRequests(data || []);
-    } catch (err) {
-      console.error("Error fetching fabrication requests:", err);
-    }
-  };
-
-  const renderFabricationReport = () => {
-  const handleRequestSubmit = async (e) => {
-  e.preventDefault();
-
-  const requestData = {
-    username: user?.username,    
-    item: newRequest.item,
-    quantity: newRequest.quantity,
-    remarks: newRequest.remarks,
-  };
-
-  try {
-    const res = await fetch("http://localhost:5000/fabrication-requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestData),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      alert(" Fabrication request submitted successfully!");
-      setFabricationRequests((prev) => [...prev, data.request]);
-      setNewRequest({ item: "", quantity: "", remarks: "" });
-    } else {
-      alert("Error" + data.message);
-    }
-  } catch (err) {
-    console.error("Error submitting fabrication request:", err);
-    alert("Server error while submitting request.");
-  }
-};
-
-
   return (
-    <div className="fabrication-report-container">
-      <div className="table-header">
-        <h3>Fabrication Request Report</h3>
-      </div>
-
-      <form className="fabrication-form" onSubmit={handleRequestSubmit}>
-        <div className="form-row">
-          <div className="input-group">
-            <label>Requestor Name</label>
-            <input
-              type="text"
-              value={user?.username || ""}
-              readOnly
-          />
-          </div>
-
-          <div className="input-group">
-            <label>Item Needed</label>
-            <select
-              value={newRequest.item}
-              onChange={(e) => setNewRequest(prev => ({ ...prev, item: e.target.value }))}
-              required
-            >
-              <option value="">Select item</option>
-              {inventory.map((inv, i) => (
-                <option key={i} value={inv.itemName}>
-                  {inv.itemName} (Available: {inv.quantity})
-                </option>
-              ))}
-            </select>
-          </div>
-
-
-          <div className="input-group small">
-            <label>Quantity</label>
-            <input
-              type="number"
-              min="1"
-              value={newRequest.quantity}
-              onChange={(e) => setNewRequest(prev => ({ ...prev, quantity: e.target.value }))}
-              placeholder="Qty"
-              required
-            />
-          </div>
-
-          <div className="input-group">
-            <label>Remarks (optional)</label>
-            <input
-              type="text"
-              value={newRequest.remarks}
-              onChange={(e) => setNewRequest(prev => ({ ...prev, remarks: e.target.value }))}
-              placeholder="Remarks or purpose"
-            />
-          </div>
-        </div>
-        <button type="submit" className="btn-add">Submit Request</button>
-      </form>
-
-      <div className="fabrication-table-wrapper">
-        {fabricationRequests.length === 0 ? (
-          <p>No fabrication requests submitted yet.</p>
-        ) : (
-          <table className="fabrication-table">
-            <thead>
-              <tr>
-                <th>Requestor</th>
-                <th>Item</th>
-                <th>Quantity</th>
-                <th>Remarks</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fabricationRequests.map((req, idx) => (
-                <tr key={idx}>
-                  <td>{req.username}</td>
-                  <td>{req.item}</td>
-                  <td>{req.quantity}</td>
-                  <td>{req.remarks || "—"}</td>
-                  <td>{req.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
-};
-
-
-  // ------------------- Render -------------------
-  return (
-
     <div className="department-dashboard">
-  {/* Left Sidebar */}
-  <div className="dashboard-sidebar">
-    {/* Title Header */}
-    <div className="accreditation-header">
-      <h1>WAREHOUSE</h1>
-      <h2>Dashboard</h2>
-    </div>
-    
-    <div className="header-nav">
-      {/* Contracts Section */}
-      <div className="nav-section">
-        <div className="section-title">Contracts</div>
-        <button className={`nav-btn ${activeView === "contracts" ? "active" : ""}`} onClick={() => setActiveView("contracts")}>
-          Active Contracts
-        </button>
+      {/* Left Sidebar */}
+      <div className="dashboard-sidebar">
+        <div className="accreditation-header">
+          <h1>WAREHOUSE</h1>
+          <h2>Dashboard</h2>
+        </div>
+        
+        <div className="header-nav">
+          <div className="nav-section">
+            <div className="section-title">Navigation</div>
+            <button className={`nav-btn ${activeView === "dashboard" ? "active" : ""}`} onClick={() => setActiveView("dashboard")}>
+              Dashboard
+            </button>
+          </div>
+          
+          <div className="nav-section">
+            <div className="section-title">Fabrication Management</div>
+            <button className={`nav-btn ${activeView === "inventory" ? "active" : ""}`} onClick={() => setActiveView("inventory")}>
+              Warehouse Inventory
+            </button>
+            <button className={`nav-btn ${activeView === "fabrication-report" ? "active" : ""}`} onClick={() => setActiveView("fabrication-report")}>
+              Request Item Report
+            </button>
+          </div>
+        </div>
+        
+        <div className="sidebar-footer">
+          <button onClick={onLogout} className="logout-btn">Logout</button>
+        </div>
       </div>
-      
-      {/* Management Section */}
-      <div className="nav-section">
-        <div className="section-title">Inventory Management</div>
-        <button className={`nav-btn ${activeView === "inventory" ? "active" : ""}`} onClick={() => setActiveView("inventory")}>
-          Inventory Monitoring
-        </button>
-        <button className={`nav-btn ${activeView === "monitoring" ? "active" : ""}`} onClick={() => setActiveView("monitoring")}>
-          Inventory
-        </button>
-      </div>
-      
-      {/* Reports Section */}
-      <div className="nav-section">
-        <div className="section-title">Reports</div>
-        <button className={`nav-btn ${activeView === "fabrication" ? "active" : ""}`} onClick={() => setActiveView("fabrication")}>
-          Fabrication Report
-        </button>
-      </div>
-    </div>
-    
-    <div className="sidebar-footer">
-      <button onClick={onLogout} className="logout-btn">Logout</button>
-    </div>
-  </div>
 
       <div className="dashboard-content">
+        {activeView === "dashboard" && renderDashboardView()}
         {activeView === "contracts" && renderContractsTable()}
         {activeView === "inventory" && renderInventoryTable()}
-        {activeView === "monitoring" && renderMonitoringTable()}
-        {activeView === "fabrication" && renderFabricationReport()}
+        {activeView === "fabrication-report" && renderFabricationReportView()}
       </div>
 
       {selectedContract && renderDetailsModal()}
       {renderInventoryModal()}
-      {renderMonitoringModal()}
+      {renderFabricationRequestModal()}
     </div>
   );
 }

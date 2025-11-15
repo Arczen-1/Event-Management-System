@@ -1,384 +1,403 @@
 import React, { useState, useEffect } from "react";
-import "./SalesManagerDashboard.css";
+import "./DepartmentDashboard.css";
 
 function CreativeDashboard({ onLogout }) {
   const [contracts, setContracts] = useState([]);
-  const [creativeRequests, setCreativeRequests] = useState([]);
-  const [sheetData, setSheetData] = useState([]);
-  const [showSheetData, setShowSheetData] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [activeContract, setActiveContract] = useState(null);
-  const [editingRequest, setEditingRequest] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
-  const [newRequest, setNewRequest] = useState({
-    requestName: "",
-    materialsNeeded: "",
-    contractNo: "",
-    dueDate: "",
-    status: "Draft",
+  const [page, setPage] = useState(1);
+  const [activeView, setActiveView] = useState("dashboard");
+
+  // Inventory state
+  const [inventoryData, setInventoryData] = useState([]);
+  const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
+  const [inventoryModalMode, setInventoryModalMode] = useState("add");
+  const [inventoryModalData, setInventoryModalData] = useState({});
+  const [inventoryEditingId, setInventoryEditingId] = useState(null);
+  const [currentInventoryDepartment, setCurrentInventoryDepartment] = useState("creative");
+
+  // Fabrication request modal state
+  const [fabricationRequestModalOpen, setFabricationRequestModalOpen] = useState(false);
+  const [selectedItemForRequest, setSelectedItemForRequest] = useState(null);
+  const [fabricationRequestData, setFabricationRequestData] = useState({
+    quantity: "",
+    remarks: ""
   });
 
+  // Other state
+  const [fabricationRequests, setFabricationRequests] = useState([]);
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem("user");
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [inventory, setInventory] = useState([]);
+  const [message, setMessage] = useState("");
+  const [fabricationReport, setFabricationReport] = useState([]);
+
+  // ------------------- Fetch Data -------------------
   useEffect(() => {
-    fetchContracts();
-    fetchCreativeRequests();
-  }, []);
+    if (activeView === "dashboard") fetchDashboardData();
+    if (activeView === "contracts") fetchContracts();
+    if (activeView === "inventory") fetchInventory();
+    if (activeView === "fabrication-report") generateFabricationReport();
+  }, [activeView]);
+
+  const fetchDashboardData = async () => {
+    await Promise.all([
+      fetchContracts(),
+      fetchInventory(),
+      fetchFabricationRequests()
+    ]);
+  };
 
   const fetchContracts = async () => {
     try {
-      const res = await fetch("http://localhost:5000/contracts/creative");
+      const res = await fetch("http://localhost:5000/contracts");
       const data = await res.json();
-      const raw = Array.isArray(data) ? data : data.contracts || [];
-      const mapped = raw.map((c) => ({
-        id: c._id,
-        name:
-          (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
-        client:
-          (c.page1 &&
-            (c.page1.celebratorName ||
-              c.page1.client ||
-              c.page1.clientName)) ||
-          "",
-        value:
-          (c.page3 && c.page3.grandTotal) ||
-          (c.page1 && c.page1.value) ||
-          "",
-        startDate:
-          (c.page1 && (c.page1.eventDate || c.page1.startDate)) || "",
-        endDate: (c.page1 && (c.page1.eventDate || c.page1.endDate)) || "",
-        status: c.status || "Draft",
-        contractNumber: c.contractNumber,
-        raw: c,
-      }));
-      setContracts(mapped);
-    } catch (err) {
-      console.error("Error fetching contracts:", err);
-      setContracts([]);
+      if (res.ok) {
+        setContracts(
+          (data.contracts || [])
+            .filter(c => c.status === "Active")
+            .map(c => ({
+              id: c._id,
+              name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
+              client: (c.page1 && c.page1.celebratorName) || "",
+              value: (c.page3 && c.page3.grandTotal) || "",
+              startDate: (c.page1 && c.page1.eventDate) || "",
+              endDate: (c.page1 && c.page1.eventDate) || "",
+              contractNumber: c.contractNumber,
+              raw: c,
+            }))
+        );
+      }
+    } catch (e) {
+      console.error("Error fetching contracts:", e);
     }
   };
 
-  const fetchCreativeRequests = async () => {
+  const fetchInventory = async (department = "creative") => {
     try {
-      const res = await fetch("http://localhost:5000/creativeRequests");
+      let url = "http://localhost:5000/inventory";
+      if (department) {
+        url = `http://localhost:5000/inventory?department=${department}`;
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
-      let arr = [];
-      if (Array.isArray(data)) arr = data;
-      else if (Array.isArray(data.requests)) arr = data.requests;
-      else if (Array.isArray(data.creativeRequests))
-        arr = data.creativeRequests;
-      else if (data.request) arr = [data.request];
-      setCreativeRequests(arr);
+      setInventoryData(data);
     } catch (err) {
-      console.error("Error fetching creative requests:", err);
-      setCreativeRequests([]);
+      console.error("Error fetching inventory data:", err);
+      setInventoryData([]);
     }
   };
 
-  const fetchGoogleSheetData = async () => {
+  const fetchFabricationRequests = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/sheets/creative");
+      const res = await fetch("http://localhost:5000/fabrication-requests");
       const data = await res.json();
-      setSheetData(data.data || []);
-      setShowSheetData(true);
+      setFabricationRequests(data || []);
     } catch (err) {
-      console.error("Error fetching Google Sheets data:", err);
-      alert("Failed to fetch Google Sheets data.");
+      console.error("Error fetching fabrication requests:", err);
     }
   };
 
-  const handleInputChange = (e) => {
-    setNewRequest({
-      ...newRequest,
-      [e.target.name]: e.target.value,
+  // ------------------- Inventory Analysis -------------------
+  const getStockStatus = (item) => {
+    const quantity = parseInt(item.Quantity) || 0;
+    if (quantity === 0) return { status: "out-of-stock", text: "Out of Stock", priority: 1 };
+    if (quantity <= 5) return { status: "low-stock", text: "Low Stock", priority: 2 };
+    return { status: "normal", text: "In Stock", priority: 3 };
+  };
+
+  const getLowStockItems = () => {
+    return inventoryData.filter(item => {
+      const { status } = getStockStatus(item);
+      return status === "low-stock" || status === "out-of-stock";
+    }).sort((a, b) => getStockStatus(a).priority - getStockStatus(b).priority);
+  };
+
+  const generateFabricationReport = () => {
+    const lowStockItems = getLowStockItems();
+    const report = lowStockItems.map(item => {
+      const quantity = parseInt(item.Quantity) || 0;
+      const suggestedQuantity = quantity === 0 ? 20 : 15; // Suggested restock quantity
+      
+      return {
+        ...item,
+        currentStock: quantity,
+        suggestedQuantity,
+        urgency: quantity === 0 ? "High" : "Medium",
+        requestType: "restock"
+      };
+    });
+    
+    setFabricationReport(report);
+  };
+
+  // ------------------- Fabrication Request Functions -------------------
+  const openFabricationRequestModal = (item) => {
+    setSelectedItemForRequest(item);
+    setFabricationRequestData({
+      quantity: item.suggestedQuantity.toString(),
+      remarks: `Restock request for ${item["Item Name"]}. Current stock: ${item.currentStock || 0}`
+    });
+    setFabricationRequestModalOpen(true);
+  };
+
+  const closeFabricationRequestModal = () => {
+    setFabricationRequestModalOpen(false);
+    setSelectedItemForRequest(null);
+    setFabricationRequestData({
+      quantity: "",
+      remarks: ""
     });
   };
 
-  const parseMaterials = (input) => {
-    if (!input || !input.trim()) return [];
-    return input
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const match = line.match(/^(.*?)(?:\((\d+)\))?$/);
-        return {
-          name: match ? match[1].trim() : line,
-          quantity: match && match[2] ? Number(match[2]) : 1,
-          notes: "",
-        };
-      });
-  };
-
-  const formatMaterials = (materials) => {
-    if (!Array.isArray(materials)) return "";
-    return materials.map((m) => `${m.name} (${m.quantity})`).join("\n");
-  };
-
-  const handleCreateOrUpdateRequest = async (e) => {
-    e.preventDefault();
+  const submitFabricationRequest = async (item, requestedQuantity, remarks = "") => {
     try {
-      const materialsArray = parseMaterials(newRequest.materialsNeeded);
+      const requestData = {
+        username: user?.username,    
+        item: item["Item Name"],
+        itemId: item["Item Id"] || item._id,
+        quantity: requestedQuantity,
+        remarks: remarks || `Restock request for ${item["Item Name"]}. Current stock: ${item.Quantity || 0}`,
+        requestType: "restock",
+        status: "pending",
+        currentStock: item.Quantity || 0,
+        department: "creative"
+      };
 
-      if (editingRequest) {
-        if (editingRequest.status === "Approved") {
-          alert("Approved requests cannot be edited.");
-          return;
-        }
-
-        const res = await fetch(
-          `http://localhost:5000/creativeRequests/${editingRequest._id}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...newRequest,
-              materials: materialsArray,
-            }),
-          }
-        );
-        const data = await res.json();
-        if (!res.ok)
-          throw new Error(data.message || "Failed to update request");
-
-        setCreativeRequests((prev) =>
-          prev.map((r) =>
-            r._id === editingRequest._id ? data.updatedRequest || data : r
-          )
-        );
-        setEditingRequest(null);
-      } else {
-        if (!activeContract) {
-          alert("Please select a contract first (Add Creative Request button).");
-          return;
-        }
-
-        const payload = {
-          requestName: newRequest.requestName,
-          contractNo: newRequest.contractNo,
-          dueDate: newRequest.dueDate,
-          status: newRequest.status || "Draft",
-          materials: materialsArray,
-          contractRef: activeContract.id,
-          contractName: activeContract.name,
-          client: activeContract.client,
-          startDate: activeContract.startDate,
-          endDate: activeContract.endDate,
-        };
-
-        const res = await fetch("http://localhost:5000/creativeRequests", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok)
-          throw new Error(data.message || "Failed to create request");
-
-        const created = data.request || data.createdRequest || data;
-        setCreativeRequests((prev) => [...prev, created]);
-      }
-
-      setShowForm(false);
-      setActiveContract(null);
-      setNewRequest({
-        requestName: "",
-        materialsNeeded: "",
-        contractNo: "",
-        dueDate: "",
-        status: "Draft",
+      const res = await fetch("http://localhost:5000/fabrication-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
       });
-    } catch (err) {
-      console.error("Request error:", err);
-      alert("Failed: " + (err.message || ""));
-    }
-  };
 
-  const handleDeleteRequest = async (id, status) => {
-    if (status === "Approved") {
-      alert("Approved requests cannot be deleted.");
-      return;
-    }
-
-    if (!window.confirm("Are you sure you want to delete this request?")) return;
-    try {
-      const res = await fetch(`http://localhost:5000/creativeRequests/${id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to delete request");
-      setCreativeRequests((prev) => prev.filter((r) => r._id !== id));
-    } catch (err) {
-      console.error("Delete error:", err);
-      alert("Failed to delete request: " + (err.message || ""));
-    }
-  };
-
-  const onContractRowClick = async (contract) => {
-    try {
-      const res = await fetch(`http://localhost:5000/contracts/${contract.id}`);
       const data = await res.json();
       if (res.ok) {
-        setSelectedContract(data.contract || contract.raw || null);
+        setMessage(`Fabrication request for ${item["Item Name"]} submitted successfully!`);
+        fetchFabricationRequests();
+        return true;
       } else {
-        console.error("Failed to fetch contract details:", data);
+        setMessage("Error: " + data.message);
+        return false;
       }
     } catch (err) {
-      console.error("Error fetching contract details:", err);
+      console.error("Error submitting fabrication request:", err);
+      setMessage("Server error while submitting request.");
+      return false;
     }
   };
 
-  const statusClass = (s = "") =>
-    s.toLowerCase().replace(/\s+/g, "-").replace("sent-to-purchasing", "approved");
+  const handleFabricationRequestSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedItemForRequest) return;
 
-  const sectionStyle = { marginTop: "28px" };
+    const success = await submitFabricationRequest(
+      selectedItemForRequest,
+      parseInt(fabricationRequestData.quantity),
+      fabricationRequestData.remarks
+    );
 
-  // === RENDER FUNCTIONS ===
-  const renderCreateForm = () => (
-    <div className="create-contract-form">
-      <h3>
-        {editingRequest
-          ? "Edit Creative Request"
-          : activeContract
-          ? `Create Creative Request for: ${activeContract.name}`
-          : "Create Creative Request"}
-      </h3>
-      <form onSubmit={handleCreateOrUpdateRequest}>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Request Name</label>
-            <input
-              type="text"
-              name="requestName"
-              value={newRequest.requestName}
-              readOnly
-            />
-          </div>
-          <div className="form-group">
-            <label>Contract No.</label>
-            <input
-              type="text"
-              name="contractNo"
-              value={newRequest.contractNo}
-              readOnly
-            />
-          </div>
-        </div>
-        <div className="form-group">
-          <label>Materials Needed (one per line, format: Name (Qty))</label>
-          <textarea
-            name="materialsNeeded"
-            value={newRequest.materialsNeeded}
-            onChange={handleInputChange}
-            rows={4}
-            required
-          />
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Due Date</label>
-            <input
-              type="date"
-              name="dueDate"
-              value={newRequest.dueDate}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Status</label>
-            <select
-              name="status"
-              value={newRequest.status}
-              onChange={handleInputChange}
-            >
-              <option value="Draft">Draft</option>
-              <option value="For Approval">For Approval</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingRequest ? "Update Request" : "Submit Request"}
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => {
-              setShowForm(false);
-              setActiveContract(null);
-              setEditingRequest(null);
-              setNewRequest({
-                requestName: "",
-                materialsNeeded: "",
-                contractNo: "",
-                dueDate: "",
-                status: "Draft",
-              });
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+    if (success) {
+      closeFabricationRequestModal();
+    }
+  };
 
-  const renderContractsTable = () => (
-    <div className="contracts-table-container">
-      <div className="table-header">
-        <h3>Contracts from Sales</h3>
-      </div>
-      <div className="contracts-table">
+  const submitBulkFabricationRequests = async (items) => {
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const item of items) {
+      const success = await submitFabricationRequest(
+        item, 
+        item.suggestedQuantity, 
+        "Bulk restock request from fabrication report"
+      );
+      if (success) {
+        successCount++;
+      } else {
+        errorCount++;
+      }
+    }
+
+    setMessage(`Bulk request completed: ${successCount} successful, ${errorCount} failed`);
+  };
+
+  const downloadFabricationReport = () => {
+    const reportData = fabricationReport.map(item => ({
+      "Item ID": item["Item Id"] || item._id,
+      "Item Name": item["Item Name"],
+      "Category": item.Category,
+      "Current Stock": item.currentStock,
+      "Suggested Quantity": item.suggestedQuantity,
+      "Unit": item.Unit,
+      "Urgency": item.urgency,
+      "Request Type": item.requestType
+    }));
+
+    const csv = [
+      Object.keys(reportData[0]).join(","),
+      ...reportData.map(row => Object.values(row).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fabrication-restock-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    setMessage("Fabrication report downloaded successfully!");
+  };
+
+  // ------------------- Inventory CRUD -------------------
+  const openInventoryModal = (mode, data = {}, id = null, department = "creative") => {
+    setInventoryModalMode(mode);
+    setInventoryModalData(data);
+    setInventoryEditingId(id);
+    setCurrentInventoryDepartment(department);
+    setInventoryModalOpen(true);
+  };
+
+  const closeInventoryModal = () => {
+    setInventoryModalOpen(false);
+    setInventoryModalData({});
+    setInventoryEditingId(null);
+  };
+
+  const saveInventoryItem = async () => {
+    try {
+      const url = inventoryModalMode === "add" 
+        ? "http://localhost:5000/inventory" 
+        : `http://localhost:5000/inventory/${inventoryEditingId}`;
+      
+      const method = inventoryModalMode === "add" ? "POST" : "PUT";
+      
+      const itemData = {
+        ...inventoryModalData,
+        Department: currentInventoryDepartment,
+        Quantity: parseInt(inventoryModalData.Quantity) || 0
+      };
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(itemData),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setMessage(`Item ${inventoryModalMode === "add" ? "added" : "updated"} successfully!`);
+        fetchInventory(currentInventoryDepartment);
+        closeInventoryModal();
+      } else {
+        setMessage(data.message || "Error saving item");
+      }
+    } catch (err) {
+      console.error("Error saving inventory item:", err);
+      setMessage("Error saving item");
+    }
+  };
+
+  const deleteInventoryItem = async (id, department = "creative") => {
+    if (!window.confirm("Are you sure you want to delete this item?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/inventory/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setMessage("Item deleted successfully!");
+        fetchInventory(department);
+      } else {
+        setMessage("Error deleting item");
+      }
+    } catch (err) {
+      console.error("Error deleting inventory item:", err);
+      setMessage("Error deleting item");
+    }
+  };
+
+  // ====== RENDER FUNCTIONS ======
+  const renderDashboardView = () => {
+    const totalItems = inventoryData.length;
+    const lowStockItems = getLowStockItems();
+    const outOfStockItems = lowStockItems.filter(item => getStockStatus(item).status === "out-of-stock").length;
+    const lowStockCount = lowStockItems.filter(item => getStockStatus(item).status === "low-stock").length;
+    const pendingRequests = fabricationRequests.filter(req => req.status === 'pending').length;
+    const itemsPerPage = 10;
+    const startIndex = (page - 1) * itemsPerPage;
+    const paginatedContracts = contracts.slice(startIndex, startIndex + itemsPerPage);
+
+    return (
+      <div className="dashboard-view">
+
+        {/* Stats Overview */}
+        <div className="dashboard-cards">
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{totalItems}</div>
+              <div className="card-label">Total Items</div>
+            </div>
+          </div>
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{lowStockCount}</div>
+              <div className="card-label">Low Stock</div>
+            </div>
+          </div>
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{outOfStockItems}</div>
+              <div className="card-label">Out of Stock</div>
+            </div>
+          </div>
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{pendingRequests}</div>
+              <div className="card-label">Pending Requests</div>
+            </div>
+          </div>
+        </div>
+        <div className="contracts-table-container">
+        <div className="table-header">
+          <h3>Active Contracts</h3>
+          <div className="pager">
+            <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
+            <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
+            <button className="pager-btn" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(contracts.length / itemsPerPage)}>→</button>
+          </div>
+        </div>
         <table>
           <thead>
             <tr>
               <th>Contract Name</th>
-              <th>Client</th>
+              <th>Celebrator/Corporate Name</th>
               <th>Contract No.</th>
-              <th>Start Date</th>
-              <th>End Date</th>
-              <th>Status</th>
-              <th>Action</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {contracts.length === 0 ? (
-              <tr className="no-contracts">
-                <td colSpan="7">No contracts found</td>
-              </tr>
+            {paginatedContracts.length === 0 ? (
+              <tr><td colSpan="4">No active contracts available</td></tr>
             ) : (
-              contracts.map((c) => (
-                <tr
-                  key={c.id}
-                  className="clickable-row"
-                  onClick={() => onContractRowClick(c)}
-                >
+              paginatedContracts.map(c => (
+                <tr key={c.id}>
                   <td>{c.name}</td>
                   <td>{c.client}</td>
-                  <td>{c.contractNumber || "-"}</td>
-                  <td>{c.startDate?.slice(0, 10)}</td>
-                  <td>{c.endDate?.slice(0, 10)}</td>
+                  <td>{c.contractNumber}</td>
                   <td>
-                    <span className={`status ${statusClass(c.status)}`}>
-                      {c.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="action-btn primary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveContract(c);
-                        setEditingRequest(null);
-                        setShowForm(true);
-                        setNewRequest((prev) => ({
-                          ...prev,
-                          requestName: c.name,
-                          contractNo: c.contractNumber,
-                        }));
-                      }}
-                    >
-                      Add Creative Request
-                    </button>
+                    <button className="btn-review" onClick={() => setSelectedContract(c.raw)}>View</button>
                   </td>
                 </tr>
               ))
@@ -386,458 +405,539 @@ function CreativeDashboard({ onLogout }) {
           </tbody>
         </table>
       </div>
-    </div>
-  );
-
-  const renderRequestsTable = () => (
-    <div className="contracts-table-container" style={sectionStyle}>
-      <div className="table-header">
-        <h3>Creative Requests</h3>
-      </div>
-      <div className="contracts-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Request Name</th>
-              <th>Contract No.</th>
-              <th>Client</th>
-              <th>Materials Needed</th>
-              <th>Due Date</th>
-              <th>Status</th>
-              <th>Remarks</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {creativeRequests.length === 0 ? (
-              <tr className="no-contracts">
-                <td colSpan="8">No creative requests yet</td>
-              </tr>
-            ) : (
-              creativeRequests.map((r, idx) => {
-                const normalizedStatus =
-                  r.status === "Sent to Purchasing" ? "Approved" : r.status;
-                const isLocked =
-                  normalizedStatus === "Approved" ||
-                  normalizedStatus === "Sent to Purchasing";
-
-                return (
-                  <tr
-                    key={r._id || idx}
-                    style={
-                      normalizedStatus === "Rejected"
-                        ? { backgroundColor: "#ffe6e6" }
-                        : {}
-                    }
-                  >
-                    <td>{r.requestName || ""}</td>
-                    <td>{r.contractNo || "-"}</td>
-                    <td>{r.client || ""}</td>
-                    <td style={{ maxWidth: 240, whiteSpace: "pre-wrap" }}>
-                      {r.materials
-                        ?.map((m) => `${m.name} (${m.quantity})`)
-                        .join("\n") || ""}
-                    </td>
-                    <td>{r.dueDate ? String(r.dueDate).slice(0, 10) : ""}</td>
-                    <td>
-                      <span
-                        className={`status ${
-                          normalizedStatus === "Approved"
-                            ? "active"
-                            : statusClass(normalizedStatus)
-                        }`}
-                      >
-                        {normalizedStatus}
-                      </span>
-                    </td>
-                    <td>
-                      {normalizedStatus === "Rejected" && r.rejectionReason ? (
-                        <span
-                          title={r.rejectionReason}
-                          style={{
-                            color: "#a40802",
-                            fontStyle: "italic",
-                            fontSize: "13px",
-                            display: "inline-block",
-                            maxWidth: "200px",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {r.rejectionReason}
-                        </span>
-                      ) : (
-                        <span style={{ color: "#777", fontSize: "13px" }}>—</span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="btn-group">
-                        {!isLocked ? (
-                          <>
-                            <button
-                              className="btn-edit"
-                              onClick={() => {
-                                setEditingRequest(r);
-                                setShowForm(true);
-                                setActiveContract(null);
-                                setNewRequest({
-                                  requestName: r.requestName || "",
-                                  materialsNeeded: formatMaterials(r.materials),
-                                  contractNo: r.contractNo || "",
-                                  dueDate: r.dueDate
-                                    ? String(r.dueDate).slice(0, 10)
-                                    : "",
-                                  status: r.status || "Draft",
-                                });
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="btn-delete"
-                              onClick={() =>
-                                handleDeleteRequest(r._id, normalizedStatus)
-                              }
-                            >
-                              Delete
-                            </button>
-                          </>
-                        ) : (
-                          <span
-                            style={{
-                              color: "#666",
-                              fontStyle: "italic",
-                              fontSize: "13px",
-                            }}
-                          >
-                            Locked (Approved)
-                          </span>
-                        )}
-                      </div>
-                    </td>
+        {/* Low Stock Alert Table */}
+        {lowStockItems.length > 0 && (
+          <div className="section-container">
+            <div className="section-header">
+              <h3>Items Needing for Requests ({lowStockItems.length})</h3>
+            </div>
+            <div className="low-stock-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Item Name</th>
+                    <th>Current Stock</th>
+                    <th>Status</th>
+                    <th>Category</th>
+                    <th>Actions</th>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                </thead>
+                <tbody>
+                  {lowStockItems.slice(0, 5).map((item, idx) => {
+                    const { status, text } = getStockStatus(item);
+                    const quantity = parseInt(item.Quantity) || 0;
+                    
+                    return (
+                      <tr key={item._id || idx} className={`stock-alert ${status}`}>
+                        <td className="item-name">{item["Item Name"]}</td>
+                        <td className="stock-quantity">{quantity}</td>
+                        <td>
+                          <span className={`status ${status}`}>
+                            {text}
+                          </span>
+                        </td>
+                        <td>{item.Category}</td>
+                        <td>
+                          <div className="action-buttons">
+                            <button 
+                              className="btn-primary small"
+                              onClick={() => openFabricationRequestModal({
+                                ...item,
+                                currentStock: quantity,
+                                suggestedQuantity: quantity === 0 ? 20 : 15
+                              })}
+                            >
+                              Request Restock
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {lowStockItems.length > 5 && (
+                <div className="view-all-link">
+                  <button 
+                    className="text-link" 
+                    onClick={() => setActiveView("fabrication-report")}
+                  >
+                    View All {lowStockItems.length} Items Needing Requests →
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
-// === DROP-IN REPLACEMENT: renderDetailsModal ===
-const renderDetailsModal = () => {
-  const toTitle = (k = "") =>
-    String(k)
-      .replace(/([A-Z])/g, " $1")
-      .replace(/_/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .replace(/^./, (c) => c.toUpperCase());
+  const renderFabricationReportView = () => {
+    const lowStockItems = getLowStockItems();
 
-  const isPrimitive = (v) =>
-    v === null ||
-    v === undefined ||
-    typeof v === "string" ||
-    typeof v === "number" ||
-    typeof v === "boolean";
+    return (
+      <div className="contracts-table-container">
+        <div className="table-header">
+          <h3>Request Item Report</h3>
+           {message && <div className="message success">{message}</div>}
+          <div className="table-actions">
+            <button 
+              className="btn-secondary" 
+              onClick={downloadFabricationReport}
+              disabled={fabricationReport.length === 0}
+            >
+              Download Report
+            </button>
+            <button 
+              className="btn-secondary" 
+              onClick={generateFabricationReport}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
 
-  const renderValue = (v) => {
-    if (isPrimitive(v)) return String(v);
-    if (Array.isArray(v)) {
-      if (v.length === 0) return "—";
-      // array of primitives
-      if (v.every(isPrimitive)) return v.join(", ");
-      // array of objects → small table
-      const keys = Array.from(
-        new Set(v.flatMap((row) => Object.keys(row || {})))
-      ).slice(0, 8); // cap to avoid overly wide tables
-      return (
-        <div className="kv-table-wrapper">
-          <table className="kv-table">
+        <div className="report-summary">
+          <div className="summary-cards">
+            <div className="summary-card critical">
+              <div className="summary-value">
+                {fabricationReport.filter(item => item.urgency === "High").length}
+              </div>
+              <div className="summary-label">Critical (Out of Stock)</div>
+            </div>
+            <div className="summary-card warning">
+              <div className="summary-value">
+                {fabricationReport.filter(item => item.urgency === "Medium").length}
+              </div>
+              <div className="summary-label">Warning (Low Stock)</div>
+            </div>
+            <div className="summary-card total">
+              <div className="summary-value">{fabricationReport.length}</div>
+              <div className="summary-label">Total Items to Request</div>
+            </div>
+          </div>
+        </div>
+
+        {fabricationReport.length === 0 ? (
+          <div className="no-data">
+            <p>No items require fabrication requests at this time.</p>
+            <p>All inventory items are sufficiently stocked.</p>
+          </div>
+        ) : (
+          <table className="fabrication-report-table">
             <thead>
               <tr>
-                {keys.map((k) => (
-                  <th key={k}>{toTitle(k)}</th>
-                ))}
+                <th>Item ID</th>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Current Stock</th>
+                <th>Suggested Quantity</th>
+                <th>Unit</th>
+                <th>Urgency</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {v.map((row, i) => (
-                <tr key={i}>
-                  {keys.map((k) => (
-                    <td key={k}>
-                      {isPrimitive(row?.[k])
-                        ? String(row?.[k] ?? "—")
-                        : JSON.stringify(row?.[k] ?? "—")}
-                    </td>
-                  ))}
+              {fabricationReport.map((item, idx) => (
+                <tr key={item._id || idx} className={`urgency-${item.urgency.toLowerCase()}`}>
+                  <td>{item["Item Id"] || item._id}</td>
+                  <td className="item-name">{item["Item Name"]}</td>
+                  <td>{item.Category}</td>
+                  <td className="current-stock">{item.currentStock}</td>
+                  <td className="suggested-quantity">{item.suggestedQuantity}</td>
+                  <td>{item.Unit}</td>
+                  <td>
+                    <span className={`urgency-badge ${item.urgency.toLowerCase()}`}>
+                      {item.urgency}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="action-buttons">
+                      <button 
+                        className="btn-primary small"
+                        onClick={() => openFabricationRequestModal(item)}
+                      >
+                        Request
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      );
-    }
-    // nested object → render as sub grid
-    const entries = Object.entries(v || {});
-    if (entries.length === 0) return "—";
-    return (
-      <div className="kv-grid nested">
-        {entries.map(([k, val]) => (
-          <div key={k} className="kv-item">
-            <div className="kv-label">{toTitle(k)}</div>
-            <div className="kv-value">
-              {isPrimitive(val) ? String(val) : renderValue(val)}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const Section = ({ title, data }) => {
-    const entries = Object.entries(data || {}).filter(
-      ([, v]) => !(v === undefined || v === null || String(v).trim?.() === "")
-    );
-    return (
-      <div className="details-section">
-        <h4>{title}</h4>
-        {entries.length === 0 ? (
-          <div className="empty">No data</div>
-        ) : (
-          <div className="kv-grid">
-            {entries.map(([k, v]) => (
-              <div key={k} className="kv-item">
-                <div className="kv-label">{toTitle(k)}</div>
-                <div className="kv-value">{renderValue(v)}</div>
-              </div>
-            ))}
-          </div>
         )}
       </div>
     );
   };
 
-  return (
-    <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Creative Contract Details</h3>
-          <button className="close-btn" onClick={() => setSelectedContract(null)}>
-            ×
-          </button>
+  const renderContractsTable = () => {
+    const itemsPerPage = 10;
+    const startIndex = (page - 1) * itemsPerPage;
+    const paginatedContracts = contracts.slice(startIndex, startIndex + itemsPerPage);
+
+    return (
+      <div className="contracts-table-container">
+        <div className="table-header">
+          <h3>Active Contracts</h3>
+          <div className="pager">
+            <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
+            <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
+            <button className="pager-btn" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(contracts.length / itemsPerPage)}>→</button>
+          </div>
         </div>
-
-        <div className="modal-body">
-          {selectedContract && (
-            <div className="contract-details contract-details-comprehensive">
-              {/* Top summary pulled from Sales */}
-              <div className="detail-section">
-                <h4>Summary</h4>
-                <div className="kv-grid">
-                  <div className="kv-item">
-                    <div className="kv-label">Contract Number</div>
-                    <div className="kv-value">
-                      {selectedContract.contractNumber || "—"}
-                    </div>
-                  </div>
-                  <div className="kv-item">
-                    <div className="kv-label">Status</div>
-                    <div className="kv-value">
-                      <span
-                        className={`status-pill ${
-                          (selectedContract.status || "draft")
-                            .toLowerCase()
-                            .replace(/\s+/g, "-")
-                        }`}
-                      >
-                        {selectedContract.status || "Draft"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="kv-item">
-                    <div className="kv-label">Client</div>
-                    <div className="kv-value">
-                      {selectedContract.page1?.client ||
-                        selectedContract.page1?.celebratorName ||
-                        "—"}
-                    </div>
-                  </div>
-                  <div className="kv-item">
-                    <div className="kv-label">Event Date</div>
-                    <div className="kv-value">
-                      {selectedContract.page1?.eventDate || "—"}
-                    </div>
-                  </div>
-                  <div className="kv-item">
-                    <div className="kv-label">Contract Name</div>
-                    <div className="kv-value">
-                      {selectedContract.page1?.contractName ||
-                        selectedContract.page1?.occasion ||
-                        "—"}
-                    </div>
-                  </div>
-                  <div className="kv-item">
-                    <div className="kv-label">Grand Total</div>
-                    <div className="kv-value">
-                      {selectedContract.page3?.grandTotal ?? "—"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Full Sales forms, including creative details that live in any page */}
-              <Section title="Sales Form — Page 1" data={selectedContract.page1} />
-              <Section title="Sales Form — Page 2" data={selectedContract.page2} />
-              <Section title="Financials — Page 3" data={selectedContract.page3} />
-            </div>
-          )}
-        </div>
-
-        <div className="modal-actions">
-          <button className="btn-secondary" onClick={() => setSelectedContract(null)}>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-
-  const renderGoogleSheetTable = () => (
-  <div className="contracts-table-container" style={{ marginTop: "30px" }}>
-    <div className="table-header">
-      <h3 style={{ color: "#500000" }}>Google Sheets Data</h3>
-    </div>
-
-    <div className="contracts-table white-theme">
-      {Array.isArray(sheetData) && sheetData.length > 0 ? (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            backgroundColor: "#fff",
-            fontSize: "14px",
-          }}
-        >
+        <table>
           <thead>
-            <tr
-              style={{
-                backgroundColor: "#4B0011",
-                color: "white",
-                borderBottom: "2px solid #333",
-              }}
-            >
-              <th style={{ padding: "8px" }}>Item No.</th>
-              <th style={{ padding: "8px", textAlign: "left" }}>
-                Item Description
-              </th>
-              <th style={{ padding: "8px" }}>UOM</th>
-              <th style={{ padding: "8px" }}>Actual Count (March 2025)</th>
-              <th style={{ padding: "8px" }}>Damage / For Repair</th>
-              <th style={{ padding: "8px" }}>For Disposal</th>
-              <th style={{ padding: "8px" }}>Good Inventory (March 2025)</th>
-              <th style={{ padding: "8px" }}>Remarks</th>
+            <tr>
+              <th>Contract Name</th>
+              <th>Celebrator/Corporate Name</th>
+              <th>Contract No.</th>
+              <th>Actions</th>
             </tr>
           </thead>
-
           <tbody>
-            {sheetData.map((row, idx) => {
-              // Only shift left if the first cell is blank and the second cell has data
-              const shiftedRow =
-                row[0] === "" || row[0] === undefined ? row.slice(1) : row;
-
-              const [
-                itemNo = "",
-                description = "",
-                uom = "",
-                actualCount = "",
-                damaged = "",
-                disposal = "",
-                goodInventory = "",
-                remarks = "",
-              ] = shiftedRow;
-
-              return (
-                <tr
-                  key={idx}
-                  style={{
-                    borderBottom: "1px solid #ddd",
-                    backgroundColor: idx % 2 === 0 ? "#fafafa" : "#fff",
-                    textAlign: "center",
-                  }}
-                >
-                  <td style={{ padding: "6px" }}>{itemNo || "–"}</td>
-                  <td style={{ padding: "6px", textAlign: "left" }}>
-                    {description || "–"}
+            {paginatedContracts.length === 0 ? (
+              <tr><td colSpan="4">No active contracts available</td></tr>
+            ) : (
+              paginatedContracts.map(c => (
+                <tr key={c.id}>
+                  <td>{c.name}</td>
+                  <td>{c.client}</td>
+                  <td>{c.contractNumber}</td>
+                  <td>
+                    <button className="btn-review" onClick={() => setSelectedContract(c.raw)}>View</button>
                   </td>
-                  <td style={{ padding: "6px" }}>{uom || "–"}</td>
-                  <td style={{ padding: "6px" }}>{actualCount || "–"}</td>
-                  <td style={{ padding: "6px" }}>{damaged || "–"}</td>
-                  <td style={{ padding: "6px" }}>{disposal || "–"}</td>
-                  <td style={{ padding: "6px" }}>{goodInventory || "–"}</td>
-                  <td style={{ padding: "6px" }}>{remarks || "–"}</td>
                 </tr>
-              );
-            })}
+              ))
+            )}
           </tbody>
         </table>
-      ) : (
-        <p style={{ padding: "10px" }}>
-          No data found in Google Sheet
-          <br />
-          <small style={{ color: "#888" }}>
-            (Ensure tab name is “CREATIVE INVENTORY (2)” and data exists from
-            A8 downward)
-          </small>
-        </p>
-      )}
-    </div>
-  </div>
-);
+      </div>
+    );
+  };
 
-
-
-
-
-
-  // === MAIN RETURN ===
-  return (
-    <div className="sales-manager-dashboard">
-      <div className="dashboard-header">
-        <div className="dashboard-header-inner">
-          <h1>Creatives Department Dashboard</h1>
-          <div>
-            <button
-              onClick={fetchGoogleSheetData}
-              className="action-btn"
-              style={{ marginRight: "10px" }}
-            >
-              View Google Sheets Data
-            </button>
-            <button onClick={onLogout} className="logout-btn header-logout">
-              Logout
+  const renderInventoryTable = () => {
+    return (
+      <div className="contracts-table-container">
+        <div className="table-header">
+          <h3>Creative Inventory Management</h3>
+          <div className="table-actions">
+            <button className="btn-add" onClick={() => openInventoryModal("add", {}, null, "creative")}>
+              Add New Item
             </button>
           </div>
+        </div>
+        
+        {inventoryData.length === 0 ? (
+          <div className="no-data">
+            <p>No inventory data found for creative department.</p>
+            <button 
+              className="btn-primary" 
+              onClick={() => fetchInventory("creative")}
+            >
+              Refresh Data
+            </button>
+          </div>
+        ) : (
+          <table className="inventory-table">
+            <thead>
+              <tr>
+                <th>Item ID</th>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Unit</th>
+                <th>Quantity</th>
+                <th>Stock Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inventoryData.map((item, idx) => {
+                const quantity = parseInt(item.Quantity) || 0;
+                const itemId = item["Item Id"] || item._id || `No ID-${idx}`;
+                const itemName = item["Item Name"] || "Unnamed Item";
+                const category = item.Category || "Uncategorized";
+                const unit = item.Unit || "pcs";
+                const { status, text } = getStockStatus(item);
+                
+                return (
+                  <tr key={item._id || idx}>
+                    <td>{itemId}</td>
+                    <td>{itemName}</td>
+                    <td>{category}</td>
+                    <td>{unit}</td>
+                    <td>{quantity}</td>
+                    <td>
+                      <span className={`status ${status}`}>
+                        {text}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button 
+                          className="btn-edit" 
+                          onClick={() => openInventoryModal("edit", item, item._id, "creative")}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          className="btn-delete" 
+                          onClick={() => deleteInventoryItem(item._id, "creative")}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    );
+  };   
+
+  const renderFabricationRequestModal = () => (
+    fabricationRequestModalOpen && selectedItemForRequest && (
+      <div className="modal-overlay" onClick={closeFabricationRequestModal}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>Create Restock Request</h3>
+            <button className="close-btn" onClick={closeFabricationRequestModal}>×</button>
+          </div>
+          
+          <form onSubmit={handleFabricationRequestSubmit}>
+            <div className="modal-input-group">
+              <label>Requestor Name</label>
+              <input
+                type="text"
+                value={user?.username || ""}
+                readOnly
+              />
+            </div>
+
+            <div className="modal-input-group">
+              <label>Item Name</label>
+              <input
+                type="text"
+                value={selectedItemForRequest["Item Name"]}
+                readOnly
+              />
+            </div>
+
+            <div className="modal-input-group">
+              <label>Current Stock</label>
+              <input
+                type="text"
+                value={selectedItemForRequest.currentStock}
+                readOnly
+              />
+            </div>
+
+            <div className="modal-input-group">
+              <label>Suggested Quantity</label>
+              <input
+                type="text"
+                value={selectedItemForRequest.suggestedQuantity}
+                readOnly
+              />
+            </div>
+
+            <div className="modal-input-group">
+              <label>Quantity Needed *</label>
+              <input
+                type="number"
+                min="1"
+                value={fabricationRequestData.quantity}
+                onChange={(e) => setFabricationRequestData(prev => ({ 
+                  ...prev, 
+                  quantity: e.target.value 
+                }))}
+                required
+              />
+            </div>
+
+            <div className="modal-input-group">
+              <label>Remarks (Optional)</label>
+              <textarea
+                value={fabricationRequestData.remarks}
+                onChange={(e) => setFabricationRequestData(prev => ({ 
+                  ...prev, 
+                  remarks: e.target.value 
+                }))}
+                placeholder="Additional information about this restock request..."
+                rows="3"
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button type="submit" className="btn-save">Submit Request</button>
+              <button type="button" className="btn-cancel" onClick={closeFabricationRequestModal}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  );
+
+  const renderDetailsModal = () => (
+    selectedContract && (
+      <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
+        <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>Contract Details - {selectedContract?.contractNumber}</h3>
+            <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
+          </div>
+          <div className="modal-body">
+            {selectedContract && (
+              <div className="contract-details">
+                <div className="detail-section">
+                  <h4>Contract Information</h4>
+                  <div className="detail-row">
+                    <strong>Contract Number:</strong> {selectedContract.contractNumber}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Venue:</strong> {selectedContract.page1?.venue || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
+                  </div>
+                </div>
+
+                <div className="detail-section">
+                  <h4>Event Timeline</h4>
+                  <div className="detail-row">
+                    <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Ingress Time:</strong> {selectedContract.page1?.ingressTime || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Cocktail Time:</strong> {selectedContract.page1?.cocktailTime || "N/A"}
+                  </div>
+                </div>
+
+                <div className="detail-section">
+                  <h4>Guest Breakdown</h4>
+                  <div className="detail-row">
+                    <strong>VIP Guests:</strong> {selectedContract.page1?.vipTableType || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Regular Guests:</strong> {selectedContract.page1?.regularTableType || "N/A"}
+                  </div>
+                </div>
+
+                {selectedContract.page3 && (
+                  <div className="detail-section">
+                    <h4>Menu Details</h4>
+                    {selectedContract.page3.cocktailHour && (
+                      <div className="detail-row">
+                        <strong>Cocktail Hour:</strong> {selectedContract.page3.cocktailHour}
+                      </div>
+                    )}
+                    {selectedContract.page3.mainEntree && (
+                      <div className="detail-row">
+                        <strong>Main Entrée:</strong> {selectedContract.page3.mainEntree}
+                      </div>
+                    )}
+                    {selectedContract.page3.dessert && (
+                      <div className="detail-row">
+                        <strong>Dessert:</strong> {selectedContract.page3.dessert}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="modal-actions">
+            <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
+  const renderInventoryModal = () => (
+    inventoryModalOpen && (
+      <div className="modal-overlay" onClick={closeInventoryModal}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <h3>
+            {inventoryModalMode === "add" ? "Add Inventory Item" : "Edit Inventory Item"} - {currentInventoryDepartment}
+          </h3>
+          <form onSubmit={(e) => { e.preventDefault(); saveInventoryItem(); }}>
+            {["Item Id", "Item Name", "Category", "Unit", "Quantity"].map(field => (
+              <div key={field} className="modal-input-group">
+                <label>{field}</label>
+                <input
+                  value={inventoryModalData[field] || ""}
+                  onChange={(e) => setInventoryModalData(prev => ({ ...prev, [field]: e.target.value }))}
+                  type={field === "Quantity" ? "number" : "text"}
+                />
+              </div>
+            ))}
+            <div className="modal-actions">
+              <button type="submit" className="btn-save">Save</button>
+              <button type="button" className="btn-cancel" onClick={closeInventoryModal}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  );
+
+  return (
+    <div className="department-dashboard">
+      {/* Left Sidebar */}
+      <div className="dashboard-sidebar">
+        <div className="accreditation-header">
+          <h1>CREATIVE</h1>
+          <h2>Dashboard</h2>
+        </div>
+        
+        <div className="header-nav">
+          <div className="nav-section">
+            <div className="section-title">Navigation</div>
+            <button className={`nav-btn ${activeView === "dashboard" ? "active" : ""}`} onClick={() => setActiveView("dashboard")}>
+              Dashboard
+            </button>
+          </div>
+          
+          <div className="nav-section">
+            <div className="section-title">Fabrication Management</div>
+            <button className={`nav-btn ${activeView === "inventory" ? "active" : ""}`} onClick={() => setActiveView("inventory")}>
+              Creative Inventory
+            </button>
+            <button className={`nav-btn ${activeView === "fabrication-report" ? "active" : ""}`} onClick={() => setActiveView("fabrication-report")}>
+              Request Item Report
+            </button>
+          </div>
+        </div>
+        
+        <div className="sidebar-footer">
+          <button onClick={onLogout} className="logout-btn">Logout</button>
         </div>
       </div>
 
       <div className="dashboard-content">
-        {showForm ? (
-          renderCreateForm()
-        ) : (
-          <>
-            {renderContractsTable()}
-            {renderRequestsTable()}
-            {showSheetData && renderGoogleSheetTable()}
-          </>
-        )}
-        {selectedContract && renderDetailsModal()}
+        {activeView === "dashboard" && renderDashboardView()}
+        {activeView === "contracts" && renderContractsTable()}
+        {activeView === "inventory" && renderInventoryTable()}
+        {activeView === "fabrication-report" && renderFabricationReportView()}
       </div>
+
+      {selectedContract && renderDetailsModal()}
+      {renderInventoryModal()}
+      {renderFabricationRequestModal()}
     </div>
   );
 }

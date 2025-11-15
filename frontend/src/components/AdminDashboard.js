@@ -1,9 +1,13 @@
-
-import { useState, useEffect } from "react"
-import "./AdminDashboard.css"
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import "leaflet-routing-machine";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+import { useState, useEffect, useRef } from "react"
+import "./hello.css"
 
 function AdminDashboard({ onLogout }) {
   // ==================== STATE MANAGEMENT ====================
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [pendingUsers, setPendingUsers] = useState([])
   const [allUsers, setAllUsers] = useState([])
   const [selectedRole, setSelectedRole] = useState("")
@@ -13,12 +17,18 @@ function AdminDashboard({ onLogout }) {
   const [editingUser, setEditingUser] = useState(null)
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [dashboardStats, setDashboardStats] = useState({
-    totalContracts: 0,
-    totalUsers: 0,
-    totalInventory: 0,
-    activeEvents: 0,
-    pendingApprovals: 0
-  })
+  totalContracts: 0,
+  totalUsers: 0,
+  totalInventory: 0,
+  activeEvents: 0,
+  pendingApprovals: 0,
+  departmentInventory: {
+    creative: 0,
+    warehouse: 0,
+    linen: 0,
+    stockroom: 0
+  }
+  });
   const [contractsData, setContractsData] = useState([])
   const [recentActivity, setRecentActivity] = useState([])
   const [fullContracts, setFullContracts] = useState([])
@@ -64,7 +74,223 @@ const [inventoryEditingIndex, setInventoryEditingIndex] = useState(null);
 const [currentInventoryDepartment, setCurrentInventoryDepartment] = useState("");
 
 // Add to your existing state variables
-// Replace your departmentData state with this:
+// Add to your existing state variables
+const [logisticsActiveTab, setLogisticsActiveTab] = useState("contracts");
+const [logisticsContracts, setLogisticsContracts] = useState([]);
+const [selectedLogisticsContract, setSelectedLogisticsContract] = useState(null);
+const [selectedLogisticsEvent, setSelectedLogisticsEvent] = useState(null);
+const [logisticsPage, setLogisticsPage] = useState(1);
+const [logisticsCalendarURL, setLogisticsCalendarURL] = useState("");
+const [logisticsBookings, setLogisticsBookings] = useState([]);
+const [logisticsStartLocation, setLogisticsStartLocation] = useState("");
+const [logisticsEndLocation, setLogisticsEndLocation] = useState("");
+const [logisticsRouteInfo, setLogisticsRouteInfo] = useState(null);
+
+
+// Add map refs (you'll need to import useRef at the top)
+const logisticsMapRef = useRef(null);
+const logisticsMapInstance = useRef(null);
+const logisticsRouteControlRef = useRef(null);
+
+// ==================== LOGISTICS MAP FUNCTIONS ====================
+
+const initLogisticsMap = () => {
+  if (!logisticsMapRef.current) return;
+  
+  // Remove existing map if any
+  if (logisticsMapInstance.current) {
+    logisticsMapInstance.current.remove();
+    logisticsMapInstance.current = null;
+  }
+
+  // Create new map
+  logisticsMapInstance.current = L.map(logisticsMapRef.current).setView([14.5995, 120.9842], 7);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "© OpenStreetMap contributors",
+  }).addTo(logisticsMapInstance.current);
+
+  // Add markers for logistics contracts
+  logisticsContracts.forEach((contract) => {
+    const address = contract.page1?.address || contract.page1?.venue;
+    if (!address) return;
+    
+    fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        address + ", Philippines"
+      )}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data[0]) {
+          const { lat, lon } = data[0];
+          const marker = L.marker([lat, lon]).addTo(logisticsMapInstance.current);
+          marker.bindPopup(
+            `<strong>${contract.name}</strong><br/>${
+              contract.page1?.celebratorName || ""
+            }<br/>${contract.page1?.venue || ""}`
+          );
+        }
+      })
+      .catch(() => {});
+  });
+};
+
+// Geocode function for logistics
+const logisticsGeocode = async (q) => {
+  if (!q || q.trim() === "") throw new Error("⚠️ Please enter a valid address.");
+
+  const cleanedQuery = q
+    .replace(/\s+/g, " ")
+    .replace(/[.,]/g, "")
+    .trim();
+  const query = `${cleanedQuery}, Philippines`;
+
+  // Try Nominatim
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
+        query
+      )}`,
+      { headers: { "User-Agent": "EventManagementSystem/1.0" } }
+    );
+    const data = await res.json();
+    if (data && data.length > 0)
+      return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+  } catch (err) {
+    console.warn("Nominatim failed:", err);
+  }
+
+  throw new Error(`⚠️ Location not found or invalid address: ${q}`);
+};
+
+// Route finder for logistics
+
+
+useEffect(() => {
+  if (activeTab === "logistics" && logisticsMapRef.current) {
+    setTimeout(() => initLogisticsMap(), 300);
+  }
+}, [activeTab]);
+
+// Add these functions to your admin component
+
+// ===== MAP INITIALIZATION =====
+
+
+// ===== GEOCODE FUNCTION =====
+const geocode = async (q) => {
+  if (!q || q.trim() === "") throw new Error("⚠️ Please enter a valid address.");
+
+  const cleanedQuery = q.replace(/\s+/g, " ").replace(/[.,]/g, "").trim();
+  const query = `${cleanedQuery}, Philippines`;
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`,
+      { headers: { "User-Agent": "EventManagementSystem/1.0" } }
+    );
+    const data = await res.json();
+    if (data && data.length > 0)
+      return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+  } catch (err) {
+    console.warn("Nominatim failed:", err);
+  }
+
+  throw new Error(`⚠️ Location not found: ${q}`);
+};
+
+// ===== ROUTE FINDER =====
+const showLogisticsRoute = async () => {
+  if (!logisticsStartLocation || !logisticsEndLocation) {
+    alert("Please enter both a starting point and destination.");
+    return;
+  }
+
+  try {
+    const start = await geocode(logisticsStartLocation);
+    const end = await geocode(logisticsEndLocation);
+
+    if (!logisticsMapInstance.current) initLogisticsMap();
+
+    if (logisticsRouteControlRef.current) {
+      logisticsMapInstance.current.removeControl(logisticsRouteControlRef.current);
+    }
+
+    const control = L.Routing.control({
+      waypoints: [L.latLng(start[0], start[1]), L.latLng(end[0], end[1])],
+      routeWhileDragging: false,
+      lineOptions: { styles: [{ color: "#007bff", weight: 5 }] },
+      createMarker: () => null,
+    })
+      .on("routesfound", (e) => {
+        const route = e.routes[0];
+        const dist = (route.summary.totalDistance / 1000).toFixed(2);
+        const time = (route.summary.totalTime / 60).toFixed(1);
+        setLogisticsRouteInfo({ distance: `${dist} km`, duration: `${time} mins` });
+      })
+      .on("routingerror", () => {
+        alert("Could not calculate route. Please check the addresses.");
+      })
+      .addTo(logisticsMapInstance.current);
+
+    logisticsRouteControlRef.current = control;
+    logisticsMapInstance.current.setView(start, 10);
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+// ===== RENDER LOGISTICS MAP VIEW =====
+const renderLogisticsMapView = () => (
+  <div className="map-container">
+    <h3>Venue Map & Route Planner</h3>
+    <div className="route-inputs">
+      <input
+        type="text"
+        placeholder="Enter starting point (e.g., Manila)"
+        value={logisticsStartLocation}
+        onChange={(e) => setLogisticsStartLocation(e.target.value)}
+        className="route-input"
+      />
+      <input
+        type="text"
+        placeholder="Enter event destination"
+        value={logisticsEndLocation}
+        onChange={(e) => setLogisticsEndLocation(e.target.value)}
+        className="route-input"
+      />
+      <button
+        onClick={showLogisticsRoute}
+        className="btn-primary"
+      >
+        Show Route
+      </button>
+    </div>
+    
+    {logisticsRouteInfo && (
+      <div className="route-info">
+        <strong>Distance:</strong> {logisticsRouteInfo.distance} |{" "}
+        <strong>Duration:</strong> {logisticsRouteInfo.duration}
+      </div>
+    )}
+    
+    <div
+      ref={logisticsMapRef}
+      className="logistics-map"
+      style={{
+        width: "100%",
+        height: "600px",
+        borderRadius: "10px",
+        background: "#ccc",
+        marginTop: "10px"
+      }}
+    ></div>
+  </div>
+);
+
+
 const [departmentData, setDepartmentData] = useState({
   creative: {
     contracts: [],
@@ -103,6 +329,8 @@ const [departmentData, setDepartmentData] = useState({
   ]
 
   // ==================== LIFECYCLE HOOKS ====================
+
+  
 
   // Update this useEffect
 useEffect(() => {
@@ -510,22 +738,28 @@ const requestEquipment = async (eventId, equipmentList) => {
 
   // ==================== API FUNCTIONS ====================
   const fetchDashboardStats = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/admin/dashboard-stats");
-      if (res.ok) {
-        const data = await res.json();
-        setDashboardStats({
-          totalContracts: data.totalContracts || 0,
-          totalUsers: data.totalUsers || 0,
-          totalInventory: data.totalInventory || 0,
-          activeEvents: data.activeEvents || 0,
-          pendingApprovals: data.pendingApprovals || 0
-        });
-      }
-    } catch (err) {
-      console.error("Fetch dashboard stats error:", err);
+  try {
+    const res = await fetch("http://localhost:5000/admin/dashboard-stats");
+    if (res.ok) {
+      const data = await res.json();
+      setDashboardStats({
+        totalContracts: data.totalContracts || 0,
+        totalUsers: data.totalUsers || 0,
+        totalInventory: data.totalInventory || 0,
+        activeEvents: data.activeEvents || 0,
+        pendingApprovals: data.pendingApprovals || 0,
+        departmentInventory: data.departmentInventory || {
+          creative: 0,
+          warehouse: 0,
+          linen: 0,
+          stockroom: 0
+        }
+      });
     }
-  };
+  } catch (err) {
+    console.error("Fetch dashboard stats error:", err);
+  }
+};
 
   const fetchRecentActivity = async () => {
     try {
@@ -1080,7 +1314,7 @@ const fetchDepartmentData = async (department) => {
   const renderDashboardCards = () => (
     <div className="dashboard-cards">
       <div className="dashboard-card" onClick={() => setActiveView("contracts")}>
-        <div className="card-icon">📋</div>
+        <div className="card-icon"></div>
         <div className="card-content">
           <h3>Contracts</h3>
           <div className="card-value">{dashboardStats.totalContracts}</div>
@@ -1089,7 +1323,7 @@ const fetchDepartmentData = async (department) => {
       </div>
 
       <div className="dashboard-card" onClick={() => setActiveView("userManagement")}>
-        <div className="card-icon">👥</div>
+        <div className="card-icon"></div>
         <div className="card-content">
           <h3>Users</h3>
           <div className="card-value">{dashboardStats.totalUsers}</div>
@@ -1098,25 +1332,25 @@ const fetchDepartmentData = async (department) => {
       </div>
 
       <div className="dashboard-card" onClick={() => setActiveView("creative")}>
-        <div className="card-icon">🎨</div>
+        <div className="card-icon"></div>
         <div className="card-content">
           <h3>Creative</h3>
-          <div className="card-value">{dashboardStats.totalInventory}</div>
+          <div className="card-value">{dashboardStats.departmentInventory.creative}</div>
           <div className="card-label">Inventory Items</div>
         </div>
       </div>
 
       <div className="dashboard-card" onClick={() => setActiveView("warehouse")}>
-        <div className="card-icon">🏭</div>
+        <div className="card-icon"></div>
         <div className="card-content">
           <h3>Warehouse</h3>
-          <div className="card-value">{dashboardStats.totalInventory}</div>
+          <div className="card-value">{dashboardStats.departmentInventory.warehouse}</div>
           <div className="card-label">Inventory Items</div>
         </div>
       </div>
 
       <div className="dashboard-card" onClick={() => setActiveView("events")}>
-        <div className="card-icon">📅</div>
+        <div className="card-icon"></div>
         <div className="card-content">
           <h3>Events</h3>
           <div className="card-value">{dashboardStats.activeEvents}</div>
@@ -1125,7 +1359,7 @@ const fetchDepartmentData = async (department) => {
       </div>
 
       <div className="dashboard-card" onClick={() => setActiveView("finance")}>
-        <div className="card-icon">💰</div>
+        <div className="card-icon"></div>
         <div className="card-content">
           <h3>Finance</h3>
           <div className="card-value">-</div>
@@ -1134,17 +1368,17 @@ const fetchDepartmentData = async (department) => {
       </div>
 
       <div className="dashboard-card" onClick={() => setActiveView("linen")}>
-        <div className="card-icon">🛏️</div>
+        <div className="card-icon"></div>
         <div className="card-content">
           <h3>Linen</h3>
-          <div className="card-value">{dashboardStats.totalInventory}</div>
+          <div className="card-value">{dashboardStats.departmentInventory.linen}</div>
           <div className="card-label">Inventory Items</div>
         </div>
       </div>
 
         
       <div className="dashboard-card" onClick={() => setActiveView("banquet")}>
-        <div className="card-icon">👨‍🍳</div>
+        <div className="card-icon"></div>
         <div className="card-content">
           <h3>Banquet</h3>
           <div className="card-value">-</div>
@@ -1153,7 +1387,7 @@ const fetchDepartmentData = async (department) => {
       </div>
 
       <div className="dashboard-card highlight" onClick={() => setActiveView("userManagement")}>
-        <div className="card-icon">⏳</div>
+        <div className="card-icon"></div>
         <div className="card-content">
           <h3>Pending</h3>
           <div className="card-value">{dashboardStats.pendingApprovals}</div>
@@ -2027,6 +2261,8 @@ const renderDepartmentView = () => {
       return renderEventsView();
     case "finance":
       return renderFinanceView();
+    case "logistics": 
+      return renderLogisticsView();
     case "userManagement":
       return renderUserManagement();
     default:
@@ -2037,7 +2273,7 @@ const renderDepartmentView = () => {
 // Update your fetchInventory function to accept department
 const fetchInventory = async (department = "") => {
   try {
-    let url = "http://localhost:5000/inventory-movement";
+    let url = "http://localhost:5000/inventory";
     if (department) {
       url = `http://localhost:5000/inventory?department=${department}`;
     }
@@ -2061,7 +2297,7 @@ const fetchInventory = async (department = "") => {
           {inventoryModalMode === "add" ? "Add Inventory Item" : "Edit Inventory Item"} - {currentInventoryDepartment}
         </h3>
         <form onSubmit={(e) => { e.preventDefault(); saveInventoryItem(); }}>
-          {["Item Code", "Item Description", "UOM", "On-hand (Start)", "Quantity", "Damages", "On-hand (End)"].map(field => (
+          {["Item Id", "Item Name", "Category", "Unit", "Quantity"].map(field => (
             <div key={field} className="modal-input-group">
               <label>{field}</label>
               <input
@@ -2081,6 +2317,8 @@ const fetchInventory = async (department = "") => {
 );
 
 const renderInventoryTable = (department = "") => {
+  console.log("Inventory data:", inventoryData); // Debug log
+  
   return (
     <div className="contracts-table-container">
       <div className="table-actions">
@@ -2089,48 +2327,94 @@ const renderInventoryTable = (department = "") => {
         </button>
       </div>
       <h3>Inventory Monitoring - {department}</h3>
+      
       {inventoryData.length === 0 ? (
-        <p>No inventory data</p>
+        <div className="no-data">
+          <p>No inventory data found.</p>
+          <p>Check console for debugging information.</p>
+          <button 
+            className="btn-primary" 
+            onClick={() => fetchInventory(department)}
+          >
+            Retry Fetch
+          </button>
+        </div>
       ) : (
         <table className="inventory-table">
           <thead>
             <tr>
-              <th>Item Code</th>
-              <th>Description</th>
-              <th>UOM</th>
-              <th>On-hand Start</th>
+              <th>Item Id</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Unit</th>
               <th>Quantity</th>
-              <th>Damages</th>
-              <th>On-hand End</th>
+              <th>Department</th>
+              <th>Stock Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {inventoryData.map((item, idx) => (
-              <tr key={item._id || idx}>
-                <td>{item["Item Code"]}</td>
-                <td>{item["Item Description"]}</td>
-                <td>{item.UOM}</td>
-                <td>{item["On-hand (Start)"]}</td>
-                <td>{item.Quantity}</td>
-                <td>{item.Damages}</td>
-                <td>{item["On-hand (End)"]}</td>
-                <td>
-                  <button 
-                    className="btn-edit" 
-                    onClick={() => openInventoryModal("edit", item, idx, department)}
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    className="btn-delete" 
-                    onClick={() => deleteInventoryItem(item._id, department)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {inventoryData.map((item, idx) => {
+              console.log("Rendering item:", item); // Debug each item
+              
+              const quantity = parseInt(item.Quantity) || 0;
+              const itemId = item["Item Id"] || `No ID-${idx}`;
+              const itemName = item["Item Name"] || "Unnamed Item";
+              const category = item.Category || "Uncategorized";
+              const unit = item.Unit || "pcs";
+              const departmentName = item.Department || "Unknown";
+              
+              let status = "normal";
+              let statusText = "In Stock";
+
+              if (quantity === 0) {
+                status = "out-of-stock";
+                statusText = "Out of Stock";
+              } else if (quantity <= 5) {
+                status = "low-stock";
+                statusText = "Low Stock";
+              }
+
+              return (
+                <tr key={item._id || idx} className={item._id ? '' : 'sheets-item'}>
+                  <td>{itemId}</td>
+                  <td>{itemName}</td>
+                  <td>{category}</td>
+                  <td>{unit}</td>
+                  <td>{quantity}</td>
+                  <td>
+                    <span className={`department-badge ${departmentName.toLowerCase()}`}>
+                      {departmentName}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status ${status}`}>
+                      {statusText}
+                    </span>
+                  </td>
+                  <td>
+                    {item._id ? ( // Only show edit/delete for MongoDB items
+                      <>
+                        <button 
+                          className="btn-edit" 
+                          onClick={() => openInventoryModal("edit", item, idx, department)}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          className="btn-delete" 
+                          onClick={() => deleteInventoryItem(item._id, department)}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    ) : (
+                      <span className="read-only">Read Only</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -2138,6 +2422,382 @@ const renderInventoryTable = (department = "") => {
   );
 };
 
+// ==================== LOGISTICS FUNCTIONS ====================
+
+// Fetch logistics contracts
+const fetchLogisticsContracts = async () => {
+  try {
+    const res = await fetch("http://localhost:5000/api/logistics/contracts");
+    const data = await res.json();
+    if (res.ok) setLogisticsContracts(data.contracts || []);
+  } catch (e) {
+    console.error("Error fetching logistics contracts:", e);
+  }
+};
+
+// Fetch logistics calendar data
+const fetchLogisticsCalendarData = async () => {
+  try {
+    const res = await fetch("http://localhost:5000/api/logistics/calendar");
+    const data = await res.json();
+    if (res.ok) {
+      setLogisticsCalendarURL(data.calendarEmbedURL);
+      const eventList = (data.events || []).map((ev) => ({
+        title: ev.title || "Event",
+        date: ev.start ? new Date(ev.start) : null,
+        venue: ev.venue || "N/A",
+        truck: ev.truck || "Unassigned",
+        driver: ev.driver || "Unassigned",
+        color: ev.color || "#1a73e8",
+        description: ev.description || "",
+      }));
+      setLogisticsBookings(eventList);
+    }
+  } catch (e) {
+    console.error("Error loading logistics calendar data:", e);
+  }
+};
+
+// Fetch logistics bookings
+const fetchLogisticsBookings = async () => {
+  try {
+    const res = await fetch("http://localhost:5000/api/logistics/bookings");
+    const data = await res.json();
+    if (res.ok) {
+      const bookingList = (data.bookings || []).map((b) => ({
+        title: b.venue || "Booking",
+        date: b.date ? new Date(b.date) : null,
+        client: b.client || "Unknown Client",
+        truck: b.truck || "N/A",
+        driver: b.driver || "N/A",
+        venue: b.venue || "N/A",
+        color: "#ff9800",
+        description: `Booking for ${b.client || "client"} at ${b.venue || "venue"}`,
+      }));
+      setLogisticsBookings((prev) => [...prev, ...bookingList]);
+    }
+  } catch (err) {
+    console.error("Error fetching logistics bookings:", err);
+  }
+};
+
+// Initialize logistics data when logistics view becomes active
+useEffect(() => {
+  if (activeView === "logistics") {
+    fetchLogisticsContracts();
+    fetchLogisticsCalendarData();
+    fetchLogisticsBookings();
+  }
+}, [activeView]);
+
+// ==================== LOGISTICS RENDER FUNCTIONS ====================
+
+const renderLogisticsContractsTable = () => {
+  const itemsPerPage = 10;
+  const startIndex = (logisticsPage - 1) * itemsPerPage;
+  const paginatedContracts = logisticsContracts.slice(startIndex, startIndex + itemsPerPage);
+
+  return (
+    <div className="contracts-table-container">
+      <div className="table-header">
+        <h3>Active Contracts - Logistics View</h3>
+        <div className="pager">
+          <button
+            className="pager-btn"
+            onClick={() => setLogisticsPage(Math.max(1, logisticsPage - 1))}
+            disabled={logisticsPage === 1}
+          >
+            ←
+          </button>
+          <span className="page-indicator">
+            Page {logisticsPage} of {Math.ceil(logisticsContracts.length / itemsPerPage)}
+          </span>
+          <button
+            className="pager-btn"
+            onClick={() => setLogisticsPage(logisticsPage + 1)}
+            disabled={logisticsPage >= Math.ceil(logisticsContracts.length / itemsPerPage)}
+          >
+            →
+          </button>
+        </div>
+      </div>
+
+      <div className="contracts-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Contract Name</th>
+              <th>Celebrator/Corporate Name</th>
+              <th>Contract No.</th>
+              <th>Venue</th>
+              <th>Event Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedContracts.length === 0 ? (
+              <tr className="no-contracts">
+                <td colSpan="6">No active contracts available</td>
+              </tr>
+            ) : (
+              paginatedContracts.map((contract) => (
+                <tr key={contract._id}>
+                  <td>{contract.name}</td>
+                  <td>{contract.celebratorName}</td>
+                  <td>{contract.contractNumber || "-"}</td>
+                  <td>{contract.page1?.venue || "N/A"}</td>
+                  <td>{contract.page1?.eventDate || "N/A"}</td>
+                  <td>
+                    <button
+                      className="btn-review"
+                      onClick={async () => {
+                        const res = await fetch(
+                          `http://localhost:5000/contracts/${contract._id}`
+                        );
+                        const data = await res.json();
+                        if (res.ok) setSelectedLogisticsContract(data.contract);
+                      }}
+                    >
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const renderLogisticsCalendarView = () => (
+  <div className="calendar-container">
+    <h3 style={{ marginBottom: "10px" }}>Logistics Calendar — Event Overview</h3>
+    {logisticsCalendarURL && (
+      <iframe
+        src={logisticsCalendarURL}
+        style={{
+          border: 0,
+          width: "100%",
+          height: "500px",
+          borderRadius: "8px",
+          marginBottom: "20px",
+        }}
+        title="Logistics Calendar"
+      ></iframe>
+    )}
+    <div
+      style={{
+        background: "#f8f9fa",
+        padding: "20px",
+        borderRadius: "10px",
+        maxHeight: "400px",
+        overflowY: "auto",
+      }}
+    >
+      {logisticsBookings.map((b, i) => (
+        <div
+          key={i}
+          title={`Driver: ${b.driver}\nTruck: ${b.truck}\nVenue: ${b.venue}`}
+          className="calendar-event-card"
+          style={{
+            background: "white",
+            marginBottom: "12px",
+            padding: "14px 18px",
+            borderRadius: "10px",
+            borderLeft: `6px solid ${b.color || "#1a73e8"}`,
+            cursor: "pointer",
+            transition: "0.2s ease",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+          onClick={() => setSelectedLogisticsEvent(b)}
+        >
+          <h4 style={{ color: "#333", marginBottom: "6px" }}>{b.title}</h4>
+          <p style={{ margin: 0 }}>
+            📆 <strong>Date:</strong>{" "}
+            {b.date ? b.date.toLocaleDateString() : "No date set"}
+          </p>
+          <p style={{ margin: 0 }}>
+            📍 <strong>Venue:</strong> {b.venue}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const renderLogisticsEventModal = () =>
+  selectedLogisticsEvent && (
+    <div className="modal-overlay" onClick={() => setSelectedLogisticsEvent(null)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Event Details - Logistics</h3>
+          <button className="close-btn" onClick={() => setSelectedLogisticsEvent(null)}>
+            ×
+          </button>
+        </div>
+        <div className="modal-body">
+          <p>
+            <strong>Event:</strong> {selectedLogisticsEvent.title}
+          </p>
+          <p>
+            <strong>Date:</strong>{" "}
+            {selectedLogisticsEvent.date?.toLocaleDateString() || "Unknown"}
+          </p>
+          <p>
+            <strong>Venue:</strong> {selectedLogisticsEvent.venue}
+          </p>
+          <p>
+            <strong>Driver:</strong> {selectedLogisticsEvent.driver}
+          </p>
+          <p>
+            <strong>Truck:</strong> {selectedLogisticsEvent.truck}
+          </p>
+          {selectedLogisticsEvent.description && (
+            <p>
+              <strong>Description:</strong> {selectedLogisticsEvent.description}
+            </p>
+          )}
+        </div>
+        <div className="modal-actions">
+          <button className="btn-primary" onClick={() => setSelectedLogisticsEvent(null)}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+const renderLogisticsContractModal = () =>
+  selectedLogisticsContract && (
+    <div className="modal-overlay" onClick={() => setSelectedLogisticsContract(null)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Logistics Contract Details</h3>
+          <button
+            className="close-btn"
+            onClick={() => setSelectedLogisticsContract(null)}
+          >
+            ×
+          </button>
+        </div>
+        <div className="modal-body">
+          <p>
+            <strong>Contract Number:</strong>{" "}
+            {selectedLogisticsContract.contractNumber}
+          </p>
+          <p>
+            <strong>Client:</strong> {selectedLogisticsContract.page1?.celebratorName}
+          </p>
+          <p>
+            <strong>Venue:</strong> {selectedLogisticsContract.page1?.venue}
+          </p>
+          <p>
+            <strong>Address:</strong> {selectedLogisticsContract.page1?.address}
+          </p>
+          <p>
+            <strong>Date:</strong> {selectedLogisticsContract.page1?.eventDate}
+          </p>
+        </div>
+        
+        <div className="modal-actions">
+  <button
+    className="btn-primary"
+    onClick={() => {
+      setLogisticsEndLocation(selectedLogisticsContract.page1?.address || selectedLogisticsContract.page1?.venue || "");
+      setLogisticsActiveTab("map");
+      setSelectedLogisticsContract(null);
+    }}
+  >
+    Show Route to Venue
+  </button>
+  <button
+    className="btn-secondary"
+    onClick={() => setSelectedLogisticsContract(null)}
+  >
+    Close
+  </button>
+</div>
+
+// In renderLogisticsEventModal, update the modal actions:
+<div className="modal-actions">
+  <button
+    className="btn-primary"
+    onClick={() => {
+      setLogisticsEndLocation(selectedLogisticsEvent.venue || "");
+      setLogisticsActiveTab("map");
+      setSelectedLogisticsEvent(null);
+    }}
+  >
+    Show Route
+  </button>
+  <button className="btn-secondary" onClick={() => setSelectedLogisticsEvent(null)}>
+    Close
+  </button>
+</div>
+      </div>
+    </div>
+  );
+
+  useEffect(() => {
+  if (activeView !== "logistics") {
+    setLogisticsActiveTab("contracts");
+  }
+}, [activeView]);
+
+// Add this useEffect to your main AdminDashboard component (with other useEffects)
+useEffect(() => {
+  if (activeView === "logistics" && logisticsActiveTab === "map" && logisticsMapRef.current) {
+    setTimeout(() => {
+      initLogisticsMap();
+    }, 300);
+  }
+}, [activeView, logisticsActiveTab]);
+
+// Then update renderLogisticsView to remove the useEffect:
+const renderLogisticsView = () => {
+  return (
+    <div className="department-view">
+      <div className="view-header">
+        <h2>Logistics Management</h2>
+        <button className="back-btn" onClick={() => setActiveView("dashboard")}>
+          ← Back to Dashboard
+        </button>
+      </div>
+
+      <div className="logistics-tabs">
+        <button
+          className={`tab ${logisticsActiveTab === "contracts" ? "active" : ""}`}
+          onClick={() => setLogisticsActiveTab("contracts")}
+        >
+          Contracts
+        </button>
+        <button
+          className={`tab ${logisticsActiveTab === "calendar" ? "active" : ""}`}
+          onClick={() => setLogisticsActiveTab("calendar")}
+        >
+          Calendar
+        </button>
+        <button
+          className={`tab ${logisticsActiveTab === "map" ? "active" : ""}`}
+          onClick={() => setLogisticsActiveTab("map")}
+        >
+          Map View
+        </button>
+      </div>
+
+      <div className="logistics-content">
+        {logisticsActiveTab === "contracts" && renderLogisticsContractsTable()}
+        {logisticsActiveTab === "calendar" && renderLogisticsCalendarView()}
+        {logisticsActiveTab === "map" && renderLogisticsMapView()}
+      </div>
+
+      {renderLogisticsContractModal()}
+      {renderLogisticsEventModal()}
+    </div>
+  );
+};
   const openInventoryModal = (mode, data = {}, index = null) => {
     setInventoryModalMode(mode);
     setInventoryModalData(data);
@@ -2647,6 +3307,10 @@ const renderUnifiedDepartmentView = (department) => {
             <button className={`nav-btn ${activeView === "banquet" ? "active" : ""}`} 
                   onClick={() => setActiveView("banquet")}>
             Banquet Staff
+          </button>
+          <button className={`nav-btn ${activeView === "logistics" ? "active" : ""}`} 
+                onClick={() => setActiveView("logistics")}>
+            Logistics
           </button>
             <button className={`nav-btn ${activeView === "events" ? "active" : ""}`} 
                     onClick={() => setActiveView("events")}>

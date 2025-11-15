@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./SalesDashboard.css";
+import "./DepartmentDashboard.css";
 import ContractForm from "./ContractForm";
 import Profile from "./Profile";
 
@@ -236,7 +236,7 @@ function SalesDashboard({ onLogout, user }) {
       <div className="table-header">
         <h3>Contracts</h3>
         <button
-          className="action-btn primary"
+          className="action-btn"
           onClick={() => setShowCreateForm(true)}
         >
           Create New Contract

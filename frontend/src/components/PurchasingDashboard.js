@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "./DepartmentDashboard.css";
-import "./SalesManagerDashboard.css"; // pull in the same button styles as CreativeDashboard
 
 // ---- Helpers (no hooks deps) ----
 const isSentToPurchasing = (s) =>
@@ -32,6 +31,7 @@ const normalizeCreativeRow = (c) => {
     remarks: c.remarks || "—",
     date: c.dueDate || c.date || c.createdAt || null,
     status: "Pending",
+    department: "Creative", // Added department field
     budget: {
       status: budgetState,
       amount:
@@ -61,6 +61,7 @@ const normalizeFabricationRow = (r) => {
     remarks: r.remarks || "—",
     date: r.date || r.createdAt || null,
     status: r.status || "Pending",
+    department: "Warehouse", // Added department field
     budget: {
       status: budgetState,
       amount: r.budget?.amount ?? r.budgetAmount ?? r.estimatedCost ?? null,
@@ -71,13 +72,13 @@ const normalizeFabricationRow = (r) => {
   };
 };
 
-// ====== Budget Form Modal (centered fields) ======
+// ====== Budget Form Modal ======
 function BudgetFormModal({
   open,
-  mode, // "approve" | "reject"
-  initialAmount, // number | null
+  mode,
+  initialAmount,
   onCancel,
-  onSubmit, // ({amount, notes})
+  onSubmit,
   readOnlyAmount = false,
   title = "",
 }) {
@@ -177,13 +178,25 @@ function BudgetFormModal({
 function PurchasingDashboard({ onLogout }) {
   const [fabricationRequests, setFabricationRequests] = useState([]);
   const [creativeRequests, setCreativeRequests] = useState([]);
+  const [allRequests, setAllRequests] = useState([]); // Combined requests
   const [loadingActionId, setLoadingActionId] = useState(null);
+  const [activeView, setActiveView] = useState("dashboard");
+  const [departmentFilter, setDepartmentFilter] = useState("all"); // Filter state
 
   // modal state
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
-  const [budgetModalMode, setBudgetModalMode] = useState("approve"); // approve | reject
-  const [activeRow, setActiveRow] = useState(null); // row object
-  const [activeSource, setActiveSource] = useState(null); // "creative" | "fabrication"
+  const [budgetModalMode, setBudgetModalMode] = useState("approve");
+  const [activeRow, setActiveRow] = useState(null);
+  const [activeSource, setActiveSource] = useState(null);
+
+  // Dashboard stats
+  const [dashboardStats, setDashboardStats] = useState({
+    totalPending: 0,
+    totalApproved: 0,
+    totalRejected: 0,
+    totalPurchaseOrders: 0,
+    recentActivities: []
+  });
 
   // ----- Fetch: FABRICATION -----
   const fetchFabricationRequests = useCallback(async () => {
@@ -191,10 +204,13 @@ function PurchasingDashboard({ onLogout }) {
       const res = await fetch("http://localhost:5000/fabrication-requests");
       const data = await res.json();
       const list = Array.isArray(data) ? data : data || [];
-      setFabricationRequests(list.map(normalizeFabricationRow));
+      const normalized = list.map(normalizeFabricationRow);
+      setFabricationRequests(normalized);
+      return normalized;
     } catch (err) {
       console.error("Error fetching fabrication requests:", err);
       setFabricationRequests([]);
+      return [];
     }
   }, []);
 
@@ -213,19 +229,94 @@ function PurchasingDashboard({ onLogout }) {
         .filter((req) => isSentToPurchasing(req.status))
         .map(normalizeCreativeRow);
       setCreativeRequests(filtered);
+      return filtered;
     } catch (err) {
       console.error("Error fetching creative requests:", err);
       setCreativeRequests([]);
+      return [];
     }
+  }, []);
+
+  // ----- Combine and sort all requests -----
+  useEffect(() => {
+    const combined = [...fabricationRequests, ...creativeRequests]
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    setAllRequests(combined);
+  }, [fabricationRequests, creativeRequests]);
+
+  // ----- Filter requests by department -----
+  const filteredRequests = departmentFilter === "all" 
+    ? allRequests 
+    : allRequests.filter(req => req.department === departmentFilter);
+
+  // ----- Fetch Purchase Orders -----
+  const fetchPurchaseOrders = useCallback(async () => {
+    try {
+      const res = await fetch("http://localhost:5000/purchase-orders");
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.error("Error fetching purchase orders:", err);
+      return [];
+    }
+  }, []);
+
+  // ----- Calculate Dashboard Stats -----
+  const calculateDashboardStats = useCallback((fabRequests, creativeReqs, purchaseOrders) => {
+    const allRequests = [...fabRequests, ...creativeReqs];
+    
+    const totalPending = allRequests.filter(req => 
+      req.budget?.status?.toLowerCase() === 'pending'
+    ).length;
+    
+    const totalApproved = allRequests.filter(req => 
+      req.budget?.status?.toLowerCase() === 'approved'
+    ).length;
+    
+    const totalRejected = allRequests.filter(req => 
+      req.budget?.status?.toLowerCase() === 'rejected'
+    ).length;
+
+    // Generate recent activities
+    const recentActivities = allRequests
+      .slice(0, 5)
+      .map(req => ({
+        id: req._id,
+        type: req.department === 'Creative' ? 'Creative Request' : 'Fabrication Request',
+        title: req.department === 'Creative' ? req.requestName : `${req.requestor} - ${req.item}`,
+        status: req.budget?.status || 'Pending',
+        date: req.date || new Date().toISOString(),
+        amount: req.budget?.amount,
+        department: req.department
+      }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return {
+      totalPending,
+      totalApproved,
+      totalRejected,
+      totalPurchaseOrders: purchaseOrders.length,
+      recentActivities
+    };
   }, []);
 
   // ----- Lifecycle -----
   useEffect(() => {
-    fetchFabricationRequests();
-    fetchCreativeRequests();
-  }, [fetchFabricationRequests, fetchCreativeRequests]);
+    const loadData = async () => {
+      const [fabRequests, creativeReqs, purchaseOrders] = await Promise.all([
+        fetchFabricationRequests(),
+        fetchCreativeRequests(),
+        fetchPurchaseOrders()
+      ]);
+      
+      const stats = calculateDashboardStats(fabRequests, creativeReqs, purchaseOrders);
+      setDashboardStats(stats);
+    };
 
-  // ----- Budget Actions (Approve/Reject) -----
+    loadData();
+  }, [fetchFabricationRequests, fetchCreativeRequests, fetchPurchaseOrders, calculateDashboardStats]);
+
+  // ----- Budget Actions -----
   const applyOptimisticBudget = (collection, setCollection, id, nextBudget) => {
     setCollection((prev) =>
       prev.map((row) =>
@@ -252,6 +343,16 @@ function PurchasingDashboard({ onLogout }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
+      // Refresh dashboard stats
+      const [fabRequests, creativeReqs, purchaseOrders] = await Promise.all([
+        fetchFabricationRequests(),
+        fetchCreativeRequests(),
+        fetchPurchaseOrders()
+      ]);
+      const stats = calculateDashboardStats(fabRequests, creativeReqs, purchaseOrders);
+      setDashboardStats(stats);
+
     } catch (e) {
       console.error("Approve budget failed:", e);
       fetchCreativeRequests();
@@ -280,6 +381,16 @@ function PurchasingDashboard({ onLogout }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
+      // Refresh dashboard stats
+      const [fabRequests, creativeReqs, purchaseOrders] = await Promise.all([
+        fetchFabricationRequests(),
+        fetchCreativeRequests(),
+        fetchPurchaseOrders()
+      ]);
+      const stats = calculateDashboardStats(fabRequests, creativeReqs, purchaseOrders);
+      setDashboardStats(stats);
+
     } catch (e) {
       console.error("Reject budget failed:", e);
       fetchCreativeRequests();
@@ -304,10 +415,7 @@ function PurchasingDashboard({ onLogout }) {
     setBudgetModalOpen(true);
   };
 
-  // Compute UI-facing status:
-  // If budget Approved -> "Sent to Accounting"
-  // If budget Rejected -> "Rejected"
-  // Else use row.status (default "Pending")
+  // Compute UI-facing status
   const computeDisplayStatus = (row) => {
     const b = (row && row.budget?.status) || "";
     const lb = String(b).toLowerCase();
@@ -316,7 +424,7 @@ function PurchasingDashboard({ onLogout }) {
     return row.status || "Pending";
   };
 
-  // Budget-only cell (no status badge here)
+  // Budget cell
   const BudgetCell = ({ row }) => {
     const { amount, notes } = row.budget || {};
     return (
@@ -329,7 +437,7 @@ function PurchasingDashboard({ onLogout }) {
     );
   };
 
-  // Actions cell — match CreativeDashboard styling
+  // Actions cell
   const ActionCell = ({ row }) => {
     const bStatus = String(row?.budget?.status || "").toLowerCase();
     const isPending = bStatus === "pending";
@@ -355,104 +463,199 @@ function PurchasingDashboard({ onLogout }) {
     );
   };
 
+  // ====== RENDER FUNCTIONS ======
+  const renderDashboardView = () => (
+    <div className="dashboard-view">
+      {/* Stats Cards */}
+      <div className="dashboard-cards">
+        <div className="dashboard-card">
+          <div className="card-icon"></div>
+          <div className="card-content">
+            <div className="card-value">{dashboardStats.totalPending}</div>
+            <div className="card-label">Pending Requests</div>
+          </div>
+        </div>
+        <div className="dashboard-card">
+          <div className="card-icon"></div>
+          <div className="card-content">
+            <div className="card-value">{dashboardStats.totalApproved}</div>
+            <div className="card-label">Approved Budgets</div>
+          </div>
+        </div>
+        <div className="dashboard-card">
+          <div className="card-icon"></div>
+          <div className="card-content">
+            <div className="card-value">{dashboardStats.totalRejected}</div>
+            <div className="card-label">Rejected Requests</div>
+          </div>
+        </div>
+        <div className="dashboard-card">
+          <div className="card-icon"></div>
+          <div className="card-content">
+            <div className="card-value">{dashboardStats.totalPurchaseOrders}</div>
+            <div className="card-label">Purchase Orders</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activities - Notification Board */}
+      <div className="recent-activity">
+        <h3>Recent Activities</h3>
+        <div className="activity-list">
+          {dashboardStats.recentActivities.length === 0 ? (
+            <p>No recent activities</p>
+          ) : (
+            dashboardStats.recentActivities.map((activity, index) => (
+              <div key={activity.id || index} className="activity-item">
+                <div className="activity-icon">
+                  {activity.status === 'approved' ? '✅' : 
+                   activity.status === 'rejected' ? '❌' : '⏳'}
+                </div>
+                <div className="activity-content">
+                  <span className="activity-text">
+                    <strong>{activity.type}</strong>: {activity.title}
+                  </span>
+                  <span className="activity-time">
+                    Dept: {activity.department} • Status: {activity.status} • 
+                    {activity.amount ? ` ₱${Number(activity.amount).toLocaleString()}` : ' No amount'} • 
+                    {new Date(activity.date).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRequestsView = () => (
+    <div className="contracts-table-container">
+      <div className="table-header">
+        <h3>All Requests</h3>
+        <div className="filter-section">
+          <label>Filter by Department:</label>
+          <select 
+            value={departmentFilter} 
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">All Departments</option>
+            <option value="Creative">Creative</option>
+            <option value="Warehouse">Warehouse</option>
+          </select>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Department</th>
+            <th>Requestor/Name</th>
+            <th>Contract No.</th>
+            <th>Item and Quantity</th>
+            <th>Remarks</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Budget</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredRequests.length === 0 ? (
+            <tr>
+              <td colSpan="9">No requests found</td>
+            </tr>
+          ) : (
+            filteredRequests.map((request, i) => (
+              <tr key={request._id || i}>
+                <td>
+                  <span className={`department-badge ${request.department.toLowerCase()}`}>
+                    {request.department}
+                  </span>
+                </td>
+                <td>
+                  {request.department === 'Creative' 
+                    ? request.requestName 
+                    : request.requestor}
+                </td>
+                <td>{request.contractNo}</td>
+                <td>{request.item}</td>
+                <td>{request.remarks}</td>
+                <td>{request.date ? new Date(request.date).toLocaleDateString() : "—"}</td>
+                <td>{computeDisplayStatus(request)}</td>
+                <td><BudgetCell row={request} /></td>
+                <td><ActionCell row={request} /></td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderReportsView = () => (
+    <div className="contracts-table-container">
+      <div className="table-header">
+        <h3>Request Reports</h3>
+      </div>
+      <div className="reports-placeholder">
+        <p>Request reports and analytics will be displayed here.</p>
+        <p>This section can show approved budgets, spending trends, and vendor performance.</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="department-dashboard">
-      <div className="dashboard-header">
-        <div className="dashboard-header-inner">
-          <h1>Purchasing Dashboard</h1>
-          <button onClick={onLogout} className="logout-btn header-logout">
-            Logout
-          </button>
+      {/* Left Sidebar - Warehouse Style */}
+      <div className="dashboard-sidebar">
+        <div className="accreditation-header">
+          <h1>PURCHASING</h1>
+          <h2>Dashboard</h2>
+        </div>
+        
+        <div className="header-nav">
+          <div className="nav-section">
+            <div className="section-title">Navigation</div>
+            <button 
+              className={`nav-btn ${activeView === "dashboard" ? "active" : ""}`} 
+              onClick={() => setActiveView("dashboard")}
+            >
+              Dashboard
+            </button>
+            <button 
+              className={`nav-btn ${activeView === "requests" ? "active" : ""}`} 
+              onClick={() => setActiveView("requests")}
+            >
+              All Requests
+            </button>
+          </div>
+          
+          <div className="nav-section">
+            <div className="section-title">Reports</div>
+            <button 
+              className={`nav-btn ${activeView === "reports" ? "active" : ""}`} 
+              onClick={() => setActiveView("reports")}
+            >
+              Requests Reports
+            </button>
+          </div>
+        </div>
+        
+        <div className="sidebar-footer">
+          <button onClick={onLogout} className="logout-btn">Logout</button>
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="dashboard-content">
-        {/* === FABRICATION REQUESTS SECTION === */}
-        <div className="contracts-table-container">
-          <div className="table-header">
-            <h3>Incoming Fabrication Requests</h3>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Requestor</th>
-                <th>Item</th>
-                <th>Quantity</th>
-                <th>Remarks</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Budget</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fabricationRequests.length === 0 ? (
-                <tr>
-                  <td colSpan="8">No requests received yet.</td>
-                </tr>
-              ) : (
-                fabricationRequests.map((r, i) => (
-                  <tr key={r._id || i}>
-                    <td>{r.requestor}</td>
-                    <td>{r.item}</td>
-                    <td>{r.quantity}</td>
-                    <td>{r.remarks}</td>
-                    <td>{r.date ? new Date(r.date).toLocaleDateString() : "—"}</td>
-                    <td>{computeDisplayStatus(r)}</td>
-                    <td><BudgetCell row={r} /></td>
-                    <td><ActionCell row={r} /></td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* === CREATIVE REQUESTS SECTION === */}
-        <div className="contracts-table-container" style={{ marginTop: "40px" }}>
-          <div className="table-header">
-            <h3>Incoming Creatives Request</h3>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Request Name</th>
-                <th>Contract No.</th>
-                <th>Item and Quantity</th>
-                <th>Remarks</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Budget</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {creativeRequests.length === 0 ? (
-                <tr>
-                  <td colSpan="8">No creative requests sent to purchasing yet.</td>
-                </tr>
-              ) : (
-                creativeRequests.map((c, i) => (
-                  <tr key={c._id || i}>
-                    <td>{c.requestName}</td>
-                    <td>{c.contractNo}</td>
-                    <td>{c.item}</td>
-                    <td>{c.remarks}</td>
-                    <td>{c.date ? new Date(c.date).toLocaleDateString() : "—"}</td>
-                    <td>{computeDisplayStatus(c)}</td>
-                    <td><BudgetCell row={c} /></td>
-                    <td><ActionCell row={c} /></td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {activeView === "dashboard" && renderDashboardView()}
+        {activeView === "requests" && renderRequestsView()}
+        {activeView === "reports" && renderReportsView()}
       </div>
 
-      {/* Modal for Approve/Reject (Creative-style) */}
+      {/* Modal for Approve/Reject */}
       <BudgetFormModal
         open={budgetModalOpen}
         mode={budgetModalMode}

@@ -9,15 +9,15 @@ async function getSheetsClient() {
   return google.sheets({ version: "v4", auth: client });
 }
 
-const SPREADSHEET_ID = "1cZhXx1MgHczqTguePFD0lTWWEksCrMpJAFhzIY0u1CM";
-const RANGE = "Sheet1!A:Z"; // if the tab is literally "Sheet1"
+const SPREADSHEET_ID = "17n0-GRnQWhQVDme94Uz3E0WOru_nP8AMH2v3QhEL9rQ";
+const RANGE = "All Inventory!A:Z"; // if the tab is literally "Sheet1"
  // tab name + range
 
 async function fetchMonitoringData() {
   const sheets = await getSheetsClient();
   const resp = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: "Sheet1!A:Z",  // ✅ make sure "Sheet1" matches your actual tab name
+    range: "All Inventory!A:Z",  // ✅ make sure "Sheet1" matches your actual tab name
   });
 
   const rows = resp.data.values || [];

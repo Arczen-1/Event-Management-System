@@ -1,409 +1,755 @@
 import React, { useState, useEffect } from "react";
-import "./AccountingDashboard.css";
-import FinanceOverview from "./income/FinanceOverview";
-import FinanceClients from "./income/FinanceClient";
+import "./DepartmentDashboard.css";
 
-function AccountingDashboard({ onLogout }) {
+function FinanceDashboard({ onLogout, user }) {
   const [contracts, setContracts] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
-  const [activeTab, setActiveTab] = useState("contracts"); // main tabs: contracts, income
-  const [subTab, setSubTab] = useState("for-review");
-  const [incomeTab, setIncomeTab] = useState("overview"); // new income subtabs
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
-  const [refreshOverview, setRefreshOverview] = useState(false); // ✅ new: trigger refresh
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [newInvoice, setNewInvoice] = useState(null);
+  const [message, setMessage] = useState("");
+  const [activeView, setActiveView] = useState("dashboard");
+  const [accountingContracts, setAccountingContracts] = useState([]);
+  const [activeContracts, setActiveContracts] = useState([]);
 
-  // Load contracts from backend
+  // Load data on component mount
   useEffect(() => {
     fetchContracts();
+    fetchInvoices();
   }, []);
 
   const fetchContracts = async () => {
     try {
-      const res = await fetch("http://localhost:3000/contracts");
-      const data = await res.json();
+      const res = await fetch("http://localhost:5000/contracts");
       if (res.ok) {
-        setContracts(
-          (data.contracts || []).map((c) => ({
-            id: c._id,
-            name:
-              (c.page1 && (c.page1.contractName || c.page1.occasion)) ||
-              "Contract",
-            client: (c.page1 && c.page1.celebratorName) || "",
-            value: (c.page3 && c.page3.grandTotal) || "",
-            startDate: (c.page1 && c.page1.eventDate) || "",
-            endDate: (c.page1 && c.page1.eventDate) || "",
-            status: c.status || "Draft",
-            contractNumber: c.contractNumber,
-            page1: c.page1,
-            page2: c.page2,
-            page3: c.page3,
-          }))
+        const data = await res.json();
+        const allContracts = data.contracts || [];
+        setContracts(allContracts);
+        
+        // Filter for contracts that need accounting review
+        const forAccountingReview = allContracts.filter(contract => 
+          contract.status === "For Accounting Review"
         );
+        setAccountingContracts(forAccountingReview);
+        
+        // Filter for active contracts
+        const activeContracts = allContracts.filter(contract => 
+          contract.status === "Active"
+        );
+        setActiveContracts(activeContracts);
       }
-    } catch (e) {
-      console.error("Error fetching contracts:", e);
-    }
-  };
-
-  const handleAccountingApprove = async (contractId) => {
-    try {
-      const res = await fetch(
-        `http://localhost:5000/contracts/${contractId}/accounting-approve`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to approve");
-      setContracts(
-        contracts.map((c) =>
-          c.id === contractId ? { ...c, status: "Active" } : c
-        )
-      );
-      alert("Contract approved and activated");
-      setSelectedContract(null);
     } catch (err) {
-      console.error(err);
-      alert("Failed to approve contract. Please try again.");
+      console.error("Fetch contracts error:", err);
     }
   };
 
-  const handleAccountingReject = async () => {
-    if (!selectedContract) return;
+  const fetchInvoices = async () => {
     try {
-      const res = await fetch(
-        `http://localhost:5000/contracts/${selectedContract._id}/accounting-reject`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: rejectReason }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to reject");
-      setContracts(
-        contracts.map((c) =>
-          c.id === selectedContract._id ? { ...c, status: "Rejected" } : c
-        )
-      );
-      alert("Contract rejected");
-      setSelectedContract(null);
-      setShowRejectModal(false);
-      setRejectReason("");
+      const res = await fetch("http://localhost:5000/finance/invoices");
+      if (res.ok) {
+        const data = await res.json();
+        setInvoices(data.invoices || []);
+      }
     } catch (err) {
-      console.error(err);
-      alert("Failed to reject contract. Please try again.");
+      console.error("Fetch invoices error:", err);
     }
   };
 
-  const getFilteredContracts = () => {
-    switch (subTab) {
-      case "for-review":
-        return contracts.filter((c) => c.status === "For Accounting Review");
-      case "approved":
-        return contracts.filter((c) => c.status === "Active");
-      default:
-        return contracts;
+  const approveContract = async (contractId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/contracts/${contractId}/accounting-approve`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (res.ok) {
+        setMessage("Contract approved and marked as Active");
+        setTimeout(() => setMessage(""), 3000);
+        fetchContracts(); // Refresh the contracts list
+        setSelectedContract(null);
+      } else {
+        const data = await res.json();
+        alert(data.message || "Failed to approve contract");
+      }
+    } catch (err) {
+      console.error("Approve contract error:", err);
+      alert("Failed to approve contract");
     }
   };
 
-  // --- Render Contracts Table ---
-  const renderContractsTable = () => {
-    const filteredContracts = getFilteredContracts();
+  const rejectContract = async (contractId, reason) => {
+    try {
+      const res = await fetch(`http://localhost:5000/contracts/${contractId}/reject`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason })
+      });
+
+      if (res.ok) {
+        setMessage("Contract rejected");
+        setTimeout(() => setMessage(""), 3000);
+        fetchContracts(); // Refresh the contracts list
+        setSelectedContract(null);
+      } else {
+        const data = await res.json();
+        alert(data.message || "Failed to reject contract");
+      }
+    } catch (err) {
+      console.error("Reject contract error:", err);
+      alert("Failed to reject contract");
+    }
+  };
+
+  const generateInvoice = async (contract) => {
+    try {
+      const res = await fetch("http://localhost:5000/finance/invoices/generate-number");
+      if (res.ok) {
+        const data = await res.json();
+        
+        const invoiceData = {
+          contractId: contract._id,
+          invoiceNumber: data.invoiceNumber,
+          contractNumber: contract.contractNumber,
+          client: contract.page1?.celebratorName || "Unknown Client",
+          issueDate: new Date().toISOString().split('T')[0],
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          items: [
+            {
+              description: `Event Contract - ${contract.page1?.occasion || 'Contract'}`,
+              quantity: 1,
+              unitPrice: contract.page3?.grandTotal || 0,
+              amount: contract.page3?.grandTotal || 0
+            }
+          ],
+          totalAmount: contract.page3?.grandTotal || 0,
+          status: "pending"
+        };
+        
+        setNewInvoice(invoiceData);
+        setSelectedContract(contract);
+        setShowInvoiceModal(true);
+      }
+    } catch (err) {
+      console.error("Generate invoice error:", err);
+      alert("Failed to generate invoice number");
+    }
+  };
+
+  const createInvoice = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/finance/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newInvoice)
+      });
+
+      if (res.ok) {
+        setShowInvoiceModal(false);
+        fetchInvoices();
+        fetchContracts(); // Refresh contracts list
+        setMessage("Invoice created successfully");
+        setTimeout(() => setMessage(""), 3000);
+      }
+    } catch (err) {
+      console.error("Create invoice error:", err);
+    }
+  };
+
+  const markAsPaid = async (invoiceId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/finance/invoices/${invoiceId}/mark-paid`, {
+        method: "PUT"
+      });
+
+      if (res.ok) {
+        fetchInvoices();
+        setMessage("Invoice marked as paid");
+        setTimeout(() => setMessage(""), 3000);
+      }
+    } catch (err) {
+      console.error("Mark as paid error:", err);
+    }
+  };
+
+  // Financial statistics calculation
+  const calculateFinancialStats = () => {
+    const totalRevenue = invoices
+      .filter(inv => inv.status === 'paid')
+      .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+    
+    const pendingRevenue = invoices
+      .filter(inv => inv.status === 'pending')
+      .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+
+    return {
+      totalRevenue,
+      pendingRevenue,
+      paidInvoices: invoices.filter(inv => inv.status === 'paid').length,
+      unpaidInvoices: invoices.filter(inv => inv.status === 'pending').length,
+      overdueInvoices: invoices.filter(inv => 
+        inv.status === 'pending' && new Date(inv.dueDate) < new Date()
+      ).length,
+      contractsForReview: accountingContracts.length,
+      activeContractsCount: activeContracts.length
+    };
+  };
+
+  const stats = calculateFinancialStats();
+
+  // Render Dashboard View
+  const renderDashboardView = () => {
     return (
-      <div className="contracts-table-container">
-        <div className="table-header">
-          <h3>Contract Review</h3>
-        </div>
-        <div className="tabs">
-          <button
-            className={`tab ${subTab === "for-review" ? "active" : ""}`}
-            onClick={() => setSubTab("for-review")}
-          >
-            For Review (
-            {contracts.filter((c) => c.status === "For Accounting Review").length}
-            )
-          </button>
-          <button
-            className={`tab ${subTab === "approved" ? "active" : ""}`}
-            onClick={() => setSubTab("approved")}
-          >
-            Approved ({contracts.filter((c) => c.status === "Active").length})
-          </button>
-          <button
-            className={`tab ${subTab === "all" ? "active" : ""}`}
-            onClick={() => setSubTab("all")}
-          >
-            All Contracts ({contracts.length})
-          </button>
+      <div className="dashboard-view">
+        {message && <div className="message success">{message}</div>}
+
+        {/* Financial Overview Cards */}
+        <div className="dashboard-cards">
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">₱{stats.totalRevenue.toLocaleString()}</div>
+              <div className="card-label">Total Revenue</div>
+            </div>
+          </div>
+          
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">₱{stats.pendingRevenue.toLocaleString()}</div>
+              <div className="card-label">Pending Revenue</div>
+            </div>
+          </div>
+          
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{stats.contractsForReview}</div>
+              <div className="card-label">For Review</div>
+            </div>
+          </div>
+          
+          <div className="dashboard-card">
+            <div className="card-icon"></div>
+            <div className="card-content">
+              <div className="card-value">{stats.activeContractsCount}</div>
+              <div className="card-label">Active Contracts</div>
+            </div>
+          </div>
         </div>
 
-        <div className="contracts-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Contract Name</th>
-                <th>Client</th>
-                <th>Contract No.</th>
-                <th>Total Value</th>
-                <th>Event Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredContracts.length === 0 ? (
-                <tr className="no-contracts">
-                  <td colSpan="7">No contracts found</td>
-                </tr>
-              ) : (
-                filteredContracts.map((contract) => (
-                  <tr
-                    key={contract.id}
-                    className="clickable-row"
-                    onClick={async () => {
-                      try {
-                        const res = await fetch(
-                          `http://localhost:5000/contracts/${contract.id}`
-                        );
-                        const data = await res.json();
-                        if (res.ok) setSelectedContract(data.contract);
-                      } catch (e) {}
-                    }}
-                  >
-                    <td>{contract.name}</td>
-                    <td>{contract.client}</td>
-                    <td>{contract.contractNumber || "-"}</td>
-                    <td>₱{contract.value}</td>
-                    <td>{contract.startDate}</td>
-                    <td>
-                      <span
-                        className={`status ${contract.status
-                          .toLowerCase()
-                          .replace(" ", "-")}`}
-                      >
-                        {contract.status}
-                      </span>
-                    </td>
-                    <td>
-                      {contract.status === "For Accounting Review" && (
+
+        {/* Recent Contracts Needing Review */}
+        {accountingContracts.length > 0 && (
+          <div className="section-container">
+            <div className="section-header">
+              <h3>Contracts Needing Accounting Review</h3>
+              <button 
+                className="text-link"
+                onClick={() => setActiveView("accounting-review")}
+              >
+                View All →
+              </button>
+            </div>
+            <div className="contracts-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Contract Name</th>
+                    <th>Client</th>
+                    <th>Value</th>
+                    <th>Event Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accountingContracts.slice(0, 5).map(contract => (
+                    <tr key={contract._id}>
+                      <td>{contract.page1?.occasion || contract.page1?.contractName || 'Contract'}</td>
+                      <td>{contract.page1?.celebratorName || 'N/A'}</td>
+                      <td>₱{(contract.page3?.grandTotal || 0).toLocaleString()}</td>
+                      <td>{contract.page1?.eventDate || 'N/A'}</td>
+                      <td>
                         <div className="action-buttons">
-                          <button
-                            className="btn-review"
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              try {
-                                const res = await fetch(
-                                  `http://localhost:5000/contracts/${contract.id}`
-                                );
-                                const data = await res.json();
-                                if (res.ok) setSelectedContract(data.contract);
-                              } catch (e) {
-                                console.error(
-                                  "Error fetching contract details:",
-                                  e
-                                );
-                              }
-                            }}
+                          <button 
+                            className="btn-primary small"
+                            onClick={() => setSelectedContract(contract)}
                           >
                             Review
                           </button>
                         </div>
-                      )}
-                    </td>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Active Contracts */}
+        {activeContracts.length > 0 && (
+          <div className="section-container">
+            <div className="section-header">
+              <h3>Recent Active Contracts</h3>
+              <button 
+                className="text-link"
+                onClick={() => setActiveView("active-contracts")}
+              >
+                View All →
+              </button>
+            </div>
+            <div className="contracts-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Contract Name</th>
+                    <th>Client</th>
+                    <th>Value</th>
+                    <th>Event Date</th>
+                    <th>Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {activeContracts.slice(0, 5).map(contract => (
+                    <tr key={contract._id}>
+                      <td>{contract.page1?.occasion || contract.page1?.contractName || 'Contract'}</td>
+                      <td>{contract.page1?.celebratorName || 'N/A'}</td>
+                      <td>₱{(contract.page3?.grandTotal || 0).toLocaleString()}</td>
+                      <td>{contract.page1?.eventDate || 'N/A'}</td>
+                      <td>
+                        <div className="action-buttons">
+                          <button 
+                            className="btn-primary small"
+                            onClick={() => setSelectedContract(contract)}
+                          >
+                            View
+                          </button>
+                          <button 
+                            className="btn-success small"
+                            onClick={() => generateInvoice(contract)}
+                          >
+                            Create Invoice
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render Accounting Review Contracts View
+  const renderAccountingReviewView = () => {
+    return (
+      <div className="department-view">
+        <div className="view-header">
+          <h2>Contracts For Accounting Review</h2>
+          <button className="back-btn" onClick={() => setActiveView("dashboard")}>
+            ← Back to Dashboard
+          </button>
+        </div>
+
+        {message && <div className="message success">{message}</div>}
+
+        <div className="contracts-table-container">
+          <div className="table-header">
+            <h3>Contracts For Accounting Review ({accountingContracts.length})</h3>
+          </div>
+          
+          <div className="contracts-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Contract Name</th>
+                  <th>Client</th>
+                  <th>Contract No.</th>
+                  <th>Value</th>
+                  <th>Event Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accountingContracts.length === 0 ? (
+                  <tr className="no-contracts">
+                    <td colSpan="6">No contracts pending accounting review</td>
+                  </tr>
+                ) : (
+                  accountingContracts.map(contract => (
+                    <tr key={contract._id}>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        {contract.page1?.occasion || contract.page1?.contractName || 'Contract'}
+                      </td>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        {contract.page1?.celebratorName || 'N/A'}
+                      </td>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        {contract.contractNumber || "-"}
+                      </td>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        ₱{(contract.page3?.grandTotal || 0).toLocaleString()}
+                      </td>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        {contract.page1?.eventDate || 'N/A'}
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <button
+                            className="btn-primary small"
+                            onClick={() => setSelectedContract(contract)}
+                          >
+                            Review
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
   };
 
-  // --- Render Income Section with Subtabs ---
-  const renderIncomeSection = () => (
-    <div className="contracts-table-container">
-      <div className="table-header">
-        <h3>Income Management</h3>
-      </div>
-      <div className="tabs" style={{ marginTop: "10px" }}>
-        <button
-          className={`tab ${incomeTab === "overview" ? "active" : ""}`}
-          onClick={() => setIncomeTab("overview")}
-        >
-          Overview
-        </button>
-        <button
-          className={`tab ${incomeTab === "clients" ? "active" : ""}`}
-          onClick={() => setIncomeTab("clients")}
-        >
-          Clients
-        </button>
-      </div>
-
-      <div style={{ marginTop: "20px" }}>
-        {incomeTab === "overview" && (
-          <FinanceOverview refreshTrigger={refreshOverview} />
-        )}
-        {incomeTab === "clients" && (
-          <FinanceClients
-            onStatusChange={() => {
-              setRefreshOverview(!refreshOverview); // ✅ refresh overview
-              setIncomeTab("overview");
-            }}
-          />
-        )}
-      </div>
-    </div>
-  );
-
-  // --- Modals (unchanged) ---
-  const renderDetailsModal = () => (
-    <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Contract Details - Accounting Review</h3>
-          <button
-            className="close-btn"
-            onClick={() => setSelectedContract(null)}
-          >
-            ×
+  // Render Active Contracts View
+  const renderActiveContractsView = () => {
+    return (
+      <div className="department-view">
+        <div className="view-header">
+          <h2>Active Contracts</h2>
+          <button className="back-btn" onClick={() => setActiveView("dashboard")}>
+            ← Back to Dashboard
           </button>
         </div>
-        <div className="modal-body">
-          {selectedContract && (
+
+        {message && <div className="message success">{message}</div>}
+
+        <div className="contracts-table-container">
+          <div className="table-header">
+            <h3>Active Contracts ({activeContracts.length})</h3>
+          </div>
+          
+          <div className="contracts-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Contract Name</th>
+                  <th>Client</th>
+                  <th>Contract No.</th>
+                  <th>Value</th>
+                  <th>Event Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeContracts.length === 0 ? (
+                  <tr className="no-contracts">
+                    <td colSpan="7">No active contracts found</td>
+                  </tr>
+                ) : (
+                  activeContracts.map(contract => (
+                    <tr key={contract._id}>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        {contract.page1?.occasion || contract.page1?.contractName || 'Contract'}
+                      </td>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        {contract.page1?.celebratorName || 'N/A'}
+                      </td>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        {contract.contractNumber || "-"}
+                      </td>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        ₱{(contract.page3?.grandTotal || 0).toLocaleString()}
+                      </td>
+                      <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
+                        {contract.page1?.eventDate || 'N/A'}
+                      </td>
+                      <td>
+                        <span className="status active">{contract.status}</span>
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <button
+                            className="btn-primary small"
+                            onClick={() => setSelectedContract(contract)}
+                          >
+                            View
+                          </button>
+                          <button
+                            className="btn-success small"
+                            onClick={() => generateInvoice(contract)}
+                          >
+                            Create Invoice
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Invoices View
+  const renderInvoicesView = () => {
+    return (
+      <div className="department-view">
+        <div className="view-header">
+          <h2>Invoice Management</h2>
+          <button className="back-btn" onClick={() => setActiveView("dashboard")}>
+            ← Back to Dashboard
+          </button>
+        </div>
+
+        {message && <div className="message success">{message}</div>}
+
+        <div className="invoices-table-container">
+          <div className="table-header">
+            <h3>All Invoices ({invoices.length})</h3>
+          </div>
+          
+          <div className="invoices-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Invoice #</th>
+                  <th>Contract #</th>
+                  <th>Client</th>
+                  <th>Amount</th>
+                  <th>Issue Date</th>
+                  <th>Due Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan="8">No invoices found</td>
+                  </tr>
+                ) : (
+                  invoices.map(invoice => (
+                    <tr key={invoice._id}>
+                      <td>{invoice.invoiceNumber}</td>
+                      <td>{invoice.contractNumber}</td>
+                      <td>{invoice.client}</td>
+                      <td>₱{(invoice.totalAmount || 0).toLocaleString()}</td>
+                      <td>{new Date(invoice.issueDate).toLocaleDateString()}</td>
+                      <td className={new Date(invoice.dueDate) < new Date() && invoice.status === 'pending' ? 'overdue' : ''}>
+                        {new Date(invoice.dueDate).toLocaleDateString()}
+                      </td>
+                      <td>
+                        <span className={`status ${invoice.status}`}>
+                          {invoice.status}
+                          {new Date(invoice.dueDate) < new Date() && invoice.status === 'pending' && ' (Overdue)'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <button className="btn-primary small">View</button>
+                          {invoice.status === 'pending' && (
+                            <button 
+                              className="btn-success small"
+                              onClick={() => markAsPaid(invoice._id)}
+                            >
+                              Mark Paid
+                            </button>
+                          )}
+                          <button className="btn-secondary small">Download</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Contract Details Modal
+  const renderContractModal = () => (
+    selectedContract && (
+      <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
+        <div className="modal large-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>Contract Details - {selectedContract.contractNumber}</h3>
+            <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
+          </div>
+          
+          <div className="modal-body">
             <div className="contract-details">
               <div className="detail-section">
-                <h4>Contract Number</h4>
+                <h4>Contract Information</h4>
                 <div className="detail-row">
-                  <strong>Contract Number:</strong>{" "}
-                  {selectedContract.contractNumber}
+                  <strong>Status:</strong> 
+                  <span className={`status ${selectedContract.status?.toLowerCase().replace(' ', '-')}`}>
+                    {selectedContract.status}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <strong>Client:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Event:</strong> {selectedContract.page1?.occasion || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Event Date:</strong> {selectedContract.page1?.eventDate || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Venue:</strong> {selectedContract.page1?.venue || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Total Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
                 </div>
               </div>
+
               <div className="detail-section">
-                <h4>Client Details (Celebrator)</h4>
+                <h4>Financial Details</h4>
                 <div className="detail-row">
-                  <strong>Celebrator/Corporate Name:</strong>{" "}
-                  {selectedContract.page1?.celebratorName || "N/A"}
+                  <strong>Contract Value:</strong> ₱{(selectedContract.page3?.grandTotal || 0).toLocaleString()}
                 </div>
-                <div className="detail-row">
-                  <strong>Address:</strong>{" "}
-                  {selectedContract.page1?.celebratorAddress || "N/A"}
-                </div>
+                {selectedContract.page3 && Object.entries(selectedContract.page3).map(([key, value]) => (
+                  key !== 'grandTotal' && value && (
+                    <div key={key} className="detail-row">
+                      <strong>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</strong> {value}
+                    </div>
+                  )
+                ))}
               </div>
             </div>
-          )}
-        </div>
-        <div className="modal-actions">
-          {selectedContract?.status === "For Accounting Review" && (
-            <div className="approval-actions">
-              <button
-                className="btn-approve"
-                onClick={() =>
-                  handleAccountingApprove(selectedContract._id)
-                }
-              >
-                Approve & Activate
-              </button>
-              <button
-                className="btn-reject"
-                onClick={() => setShowRejectModal(true)}
-              >
-                Reject
-              </button>
-            </div>
-          )}
-          <button
-            className="btn-secondary"
-            onClick={() => setSelectedContract(null)}
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+          </div>
 
-  const renderRejectModal = () => (
-    <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Reject Contract</h3>
-          <button
-            className="close-btn"
-            onClick={() => setShowRejectModal(false)}
-          >
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          <div className="form-group">
-            <label>Reason for Rejection</label>
-            <textarea
-              placeholder="Please provide a reason..."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              rows="5"
-              required
-            />
+          <div className="modal-actions">
+            {selectedContract.status === "For Accounting Review" && (
+              <div className="approval-actions">
+                <button 
+                  className="btn-approve"
+                  onClick={() => approveContract(selectedContract._id)}
+                >
+                  Approve & Activate Contract
+                </button>
+                <button 
+                  className="btn-reject"
+                  onClick={() => {
+                    const reason = prompt("Please enter reason for rejection:");
+                    if (reason) {
+                      rejectContract(selectedContract._id, reason);
+                    }
+                  }}
+                >
+                  Reject Contract
+                </button>
+              </div>
+            )}
+            {(selectedContract.status === "Active" || selectedContract.status === "For Accounting Review") && (
+              <button 
+                className="btn-success"
+                onClick={() => generateInvoice(selectedContract)}
+              >
+                Create Invoice
+              </button>
+            )}
+            <button className="btn-secondary" onClick={() => setSelectedContract(null)}>
+              Close
+            </button>
           </div>
         </div>
-        <div className="modal-actions">
-          <button
-            className="btn-reject"
-            onClick={handleAccountingReject}
-            disabled={!rejectReason.trim()}
-          >
-            Submit Rejection
-          </button>
-          <button
-            className="btn-secondary"
-            onClick={() => setShowRejectModal(false)}
-          >
-            Cancel
-          </button>
-        </div>
       </div>
-    </div>
+    )
   );
 
-  // --- Main render ---
+  // Render Invoice Generation Modal (same as before)
+  const renderInvoiceModal = () => (
+    showInvoiceModal && newInvoice && (
+      <div className="modal-overlay">
+        <div className="modal">
+          <h3>Generate Invoice</h3>
+          <div className="invoice-preview">
+            {/* ... invoice modal content same as before ... */}
+          </div>
+          <div className="modal-actions">
+            <button className="btn-primary" onClick={createInvoice}>
+              Create Invoice
+            </button>
+            <button className="btn-secondary" onClick={() => setShowInvoiceModal(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
   return (
-    <div className="accounting-dashboard">
-      <div className="dashboard-header">
-        <div className="dashboard-header-inner">
-          <h1>Accounting Dashboard</h1>
-          <div className="tabs">
-            <button
-              className={`tab ${activeTab === "contracts" ? "active" : ""}`}
-              onClick={() => setActiveTab("contracts")}
+    <div className="department-dashboard">
+      {/* Left Sidebar */}
+      <div className="dashboard-sidebar">
+        <div className="accreditation-header">
+          <h1>FINANCE</h1>
+          <h2>Dashboard</h2>
+        </div>
+        
+        <div className="header-nav">
+          <div className="nav-section">
+            <div className="section-title">NAVIGATION</div>
+            <button 
+              className={`nav-btn ${activeView === "dashboard" ? "active" : ""}`}
+              onClick={() => setActiveView("dashboard")}
             >
-              Contracts
+              Dashboard
             </button>
-            <button
-              className={`tab ${activeTab === "income" ? "active" : ""}`}
-              onClick={() => setActiveTab("income")}
+            <button 
+              className={`nav-btn ${activeView === "accounting-review" ? "active" : ""}`}
+              onClick={() => setActiveView("accounting-review")}
             >
-              Income
+              For Review ({accountingContracts.length})
+            </button>
+            <button 
+              className={`nav-btn ${activeView === "active-contracts" ? "active" : ""}`}
+              onClick={() => setActiveView("active-contracts")}
+            >
+              Active Contracts ({activeContracts.length})
+            </button>
+            <button 
+              className={`nav-btn ${activeView === "invoices" ? "active" : ""}`}
+              onClick={() => setActiveView("invoices")}
+            >
+              Invoices
             </button>
           </div>
-          <button onClick={onLogout} className="logout-btn header-logout">
-            Logout
-          </button>
+        </div>
+        
+        <div className="sidebar-footer">
+          <button onClick={onLogout} className="logout-btn">Logout</button>
         </div>
       </div>
 
       <div className="dashboard-content">
-        {activeTab === "contracts" && renderContractsTable()}
-        {activeTab === "income" && renderIncomeSection()}
-        {selectedContract && renderDetailsModal()}
-        {showRejectModal && renderRejectModal()}
+        {activeView === "dashboard" && renderDashboardView()}
+        {activeView === "accounting-review" && renderAccountingReviewView()}
+        {activeView === "active-contracts" && renderActiveContractsView()}
+        {activeView === "invoices" && renderInvoicesView()}
+        
+        {/* Modals */}
+        {renderContractModal()}
+        {renderInvoiceModal()}
       </div>
     </div>
   );
 }
 
-export default AccountingDashboard;
+export default FinanceDashboard;

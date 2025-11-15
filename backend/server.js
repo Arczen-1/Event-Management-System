@@ -868,25 +868,6 @@ app.get("/monitoring", async (req, res) => {
   }
 });
 
-app.get("/inventory", async (req, res) => {
-  try {
-    const sections = await fetchMonitoringData();
-
-    // Flatten your sheet rows into simple items list
-    // Assuming each "section" looks like: header: [...], rows: [[date, item, qty, ...], ...]
-    const items = sections.flatMap(section => 
-      section.rows.map(row => ({
-        itemName: row[0], 
-        quantity: row[2], 
-      }))
-    );
-
-    res.json(items);
-  } catch (err) {
-    console.error("Error fetching inventory:", err);
-    res.status(500).json({ message: "Error retrieving inventory from Google Sheets" });
-  }
-});
 
 // ==================== FABRICATION REQUEST ROUTES ====================
 
@@ -1065,8 +1046,295 @@ app.get("/stockroom-inventory", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch stockroom inventory data" });
   }
 });
+// ==================== INVENTORY CRUD ROUTES ====================
+
+// Inventory Schema - For MongoDB fallback
+const InventorySchema = new mongoose.Schema({
+  "Item Id": { type: String, required: true },
+  "Item Name": { type: String, required: true },
+  "Category": { type: String, required: true },
+  "Unit": { type: String, required: true },
+  "Quantity": { type: Number, required: true, default: 0 },
+  "Minimum Stock": { type: Number, default: 5 },
+  "Department": { type: String, required: true },
+  "Status": { type: String, default: "Active" },
+  "Last Updated": { type: Date, default: Date.now }
+}, { 
+  collection: 'inventory',
+  strict: false 
+});
+
+const Inventory = mongoose.model('Inventory', InventorySchema);
+
+// GET /inventory - Get inventory from Google Sheets, fallback to MongoDB
+app.get("/inventory", async (req, res) => {
+  try {
+    const { department } = req.query;
+    
+    // First try to get from Google Sheets
+    try {
+      const sheets = await getSheetsClient();
+      const resp = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: "All Inventory!A:Z", // Adjust range based on your sheet structure
+      });
+
+      let rows = resp.data.values || [];
+      
+      // Remove empty rows
+      rows = rows.filter(row => row.some(cell => cell && cell.trim() !== ""));
+      
+      if (rows.length >= 2) { // Has headers and at least one data row
+        const headers = rows[0]; // First row is headers
+        const data = rows.slice(1); // Data starts from second row
+        
+        // Map to your desired structure
+        const items = data.map(row => {
+          const item = {
+            "Item Id": row[0] || "",
+            "Item Name": row[1] || "",
+            "Category": row[2] || "",
+            "Unit": row[3] || "",
+            "Quantity": parseInt(row[4]) || 0,
+            "Department": row[5] || "warehouse",
+            "Minimum Stock": 5, // Default value
+            "Status": "Active"
+          };
+          return item;
+        });
+
+        // Filter by department if specified
+        let filteredItems = items;
+        if (department && department !== "") {
+          filteredItems = items.filter(item => 
+            item.Department.toLowerCase() === department.toLowerCase()
+          );
+        }
+
+        return res.json(filteredItems);
+      }
+    } catch (sheetsError) {
+      console.log("Google Sheets inventory not available, falling back to MongoDB");
+    }
+
+    // Fallback to MongoDB
+    let query = {};
+    if (department && department !== "") {
+      query.Department = department;
+    }
+
+    const mongoInventory = await Inventory.find(query).sort({ "Item Name": 1 });
+    res.json(mongoInventory);
+
+  } catch (error) {
+    console.error("Error fetching inventory:", error);
+    res.status(500).json({ message: "Server error fetching inventory" });
+  }
+});
+
+// POST /inventory - Create new inventory item (saves to MongoDB)
+app.post("/inventory", async (req, res) => {
+  try {
+    const itemId = req.body["Item Id"];
+    const itemName = req.body["Item Name"];
+    const category = req.body["Category"];
+    const unit = req.body["Unit"];
+    const quantity = req.body["Quantity"];
+    const department = req.body["Department"];
+
+    if (!itemId || !itemName || !category || !unit || !quantity || !department) {
+      return res.status(400).json({ 
+        message: "Missing required fields: Item Id, Item Name, Category, Unit, Quantity, Department" 
+      });
+    }
+
+    // Check if item ID already exists
+    const existingItem = await Inventory.findOne({ "Item Id": itemId });
+    if (existingItem) {
+      return res.status(400).json({ 
+        message: "Item ID already exists" 
+      });
+    }
+
+    const inventoryItem = new Inventory({
+      "Item Id": itemId,
+      "Item Name": itemName,
+      "Category": category,
+      "Unit": unit,
+      "Quantity": parseInt(quantity) || 0,
+      "Minimum Stock": 5,
+      "Department": department,
+      "Status": "Active",
+      "Last Updated": new Date()
+    });
+
+    await inventoryItem.save();
+    
+    res.status(201).json({ 
+      message: "Inventory item created successfully", 
+      item: inventoryItem 
+    });
+  } catch (error) {
+    console.error("Error creating inventory item:", error);
+    res.status(500).json({ message: "Server error creating inventory item: " + error.message });
+  }
+});
+
+// PUT /inventory/:id - Update inventory item in MongoDB
+app.put("/inventory/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid inventory item ID" });
+    }
+
+    const updateData = {
+      ...req.body,
+      "Last Updated": new Date()
+    };
+
+    // Convert quantity to number if it exists
+    if (updateData.Quantity) {
+      updateData.Quantity = parseInt(updateData.Quantity);
+    }
+
+    // Ensure Minimum Stock is always 5
+    updateData["Minimum Stock"] = 5;
+
+    const updatedItem = await Inventory.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedItem) {
+      return res.status(404).json({ message: "Inventory item not found" });
+    }
+
+    res.json({ 
+      message: "Inventory item updated successfully", 
+      item: updatedItem 
+    });
+  } catch (error) {
+    console.error("Error updating inventory item:", error);
+    res.status(500).json({ message: "Server error updating inventory item" });
+  }
+});
+
+// DELETE /inventory/:id - Delete inventory item from MongoDB
+app.delete("/inventory/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid inventory item ID" });
+    }
+
+    const deletedItem = await Inventory.findByIdAndDelete(id);
+
+    if (!deletedItem) {
+      return res.status(404).json({ message: "Inventory item not found" });
+    }
+
+    res.json({ message: "Inventory item deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting inventory item:", error);
+    res.status(500).json({ message: "Server error deleting inventory item" });
+  }
+});
+
+// GET /inventory/stats - Get inventory statistics
+app.get("/inventory/stats", async (req, res) => {
+  try {
+    const { department } = req.query;
+    
+    // Try to get from Google Sheets first
+    try {
+      const items = await getInventoryFromSheets(department);
+      
+      const totalItems = items.length;
+      const lowStockItems = items.filter(item => item.Quantity <= 5).length;
+      const outOfStockItems = items.filter(item => item.Quantity <= 0).length;
+
+      return res.json({
+        totalItems,
+        lowStockItems,
+        outOfStockItems
+      });
+    } catch (sheetsError) {
+      console.log("Using MongoDB for stats");
+    }
+
+    // Fallback to MongoDB
+    let query = {};
+    if (department && department !== "") {
+      query.Department = department;
+    }
+
+    const totalItems = await Inventory.countDocuments(query);
+    const lowStockItems = await Inventory.countDocuments({
+      ...query,
+      Quantity: { $lte: 5 }
+    });
+    const outOfStockItems = await Inventory.countDocuments({
+      ...query,
+      Quantity: { $lte: 0 }
+    });
+
+    res.json({
+      totalItems,
+      lowStockItems,
+      outOfStockItems
+    });
+  } catch (error) {
+    console.error("Error fetching inventory stats:", error);
+    res.status(500).json({ message: "Server error fetching inventory stats" });
+  }
+});
+
+// Helper function to get inventory from Google Sheets
+async function getInventoryFromSheets(department = "") {
+  try {
+    const sheets = await getSheetsClient();
+    const resp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: "'All Inventory'!A:F",
+    });
+
+    let rows = resp.data.values || [];
+    rows = rows.filter(row => row.some(cell => cell && cell.trim() !== ""));
+    
+    if (rows.length < 2) return [];
+
+    const data = rows.slice(1);
+    const items = data.map(row => ({
+      "Item Id": row[0] || "",
+      "Item Name": row[1] || "",
+      "Category": row[2] || "",
+      "Unit": row[3] || "",
+      "Quantity": parseInt(row[4]) || 0,
+      "Department": row[5],
+      "Minimum Stock": 5,
+      "Status": "Active"
+    }));
+
+    if (department && department !== "") {
+      return items.filter(item => 
+        item.Department.toLowerCase() === department.toLowerCase()
+      );
+    }
+
+    return items;
+  } catch (error) {
+    throw error;
+  }
+}
+
+  
 // ==================== ADMIN DASHBOARD STATS ENDPOINTS ====================
 
+// GET /admin/dashboard-stats - Get comprehensive stats for admin dashboard
 // GET /admin/dashboard-stats - Get comprehensive stats for admin dashboard
 app.get("/admin/dashboard-stats", async (req, res) => {
   try {
@@ -1081,39 +1349,70 @@ app.get("/admin/dashboard-stats", async (req, res) => {
     
     // Get pending approvals count
     const pendingApprovals = await User.countDocuments({ status: "pending" });
-    
-    // Get inventory count from Google Sheets
-    let totalInventory = 0;
+
+    // Get department-specific inventory counts
+    let departmentInventory = {
+      creative: 0,
+      warehouse: 0,
+      linen: 0,
+      stockroom: 0
+    };
+
     try {
-      const inventoryData = await fetchMonitoringData();
-      totalInventory = inventoryData.reduce((total, section) => total + section.rows.length, 0);
-    } catch (inventoryErr) {
-      console.error("Error fetching inventory data:", inventoryErr);
-      // Continue without inventory data
+      // Try to get from Google Sheets first
+      const sheets = await getSheetsClient();
+      const resp = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: "All inventory!A:Z",
+      });
+
+      let rows = resp.data.values || [];
+      rows = rows.filter(row => row.some(cell => cell && cell.trim() !== ""));
+      
+      if (rows.length >= 2) {
+        const data = rows.slice(1);
+        
+        // Count items by department
+        data.forEach(row => {
+          const department = (row[5]).toLowerCase();
+          if (departmentInventory.hasOwnProperty(department)) {
+            departmentInventory[department]++;
+          }
+        });
+      }
+    } catch (sheetsError) {
+      console.log("Using MongoDB for department inventory counts");
+      // Fallback to MongoDB
+      const departmentCounts = await Inventory.aggregate([
+        {
+          $group: {
+            _id: "$Department",
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+
+      departmentCounts.forEach(dept => {
+        const department = dept._id.toLowerCase();
+        if (departmentInventory.hasOwnProperty(department)) {
+          departmentInventory[department] = dept.count;
+        }
+      });
     }
 
-    // Get recent activity (last 7 days)
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
-    const recentContracts = await Contract.countDocuments({ 
-      createdAt: { $gte: oneWeekAgo } 
-    });
-    
-    const recentUsers = await User.countDocuments({ 
-      createdAt: { $gte: oneWeekAgo },
-      status: "approved"
-    });
+    // Get total inventory count (sum of all departments)
+    const totalInventory = Object.values(departmentInventory).reduce((sum, count) => sum + count, 0);
 
     res.json({
       totalContracts,
       totalUsers,
       totalInventory,
+      departmentInventory, // Add department-specific counts
       activeEvents: activeContracts,
       pendingApprovals,
       recentActivity: {
-        newContracts: recentContracts,
-        newUsers: recentUsers
+        newContracts: 0, // You can update this if needed
+        newUsers: 0      // You can update this if needed
       }
     });
   } catch (error) {
@@ -2351,7 +2650,307 @@ const LinenRequestSchema = new mongoose.Schema({
 
 const LinenRequest = mongoose.model("LinenRequest", LinenRequestSchema);
 
+// Add these routes to your server.js file
 
+// In-memory storage for banquet data (you might want to use a database in production)
+let banquetEquipmentRequests = [];
+let banquetStaffAssignments = [];
+
+// ===== BANQUET STAFF ROUTES =====
+
+// Get all equipment requests
+app.get('/banquet/equipment-requests', (req, res) => {
+  try {
+    res.json({ 
+      success: true, 
+      requests: banquetEquipmentRequests 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching equipment requests' 
+    });
+  }
+});
+
+// Create new equipment request
+app.post('/banquet/equipment-requests', (req, res) => {
+  try {
+    const { eventId, equipment, status } = req.body;
+    
+    const newRequest = {
+      _id: Date.now().toString(),
+      eventId,
+      eventName: 'Event', // You might want to fetch the actual event name
+      equipment,
+      status: status || 'pending',
+      date: new Date().toISOString(),
+      createdAt: new Date()
+    };
+    
+    banquetEquipmentRequests.push(newRequest);
+    
+    res.json({ 
+      success: true, 
+      message: 'Equipment request created successfully',
+      request: newRequest
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error creating equipment request' 
+    });
+  }
+});
+
+// Get all staff assignments
+app.get('/banquet/staff-assignments', (req, res) => {
+  try {
+    res.json({ 
+      success: true, 
+      assignments: banquetStaffAssignments 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching staff assignments' 
+    });
+  }
+});
+
+// Create new staff assignment
+app.post('/banquet/staff-assignments', (req, res) => {
+  try {
+    const { staffId, staffName, eventId, eventName, role, notes, status } = req.body;
+    
+    const newAssignment = {
+      id: req.body.id || Date.now().toString(),
+      staffId,
+      staffName,
+      eventId,
+      eventName,
+      role,
+      notes: notes || '',
+      status: status || 'assigned',
+      date: new Date().toISOString(),
+      createdAt: new Date()
+    };
+    
+    banquetStaffAssignments.push(newAssignment);
+    
+    res.json({ 
+      success: true, 
+      message: 'Staff assignment created successfully',
+      assignment: newAssignment
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error creating staff assignment' 
+    });
+  }
+});
+
+// Update staff assignment
+app.patch('/banquet/staff-assignments/:id', (req, res) => {
+  try {
+    const assignmentId = req.params.id;
+    const updates = req.body;
+    
+    const assignmentIndex = banquetStaffAssignments.findIndex(a => a.id === assignmentId);
+    
+    if (assignmentIndex === -1) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Staff assignment not found' 
+      });
+    }
+    
+    banquetStaffAssignments[assignmentIndex] = {
+      ...banquetStaffAssignments[assignmentIndex],
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    res.json({ 
+      success: true, 
+      message: 'Staff assignment updated successfully',
+      assignment: banquetStaffAssignments[assignmentIndex]
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating staff assignment' 
+    });
+  }
+});
+
+// Delete staff assignment
+app.delete('/banquet/staff-assignments/:id', (req, res) => {
+  try {
+    const assignmentId = req.params.id;
+    
+    const assignmentIndex = banquetStaffAssignments.findIndex(a => a.id === assignmentId);
+    
+    if (assignmentIndex === -1) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Staff assignment not found' 
+      });
+    }
+    
+    banquetStaffAssignments.splice(assignmentIndex, 1);
+    
+    res.json({ 
+      success: true, 
+      message: 'Staff assignment deleted successfully' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting staff assignment' 
+    });
+  }
+});
+
+// Update equipment request status
+app.patch('/banquet/equipment-requests/:id', (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const { status } = req.body;
+    
+    const requestIndex = banquetEquipmentRequests.findIndex(r => r._id === requestId);
+    
+    if (requestIndex === -1) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Equipment request not found' 
+      });
+    }
+    
+    banquetEquipmentRequests[requestIndex].status = status;
+    banquetEquipmentRequests[requestIndex].updatedAt = new Date();
+    
+    res.json({ 
+      success: true, 
+      message: 'Equipment request updated successfully',
+      request: banquetEquipmentRequests[requestIndex]
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating equipment request' 
+    });
+  }
+});
+
+// Get banquet dashboard stats
+app.get('/banquet/dashboard-stats', (req, res) => {
+  try {
+    const pendingRequests = banquetEquipmentRequests.filter(r => r.status === 'pending').length;
+    const activeAssignments = banquetStaffAssignments.filter(a => a.status === 'assigned').length;
+    
+    res.json({
+      success: true,
+      stats: {
+        pendingEquipmentRequests: pendingRequests,
+        activeStaffAssignments: activeAssignments,
+        totalEquipmentRequests: banquetEquipmentRequests.length,
+        totalStaffAssignments: banquetStaffAssignments.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching dashboard stats' 
+    });
+  }
+});
+
+// Add some sample data for testing
+app.post('/banquet/seed-sample-data', (req, res) => {
+  try {
+    // Sample equipment requests
+    banquetEquipmentRequests = [
+      {
+        _id: '1',
+        eventId: 'sample1',
+        eventName: 'Wedding Reception',
+        equipment: ['Chairs', 'Tables', 'Tablecloths'],
+        status: 'pending',
+        date: new Date().toISOString(),
+        createdAt: new Date()
+      },
+      {
+        _id: '2',
+        eventId: 'sample2',
+        eventName: 'Corporate Event',
+        equipment: ['Projector', 'Screen', 'Microphones'],
+        status: 'approved',
+        date: new Date(Date.now() - 86400000).toISOString(), // yesterday
+        createdAt: new Date(Date.now() - 86400000)
+      }
+    ];
+    
+    // Sample staff assignments
+    banquetStaffAssignments = [
+      {
+        id: '1',
+        staffId: 'staff_1',
+        staffName: 'John Smith',
+        eventId: 'sample1',
+        eventName: 'Wedding Reception',
+        role: 'Head Waiter',
+        notes: 'Handle VIP section',
+        status: 'assigned',
+        date: new Date().toISOString(),
+        createdAt: new Date()
+      },
+      {
+        id: '2',
+        staffId: 'staff_2',
+        staffName: 'Maria Garcia',
+        eventId: 'sample2',
+        eventName: 'Corporate Event',
+        role: 'Bartender',
+        notes: 'Main bar station',
+        status: 'completed',
+        date: new Date(Date.now() - 86400000).toISOString(),
+        createdAt: new Date(Date.now() - 86400000)
+      }
+    ];
+    
+    res.json({ 
+      success: true, 
+      message: 'Sample data seeded successfully',
+      equipmentRequests: banquetEquipmentRequests.length,
+      staffAssignments: banquetStaffAssignments.length
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error seeding sample data' 
+    });
+  }
+});
+
+// Clear all banquet data (for testing)
+app.delete('/banquet/clear-data', (req, res) => {
+  try {
+    banquetEquipmentRequests = [];
+    banquetStaffAssignments = [];
+    
+    res.json({ 
+      success: true, 
+      message: 'All banquet data cleared successfully' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error clearing data' 
+    });
+  }
+});
 
 // ========== LINEN ROUTES ==========
 
