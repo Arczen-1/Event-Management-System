@@ -1,7 +1,5 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
-// Contract schema to store full contract details with explicitly defined fields
-// matching the frontend contract form structure
 const ContractSchema = new mongoose.Schema(
   {
     contractNumber: { type: String, required: true, unique: true },
@@ -42,11 +40,13 @@ const ContractSchema = new mongoose.Schema(
       totalRegular: { type: String, default: "" },
       themeSetup: { type: String, default: "" },
       colorMotif: { type: String, default: "" },
+      
+      // TABLE CONFIGURATION - ADD THE MISSING FIELDS
       vipTableType: { type: String, default: "" },
-      regularTableType: { type: String, default: "" },
-      vipTableSeats: { type: String, default: "" },
-      regularTableSeats: { type: String, default: "" },
+      vipChairs: { type: String, default: "" }, // ADD THIS
       vipTableQuantity: { type: String, default: "" },
+      regularTableType: { type: String, default: "" },
+      regularChairs: { type: String, default: "" }, // ADD THIS
       regularTableQuantity: { type: String, default: "" },
       vipUnderliner: { type: String, default: "" },
       vipTopper: { type: String, default: "" },
@@ -80,6 +80,18 @@ const ContractSchema = new mongoose.Schema(
       soundSystem: { type: String, default: "" },
       tent: { type: String, default: "" },
       celebratorsChair: { type: String, default: "" },
+      
+      creativeCosts: {
+        backdrop: { type: Number, default: 0 },
+        flower: { type: Number, default: 0 },
+        decor: { type: Number, default: 0 },
+        entrance: { type: Number, default: 0 },
+        staging: { type: Number, default: 0 },
+        equipment: { type: Number, default: 0 },
+        miscellaneous: { type: Number, default: 0 }
+      },
+      totalCreativeRequirementCost: { type: Number, default: 0 },
+      flowerRemarks: { type: String, default: "" }
     },
 
     pageBuffet: {
@@ -142,6 +154,4 @@ const ContractSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-module.exports = mongoose.model("Contract2", ContractSchema)
-
-
+module.exports = mongoose.model("Contract5", ContractSchema)

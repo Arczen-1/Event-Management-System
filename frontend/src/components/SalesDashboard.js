@@ -243,7 +243,7 @@ function SalesDashboard({ onLogout, user }) {
         </button>
       </div>
       <div className="status-tabs">
-        {["All", "Draft", "For Approval", "For Accounting Review", "Active", "Completed", "Rejected"].map(status => (
+        {["All", "Draft", "For Accounting Review", "Active", "Completed", "Rejected"].map(status => (
           <button
             key={status}
             className={`status-tab ${statusFilter === status ? 'active' : ''}`}
@@ -388,7 +388,7 @@ function SalesDashboard({ onLogout, user }) {
                                 setContracts(prevContracts =>
                                   prevContracts.map(c =>
                                     c.id === contract.id
-                                      ? { ...c, status: "For Approval" }
+                                      ? { ...c, status: "For Accounting Review" }
                                       : c
                                   )
                                 );

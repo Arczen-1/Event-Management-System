@@ -4,6 +4,7 @@ import "leaflet-routing-machine";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import { useState, useEffect, useRef } from "react"
 import "./hello.css"
+import logo from './logo.png';
 
 function AdminDashboard({ onLogout }) {
   // ==================== STATE MANAGEMENT ====================
@@ -3269,6 +3270,7 @@ const renderUnifiedDepartmentView = (department) => {
       {/* Left Sidebar */}
       <div className="dashboard-sidebar">
         <div className="accreditation-header">
+          <img src={logo} alt="Logo" className="logo" />
           <h1>ADMIN</h1>
           <h2>Dashboard</h2>
         </div>

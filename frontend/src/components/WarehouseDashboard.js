@@ -23,13 +23,21 @@ function WarehouseDashboard({ onLogout }) {
     remarks: ""
   });
 
+  // Post-event checklist state
+  const [submittedChecklists, setSubmittedChecklists] = useState([]);
+  const [selectedChecklist, setSelectedChecklist] = useState(null);
+  const [checklistModalOpen, setChecklistModalOpen] = useState(false);
+  const [checklistItems, setChecklistItems] = useState([]);
+  const [missingItems, setMissingItems] = useState([]);
+  const [isEditingChecklist, setIsEditingChecklist] = useState(false);
+  const [editingChecklistId, setEditingChecklistId] = useState(null);
+
   // Other state
   const [fabricationRequests, setFabricationRequests] = useState([]);
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
   });
-  const [inventory, setInventory] = useState([]);
   const [message, setMessage] = useState("");
   const [fabricationReport, setFabricationReport] = useState([]);
 
@@ -39,6 +47,8 @@ function WarehouseDashboard({ onLogout }) {
     if (activeView === "contracts") fetchContracts();
     if (activeView === "inventory") fetchInventory();
     if (activeView === "fabrication-report") generateFabricationReport();
+    if (activeView === "fabrication-requests") fetchFabricationRequests();
+    if (activeView === "checklists") fetchSubmittedChecklists();
   }, [activeView]);
 
   const fetchDashboardData = async () => {
@@ -49,24 +59,45 @@ function WarehouseDashboard({ onLogout }) {
     ]);
   };
 
+  const fetchSubmittedChecklists = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/post-event-checklists");
+      const data = await res.json();
+      if (res.ok) {
+        setSubmittedChecklists(data);
+      }
+    } catch (err) {
+      console.error("Error fetching checklists:", err);
+      setSubmittedChecklists([]);
+    }
+  };
+
   const fetchContracts = async () => {
     try {
       const res = await fetch("http://localhost:5000/contracts");
       const data = await res.json();
       if (res.ok) {
+        const checklistsRes = await fetch("http://localhost:5000/post-event-checklists");
+        const checklistsData = await checklistsRes.ok ? await checklistsRes.json() : [];
+        
         setContracts(
           (data.contracts || [])
-            .filter(c => c.status === "Active")
-            .map(c => ({
-              id: c._id,
-              name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
-              client: (c.page1 && c.page1.celebratorName) || "",
-              value: (c.page3 && c.page3.grandTotal) || "",
-              startDate: (c.page1 && c.page1.eventDate) || "",
-              endDate: (c.page1 && c.page1.eventDate) || "",
-              contractNumber: c.contractNumber,
-              raw: c,
-            }))
+            .filter(c => c.status === "Active" || c.status === "Completed")
+            .map(c => {
+              const existingChecklist = checklistsData.find(cl => cl.contractId === c._id && cl.department === 'warehouse');
+              return {
+                id: c._id,
+                name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
+                client: (c.page1 && c.page1.celebratorName) || "",
+                value: (c.page3 && c.page3.grandTotal) || "",
+                eventDate: c.page1?.eventDate || "",
+                contractNumber: c.contractNumber,
+                status: c.status,
+                hasChecklist: !!existingChecklist,
+                existingChecklistId: existingChecklist?._id,
+                raw: c,
+              }
+            })
         );
       }
     } catch (e) {
@@ -100,6 +131,184 @@ function WarehouseDashboard({ onLogout }) {
     }
   };
 
+  // ------------------- Post-Event Checklist -------------------
+  const openChecklistModal = async (contract, editMode = false, checklistId = null) => {
+    setSelectedContract(contract);
+    
+    if (editMode && checklistId) {
+      try {
+        const res = await fetch(`http://localhost:5000/post-event-checklist/${checklistId}`);
+        if (res.ok) {
+          const existingChecklist = await res.json();
+          setChecklistItems(existingChecklist.checklistItems || []);
+          setMissingItems(existingChecklist.missingItems || []);
+          setEditingChecklistId(checklistId);
+          setIsEditingChecklist(true);
+        }
+      } catch (err) {
+        console.error("Error loading checklist for editing:", err);
+        setMessage("Error loading checklist");
+        return;
+      }
+    } else {
+      const existingChecklist = submittedChecklists.find(cl => 
+        cl.contractId === contract._id && cl.department === 'warehouse'
+      );
+      
+      if (existingChecklist) {
+        setMessage("A warehouse checklist already exists for this contract. Use the Edit button.");
+        return;
+      }
+      
+      const generatedChecklist = generateChecklistItems(contract);
+      setChecklistItems(generatedChecklist);
+      setMissingItems([]);
+      setIsEditingChecklist(false);
+      setEditingChecklistId(null);
+    }
+    
+    setChecklistModalOpen(true);
+  };
+
+  const generateChecklistItems = (contract) => {
+    const p2 = contract.page2 || {};
+    const items = [];
+
+    // Warehouse department items - furniture, equipment, etc.
+    const warehouseFields = ['furniture', 'equipment', 'lighting', 'sound'];
+    
+    warehouseFields.forEach(field => {
+      if (p2[field] && p2[field].length > 0) {
+        const fieldItems = Array.isArray(p2[field]) ? p2[field] : [p2[field]];
+        fieldItems.forEach(item => {
+          if (item.trim() !== '') {
+            items.push({
+              id: `${field}-${item}`,
+              name: `${field.charAt(0).toUpperCase() + field.slice(1)}: ${item}`,
+              category: field,
+              checked: false,
+              missing: false,
+              department: 'warehouse'
+            });
+          }
+        });
+      }
+    });
+
+    return items;
+  };
+
+  const handleChecklistChange = (itemId, field, value) => {
+    setChecklistItems(prev => 
+      prev.map(item => 
+        item.id === itemId ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const submitChecklist = async () => {
+    try {
+      const missingItemsList = checklistItems.filter(item => item.missing);
+      
+      const checklistData = {
+        contractId: selectedContract._id,
+        contractNumber: selectedContract.contractNumber,
+        checklistItems: checklistItems,
+        missingItems: missingItemsList,
+        submittedBy: user?.username,
+        department: 'warehouse',
+        submittedAt: new Date().toISOString()
+      };
+
+      let url = "http://localhost:5000/post-event-checklist";
+      let method = "POST";
+
+      if (isEditingChecklist && editingChecklistId) {
+        url = `http://localhost:5000/post-event-checklist/${editingChecklistId}`;
+        method = "PUT";
+      } else {
+        const existingChecklist = submittedChecklists.find(cl => 
+          cl.contractId === selectedContract._id && cl.department === 'warehouse'
+        );
+        
+        if (existingChecklist) {
+          setMessage("A warehouse checklist already exists for this contract. Please use the Edit button.");
+          return;
+        }
+      }
+
+      const res = await fetch(url, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(checklistData),
+      });
+
+      if (res.ok) {
+        const responseData = await res.json();
+        
+        setMessage(`Warehouse checklist ${isEditingChecklist ? 'updated' : 'submitted'} successfully!`);
+        setChecklistModalOpen(false);
+        
+        setIsEditingChecklist(false);
+        setEditingChecklistId(null);
+        
+        fetchContracts();
+        fetchSubmittedChecklists();
+        
+      } else {
+        const data = await res.json();
+        setMessage("Error: " + data.message);
+      }
+    } catch (err) {
+      console.error("Error submitting checklist:", err);
+      setMessage("Server error while submitting checklist");
+    }
+  };
+
+  // ------------------- Fabrication Request Approval Workflow -------------------
+  const approveFabricationRequest = async (requestId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/fabrication-requests/${requestId}/approve`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approvedBy: user?.username })
+      });
+
+      if (res.ok) {
+        setMessage("Fabrication request approved!");
+        fetchFabricationRequests();
+      } else {
+        const data = await res.json();
+        setMessage("Error: " + data.message);
+      }
+    } catch (err) {
+      console.error("Error approving request:", err);
+      setMessage("Server error while approving request");
+    }
+  };
+
+  const markRequestAsReceived = async (requestId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/fabrication-requests/${requestId}/received`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receivedBy: user?.username })
+      });
+
+      if (res.ok) {
+        setMessage("Items received and inventory updated!");
+        fetchFabricationRequests();
+        fetchInventory();
+      } else {
+        const data = await res.json();
+        setMessage("Error: " + data.message);
+      }
+    } catch (err) {
+      console.error("Error marking as received:", err);
+      setMessage("Server error while updating request");
+    }
+  };
+
   // ------------------- Inventory Analysis -------------------
   const getStockStatus = (item) => {
     const quantity = parseInt(item.Quantity) || 0;
@@ -119,7 +328,7 @@ function WarehouseDashboard({ onLogout }) {
     const lowStockItems = getLowStockItems();
     const report = lowStockItems.map(item => {
       const quantity = parseInt(item.Quantity) || 0;
-      const suggestedQuantity = quantity === 0 ? 20 : 15; // Suggested restock quantity
+      const suggestedQuantity = quantity === 0 ? 20 : 15;
       
       return {
         ...item,
@@ -204,26 +413,6 @@ function WarehouseDashboard({ onLogout }) {
     }
   };
 
-  const submitBulkFabricationRequests = async (items) => {
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const item of items) {
-      const success = await submitFabricationRequest(
-        item, 
-        item.suggestedQuantity, 
-        "Bulk restock request from fabrication report"
-      );
-      if (success) {
-        successCount++;
-      } else {
-        errorCount++;
-      }
-    }
-
-    setMessage(`Bulk request completed: ${successCount} successful, ${errorCount} failed`);
-  };
-
   const downloadFabricationReport = () => {
     const reportData = fabricationReport.map(item => ({
       "Item ID": item["Item Id"] || item._id,
@@ -245,7 +434,7 @@ function WarehouseDashboard({ onLogout }) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `fabrication-restock-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `warehouse-fabrication-report-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -324,6 +513,20 @@ function WarehouseDashboard({ onLogout }) {
     }
   };
 
+  // ------------------- Utility Functions -------------------
+  const isEventPassed = (eventDate) => {
+    if (!eventDate) return false;
+    
+    try {
+      const eventDay = new Date(eventDate).toISOString().split('T')[0];
+      const todayDay = new Date().toISOString().split('T')[0];
+      return eventDay < todayDay;
+    } catch (error) {
+      console.error('Error:', error);
+      return false;
+    }
+  };
+
   // ====== RENDER FUNCTIONS ======
   const renderDashboardView = () => {
     const totalItems = inventoryData.length;
@@ -337,7 +540,6 @@ function WarehouseDashboard({ onLogout }) {
 
     return (
       <div className="dashboard-view">
-
         {/* Stats Overview */}
         <div className="dashboard-cards">
           <div className="dashboard-card">
@@ -369,42 +571,68 @@ function WarehouseDashboard({ onLogout }) {
             </div>
           </div>
         </div>
+
         <div className="contracts-table-container">
-        <div className="table-header">
-          <h3>Active Contracts</h3>
-          <div className="pager">
-            <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
-            <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
-            <button className="pager-btn" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(contracts.length / itemsPerPage)}>→</button>
+          <div className="table-header">
+            <h3>Active Contracts</h3>
+            <div className="pager">
+              <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
+              <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
+              <button className="pager-btn" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(contracts.length / itemsPerPage)}>→</button>
+            </div>
           </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Contract Name</th>
+                <th>Celebrator/Corporate Name</th>
+                <th>Contract No.</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedContracts.length === 0 ? (
+                <tr><td colSpan="5">No active contracts available</td></tr>
+              ) : (
+                paginatedContracts.map(c => (
+                  <tr key={c.id}>
+                    <td>{c.name}</td>
+                    <td>{c.client}</td>
+                    <td>{c.contractNumber}</td>
+                    <td>
+                      <span className={`status ${c.status.toLowerCase()}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button className="btn-review" onClick={() => setSelectedContract(c.raw)}>View</button>
+                        {isEventPassed(c.eventDate) && c.status === "Active" && (
+                          <button 
+                            className="btn-checklist"
+                            onClick={() => openChecklistModal(c.raw)}
+                          >
+                            Post-Event Checklist
+                          </button>
+                        )}
+                        {isEventPassed(c.eventDate) && c.status === "Active" && c.hasChecklist && (
+                          <button 
+                            className="btn-edit small"
+                            onClick={() => openChecklistModal(c.raw, true, c.existingChecklistId)}
+                          >
+                            Edit Checklist
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Contract Name</th>
-              <th>Celebrator/Corporate Name</th>
-              <th>Contract No.</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedContracts.length === 0 ? (
-              <tr><td colSpan="4">No active contracts available</td></tr>
-            ) : (
-              paginatedContracts.map(c => (
-                <tr key={c.id}>
-                  <td>{c.name}</td>
-                  <td>{c.client}</td>
-                  <td>{c.contractNumber}</td>
-                  <td>
-                    <button className="btn-review" onClick={() => setSelectedContract(c.raw)}>View</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+
         {/* Low Stock Alert Table */}
         {lowStockItems.length > 0 && (
           <div className="section-container">
@@ -469,6 +697,127 @@ function WarehouseDashboard({ onLogout }) {
             </div>
           </div>
         )}
+
+        {submittedChecklists.length > 0 && (
+          <div className="section-container">
+            <div className="section-header">
+              <h3>Recent Post-Event Checklists</h3>
+              <button 
+                className="text-link"
+                onClick={() => setActiveView("checklists")}
+              >
+                View All →
+              </button>
+            </div>
+            <div className="recent-checklists">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Contract Number</th>
+                    <th>Submitted By</th>
+                    <th>Missing Items</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {submittedChecklists.slice(0, 3).map((checklist, index) => (
+                    <tr key={checklist._id || index}>
+                      <td>{checklist.contractNumber}</td>
+                      <td>{checklist.submittedBy}</td>
+                      <td>
+                        <span className={`missing-count ${checklist.missingItems?.length > 0 ? 'has-missing' : ''}`}>
+                          {checklist.missingItems?.length || 0}
+                        </span>
+                      </td>
+                      <td>
+                        {checklist.createdAt ? new Date(checklist.createdAt).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td>
+                        <button 
+                          className="btn-primary small"
+                          onClick={() => setSelectedChecklist(checklist)}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderFabricationRequestsView = () => {
+    return (
+      <div className="contracts-table-container">
+        <div className="table-header">
+          <h3>Fabrication Requests</h3>
+          {message && <div className="message success">{message}</div>}
+        </div>
+
+        <table className="fabrication-requests-table">
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Item Name</th>
+              <th>Quantity</th>
+              <th>Requested By</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fabricationRequests.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="no-data">No fabrication requests found</td>
+              </tr>
+            ) : (
+              fabricationRequests.map(request => (
+                <tr key={request._id} className={`status-${request.status}`}>
+                  <td>{request._id.slice(-6)}</td>
+                  <td>{request.item}</td>
+                  <td>{request.quantity}</td>
+                  <td>{request.username}</td>
+                  <td>
+                    <span className={`status-badge ${request.status}`}>
+                      {request.status}
+                    </span>
+                  </td>
+                  <td>{new Date(request.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <div className="action-buttons">
+                      {request.status === "pending" && (
+                        <button 
+                          className="btn-approve small"
+                          onClick={() => approveFabricationRequest(request._id)}
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {request.status === "approved" && (
+                        <button 
+                          className="btn-success small"
+                          onClick={() => markRequestAsReceived(request._id)}
+                        >
+                          Mark Received
+                        </button>
+                      )}
+                      {request.status === "completed" && (
+                        <span className="completed-text">Completed</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     );
   };
@@ -480,7 +829,7 @@ function WarehouseDashboard({ onLogout }) {
       <div className="contracts-table-container">
         <div className="table-header">
           <h3>Request Item Report</h3>
-           {message && <div className="message success">{message}</div>}
+          {message && <div className="message success">{message}</div>}
           <div className="table-actions">
             <button 
               className="btn-secondary" 
@@ -571,50 +920,203 @@ function WarehouseDashboard({ onLogout }) {
     );
   };
 
-  const renderContractsTable = () => {
-    const itemsPerPage = 10;
-    const startIndex = (page - 1) * itemsPerPage;
-    const paginatedContracts = contracts.slice(startIndex, startIndex + itemsPerPage);
-
+  const renderChecklistsView = () => {
     return (
       <div className="contracts-table-container">
         <div className="table-header">
-          <h3>Active Contracts</h3>
-          <div className="pager">
-            <button className="pager-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>←</button>
-            <span className="page-indicator">Page {page} of {Math.ceil(contracts.length / itemsPerPage)}</span>
-            <button className="pager-btn" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(contracts.length / itemsPerPage)}>→</button>
+          <h3>Submitted Post-Event Checklists</h3>
+          {message && <div className="message success">{message}</div>}
+          <div className="table-actions">
+            <button 
+              className="btn-secondary" 
+              onClick={fetchSubmittedChecklists}
+            >
+              Refresh
+            </button>
           </div>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Contract Name</th>
-              <th>Celebrator/Corporate Name</th>
-              <th>Contract No.</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedContracts.length === 0 ? (
-              <tr><td colSpan="4">No active contracts available</td></tr>
-            ) : (
-              paginatedContracts.map(c => (
-                <tr key={c.id}>
-                  <td>{c.name}</td>
-                  <td>{c.client}</td>
-                  <td>{c.contractNumber}</td>
+
+        {submittedChecklists.length === 0 ? (
+          <div className="no-data">
+            <p>No post-event checklists submitted yet.</p>
+            <p>Checklists will appear here after events are completed and submitted.</p>
+          </div>
+        ) : (
+          <table className="checklists-table">
+            <thead>
+              <tr>
+                <th>Contract Number</th>
+                <th>Department</th>
+                <th>Submitted By</th>
+                <th>Total Items</th>
+                <th>Missing Items</th>
+                <th>Submitted Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {submittedChecklists.map((checklist, index) => (
+                <tr key={checklist._id || index}>
+                  <td><strong>{checklist.contractNumber}</strong></td>
                   <td>
-                    <button className="btn-review" onClick={() => setSelectedContract(c.raw)}>View</button>
+                    <span className={`department-badge ${checklist.department}`}>
+                      {checklist.department.toUpperCase()}
+                    </span>
+                  </td>
+                  <td>{checklist.submittedBy}</td>
+                  <td>{checklist.checklistItems?.length || 0}</td>
+                  <td>
+                    <span className={`missing-count ${checklist.missingItems?.length > 0 ? 'has-missing' : ''}`}>
+                      {checklist.missingItems?.length || 0}
+                    </span>
+                  </td>
+                  <td>
+                    {checklist.createdAt ? new Date(checklist.createdAt).toLocaleDateString() : 'N/A'}
+                  </td>
+                  <td>
+                    <div className="action-buttons">
+                      <button 
+                        className="btn-primary small"
+                        onClick={() => setSelectedChecklist(checklist)}
+                      >
+                        View
+                      </button>
+                      {checklist.department === 'warehouse' && (
+                        <button 
+                          className="btn-edit small"
+                          onClick={async () => {
+                            const contract = contracts.find(c => c.raw?._id === checklist.contractId);
+                            if (contract) {
+                              await openChecklistModal(contract.raw, true, checklist._id);
+                            }
+                          }}
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     );
   };
+
+  const renderChecklistDetailModal = () => (
+    selectedChecklist && (
+      <div className="modal-overlay" onClick={() => setSelectedChecklist(null)}>
+        <div className="modal-content large-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>Checklist Details - {selectedChecklist.contractNumber}</h3>
+            <button className="close-btn" onClick={() => setSelectedChecklist(null)}>×</button>
+          </div>
+          
+          <div className="modal-body">
+            <div className="checklist-detail-container">
+              <div className="checklist-meta">
+                <div className="meta-grid">
+                  <div className="meta-item">
+                    <strong>Contract Number:</strong>
+                    <span>{selectedChecklist.contractNumber}</span>
+                  </div>
+                  <div className="meta-item">
+                    <strong>Submitted By:</strong>
+                    <span>{selectedChecklist.submittedBy}</span>
+                  </div>
+                  <div className="meta-item">
+                    <strong>Submitted Date:</strong>
+                    <span>
+                      {selectedChecklist.submittedAt ? 
+                        new Date(selectedChecklist.submittedAt).toLocaleDateString() : 'N/A'
+                      }
+                    </span>
+                  </div>
+                  <div className="meta-item">
+                    <strong>Total Items:</strong>
+                    <span>{selectedChecklist.checklistItems?.length || 0}</span>
+                  </div>
+                  <div className="meta-item">
+                    <strong>Checked Items:</strong>
+                    <span>
+                      {selectedChecklist.checklistItems?.filter(item => item.checked).length || 0}
+                    </span>
+                  </div>
+                  <div className="meta-item missing">
+                    <strong>Missing Items:</strong>
+                    <span className="missing-badge">
+                      {selectedChecklist.missingItems?.length || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="checklist-items-section">
+                <h4>Checklist Items</h4>
+                {selectedChecklist.checklistItems?.length === 0 ? (
+                  <p className="no-items">No items in this checklist.</p>
+                ) : (
+                  <div className="checklist-items-grid">
+                    {selectedChecklist.checklistItems?.map((item, index) => (
+                      <div 
+                        key={item.id || index} 
+                        className={`checklist-item-card ${item.missing ? 'missing' : ''} ${item.checked ? 'checked' : ''}`}
+                      >
+                        <div className="item-status">
+                          {item.checked ? (
+                            <span className="status-icon checked">✓</span>
+                          ) : (
+                            <span className="status-icon unchecked">○</span>
+                          )}
+                          {item.missing && (
+                            <span className="status-icon missing">⚠</span>
+                          )}
+                        </div>
+                        <div className="item-details">
+                          <div className="item-name">{item.name}</div>
+                          <div className="item-category">Category: {item.category}</div>
+                          <div className="item-status-text">
+                            {item.checked ? 'Returned/Recovered' : 'Not Returned'}
+                            {item.missing && ' • Reported Missing'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {selectedChecklist.missingItems?.length > 0 && (
+                <div className="missing-items-section">
+                  <h4 className="missing-header">⚠ Missing Items Report</h4>
+                  <div className="missing-items-list">
+                    {selectedChecklist.missingItems.map((item, index) => (
+                      <div key={item.id || index} className="missing-item">
+                        <span className="missing-icon">⚠</span>
+                        <span className="missing-name">{item.name}</span>
+                        <span className="missing-category">({item.category})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="modal-actions">
+            <button 
+              className="btn-secondary" 
+              onClick={() => setSelectedChecklist(null)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  );
 
   const renderInventoryTable = () => {
     return (
@@ -630,7 +1132,7 @@ function WarehouseDashboard({ onLogout }) {
         
         {inventoryData.length === 0 ? (
           <div className="no-data">
-            <p>No inventory data found for warehouse.</p>
+            <p>No inventory data found for warehouse department.</p>
             <button 
               className="btn-primary" 
               onClick={() => fetchInventory("warehouse")}
@@ -696,7 +1198,131 @@ function WarehouseDashboard({ onLogout }) {
         )}
       </div>
     );
-  };   
+  };
+
+  const renderChecklistModal = () => (
+    checklistModalOpen && selectedContract && (
+      <div className="modal-overlay" onClick={() => setChecklistModalOpen(false)}>
+        <div className="modal-content large-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>
+              {isEditingChecklist ? 'Edit' : 'Create'} Warehouse Checklist - {selectedContract.contractNumber}
+              {isEditingChecklist && <span className="edit-badge">(Editing)</span>}
+            </h3>
+            <button className="close-btn" onClick={() => {
+              setChecklistModalOpen(false);
+              setIsEditingChecklist(false);
+              setEditingChecklistId(null);
+            }}>×</button>
+          </div>
+          
+          <div className="modal-body">
+            <div className="checklist-container">
+              <div className="checklist-header">
+                <h4>Event: {selectedContract.page1?.occasion || "Event"}</h4>
+                <p>Client: {selectedContract.page1?.celebratorName || "N/A"}</p>
+                <p>Event Date: {selectedContract.page1?.eventDate || "N/A"}</p>
+                <div className="department-notice">
+                  <strong>Warehouse Department Only</strong>
+                  <p>This checklist is for Warehouse items only: Furniture, Equipment, Lighting, and Sound.</p>
+                  <p>Contract will be marked as Completed when all departments (Creative, Linen, Warehouse) submit their checklists.</p>
+                </div>
+                {isEditingChecklist && (
+                  <div className="edit-notice">
+                    <span>⚠ Editing existing Warehouse checklist.</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="checklist-items">
+                <h5>Warehouse Items Checklist</h5>
+                {checklistItems.length === 0 ? (
+                  <p className="no-items">No warehouse items found for this event.</p>
+                ) : (
+                  <div className="checklist-items-container">
+                    {checklistItems.map(item => (
+                      <div key={item.id} className="checklist-item">
+                        <div className="checklist-item-content">
+                          <div className="item-main-info">
+                            <label className="checkbox-container large">
+                              <input
+                                type="checkbox"
+                                checked={item.checked}
+                                onChange={(e) => handleChecklistChange(item.id, 'checked', e.target.checked)}
+                              />
+                              <span className="checkmark"></span>
+                              <span className="item-name">{item.name}</span>
+                            </label>
+                            <span className="item-department-badge">Warehouse</span>
+                          </div>
+                          
+                          <div className="item-status-actions">
+                            <label className="missing-toggle">
+                              <input
+                                type="checkbox"
+                                checked={item.missing}
+                                onChange={(e) => handleChecklistChange(item.id, 'missing', e.target.checked)}
+                              />
+                              <span className="toggle-slider"></span>
+                              <span className="missing-label">
+                                {item.missing ? 'Missing' : 'Report Missing'}
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="checklist-summary">
+                <h5>Summary</h5>
+                <div className="summary-stats">
+                  <div className="stat">
+                    <span className="stat-label">Total Items:</span>
+                    <span className="stat-value">{checklistItems.length}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Checked Items:</span>
+                    <span className="stat-value">
+                      {checklistItems.filter(item => item.checked).length}
+                    </span>
+                  </div>
+                  <div className="stat missing">
+                    <span className="stat-label">Missing Items:</span>
+                    <span className="stat-value">
+                      {checklistItems.filter(item => item.missing).length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-actions">
+            <button 
+              className="btn-primary" 
+              onClick={submitChecklist}
+              disabled={checklistItems.length === 0}
+            >
+              {isEditingChecklist ? 'Update Warehouse Checklist' : 'Submit Warehouse Checklist'}
+            </button>
+            <button 
+              className="btn-secondary" 
+              onClick={() => {
+                setChecklistModalOpen(false);
+                setIsEditingChecklist(false);
+                setEditingChecklistId(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  );
 
   const renderFabricationRequestModal = () => (
     fabricationRequestModalOpen && selectedItemForRequest && (
@@ -860,6 +1486,14 @@ function WarehouseDashboard({ onLogout }) {
             )}
           </div>
           <div className="modal-actions">
+            {isEventPassed(selectedContract.page1?.eventDate) && selectedContract.status === "Active" && (
+              <button 
+                className="btn-checklist"
+                onClick={() => openChecklistModal(selectedContract)}
+              >
+                Post-Event Checklist
+              </button>
+            )}
             <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
           </div>
         </div>
@@ -913,12 +1547,23 @@ function WarehouseDashboard({ onLogout }) {
           </div>
           
           <div className="nav-section">
+            <div className="section-title">Event Management</div>
+            <button className={`nav-btn ${activeView === "checklists" ? "active" : ""}`} 
+              onClick={() => setActiveView("checklists")}>
+              Post-Event Checklists ({submittedChecklists.length})
+            </button>
+          </div>
+          
+          <div className="nav-section">
             <div className="section-title">Fabrication Management</div>
             <button className={`nav-btn ${activeView === "inventory" ? "active" : ""}`} onClick={() => setActiveView("inventory")}>
               Warehouse Inventory
             </button>
             <button className={`nav-btn ${activeView === "fabrication-report" ? "active" : ""}`} onClick={() => setActiveView("fabrication-report")}>
               Request Item Report
+            </button>
+            <button className={`nav-btn ${activeView === "fabrication-requests" ? "active" : ""}`} onClick={() => setActiveView("fabrication-requests")}>
+              Fabrication Requests ({fabricationRequests.filter(req => req.status === 'pending').length})
             </button>
           </div>
         </div>
@@ -930,14 +1575,17 @@ function WarehouseDashboard({ onLogout }) {
 
       <div className="dashboard-content">
         {activeView === "dashboard" && renderDashboardView()}
-        {activeView === "contracts" && renderContractsTable()}
         {activeView === "inventory" && renderInventoryTable()}
         {activeView === "fabrication-report" && renderFabricationReportView()}
+        {activeView === "fabrication-requests" && renderFabricationRequestsView()}
+        {activeView === "checklists" && renderChecklistsView()}
       </div>
 
       {selectedContract && renderDetailsModal()}
       {renderInventoryModal()}
       {renderFabricationRequestModal()}
+      {renderChecklistModal()}
+      {renderChecklistDetailModal()}
     </div>
   );
 }

@@ -1,13 +1,13 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const cors = require("cors");
-const Admin = require("./models/Admin");
-const User = require("./models/User");
-const Contract = require("./models/Contract");
-const Counter = require("./models/Counter");
-const CreativeRequest = require("./models/CreativeRequest");
-const { fetchCreativeSheetData } = require("./gsheetshelper3");
+import express from "express";
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+import cors from "cors";
+import Admin from "./models/Admin.js";
+import User from "./models/User.js";
+import Contract from "./models/Contract.js";
+import Counter from "./models/Counter.js";
+import CreativeRequest from "./models/CreativeRequest.js";
+import { fetchCreativeSheetData } from "./gsheetshelper3.js";
 
 const app = express();
 const PORT = 5000;
@@ -77,6 +77,7 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error" })
   }
 })
+
 
 // POST /register - User registration endpoint
 app.post("/register", async (req, res) => {
@@ -336,7 +337,7 @@ app.post('/banquet/equipment-requests', async (req, res) => {
 // ==================== FINANCE/INVOICE ROUTES ====================
 // If you already have this:
 // Change it to:
-const { MongoClient, ObjectId } = require('mongodb');
+import { MongoClient, ObjectId } from 'mongodb';
 // In server.js - make sure this route exists
 app.post('/finance/invoices', async (req, res) => {
   try {
@@ -854,7 +855,7 @@ app.get('/finance/invoices/overdue', async (req, res) => {
 
 // ==================== GOOGLE SHEETS HELPER ====================
 
-const { fetchMonitoringData, getSheetsClient, SPREADSHEET_ID } = require("./googleSheetsHelper");
+import { fetchMonitoringData, getSheetsClient, SPREADSHEET_ID } from "./googleSheetsHelper.js";
 
 
 app.get("/monitoring", async (req, res) => {
@@ -871,7 +872,7 @@ app.get("/monitoring", async (req, res) => {
 
 // ==================== FABRICATION REQUEST ROUTES ====================
 
-const FabricationRequest = require("./models/fabricationRequest");
+import FabricationRequest from "./models/fabricationRequest.js";
 
 // GET /fabrication-requests - fetch all requests
 app.get("/fabrication-requests", async (req, res) => {
@@ -1000,8 +1001,8 @@ app.get("/inventory/checklist", async (req, res) => {
 });
 
 
-const { google } = require("googleapis");
-const fs = require("fs");
+import { google } from "googleapis";
+import fs from "fs";
 
 app.get("/stockroom-inventory", async (req, res) => {
   try {
@@ -1418,6 +1419,375 @@ app.get("/admin/dashboard-stats", async (req, res) => {
   } catch (error) {
     console.error("Admin dashboard stats error:", error);
     res.status(500).json({ message: "Server error fetching dashboard stats" });
+  }
+});
+// POST /post-event-checklist
+
+
+import Checklist from './models/Checklist.js';
+// GET /checklists/contract/:contractId/status
+app.get('/checklists/contract/:contractId/status', async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    // Get all checklists for this contract
+    const checklists = await Checklist.find({ contractId });
+    
+    const departments = ['creative', 'linen', 'warehouse'];
+    const submittedDepartments = checklists.map(cl => cl.department);
+    
+    const allDepartmentsCompleted = departments.every(dept => 
+      submittedDepartments.includes(dept)
+    );
+    
+    res.json({
+      contractId,
+      submittedDepartments,
+      allDepartmentsCompleted,
+      missingDepartments: departments.filter(dept => !submittedDepartments.includes(dept))
+    });
+    
+  } catch (error) {
+    console.error('Error checking department status:', error);
+    res.status(500).json({ message: 'Server error while checking department status' });
+  }
+});
+
+// PUT /contracts/:id/complete (to be called when all departments are done)
+app.put('/contracts/:id/complete', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await mongoose.connection.collection('contracts').updateOne(
+      { _id: new mongoose.Types.ObjectId(id) },
+      { 
+        $set: { 
+          status: 'Completed',
+          completedAt: new Date(),
+          updatedAt: new Date()
+        } 
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: 'Contract not found' });
+    }
+
+    res.json({ 
+      message: 'Contract marked as completed',
+      status: 'Completed'
+    });
+
+  } catch (error) {
+    console.error('Error completing contract:', error);
+    res.status(500).json({ message: 'Server error while completing contract' });
+  }
+});
+// POST /post-event-checklist
+// POST /post-event-checklist
+
+app.get('/api/logistics/calendar', (req, res) => {
+  // Return calendar data - you can integrate with Google Calendar API
+  res.json({
+    calendarEmbedURL: "https://calendar.google.com/calendar/embed?src=your_calendar_id&ctz=Asia%2FManila",
+    events: []
+  });
+});
+
+app.get('/api/logistics/bookings', (req, res) => {
+  // Return logistics bookings
+  res.json({
+    bookings: []
+  });
+});
+
+app.get('/api/logistics/drivers', (req, res) => {
+  // Return available drivers
+  res.json({
+    drivers: [
+      { id: 1, name: "John Smith", license: "DL12345", status: "available" },
+      { id: 2, name: "Mike Johnson", license: "DL67890", status: "available" },
+      { id: 3, name: "David Wilson", license: "DL11223", status: "available" }
+    ]
+  });
+});
+
+app.get('/api/logistics/trucks', (req, res) => {
+  // Return available trucks
+  res.json({
+    trucks: [
+      { id: 1, name: "Truck A", plate: "ABC123", capacity: "Large", status: "available" },
+      { id: 2, name: "Truck B", plate: "DEF456", capacity: "Medium", status: "available" },
+      { id: 3, name: "Van C", plate: "GHI789", capacity: "Small", status: "available" }
+    ]
+  });
+});
+
+app.post('/api/logistics/assignments', (req, res) => {
+  // Save driver and truck assignments
+  const { eventId, contractNumber, driver, truck, notes, assignedBy } = req.body;
+  
+  // Save to database (you'll need to implement this)
+  console.log('Saving assignment:', { eventId, contractNumber, driver, truck, notes, assignedBy });
+  
+  res.json({ 
+    success: true, 
+    message: "Assignment saved successfully",
+    assignment: req.body
+  });
+});
+
+// Get all venue locations from contracts
+app.get('/api/logistics/venues', (req, res) => {
+  // This would query your contracts collection and return unique venues
+  res.json({
+    venues: [
+      "Manila Hotel, Manila",
+      "Sofitel Philippine Plaza, Pasay City",
+      "The Peninsula Manila, Makati",
+      "Makati Shangri-La, Makati",
+      "Okada Manila, Parañaque"
+    ]
+  });
+});
+app.post('/post-event-checklist', async (req, res) => {
+  try {
+    const { contractId, department } = req.body;
+
+    // Check if checklist already exists for this contract and department
+    const existingChecklist = await Checklist.findOne({ 
+      contractId, 
+      department 
+    });
+
+    if (existingChecklist) {
+      return res.status(400).json({ 
+        message: `A ${department} checklist already exists for this contract. Use the edit functionality instead.` 
+      });
+    }
+
+    // ... rest of your existing POST logic
+  } catch (error) {
+    console.error('Error submitting checklist:', error);
+    res.status(500).json({ message: 'Server error while submitting checklist' });
+  }
+});
+
+// GET /post-event-checklists
+app.get('/post-event-checklists', async (req, res) => {
+  try {
+    const checklists = await Checklist.find({})
+      .sort({ createdAt: -1 });
+
+    res.json(checklists);
+
+  } catch (error) {
+    console.error('Error fetching checklists:', error);
+    res.status(500).json({ message: 'Server error while fetching checklists' });
+  }
+});
+
+// PUT /contracts/:id/status
+app.put('/contracts/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: 'Status is required' });
+    }
+
+    const db = req.app.locals.db;
+    
+    const result = await db.collection('contracts').updateOne(
+      { _id: new ObjectId(id) },
+      { 
+        $set: { 
+          status,
+          updatedAt: new Date()
+        } 
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: 'Contract not found' });
+    }
+
+    res.json({ 
+      message: 'Contract status updated successfully',
+      status 
+    });
+
+  } catch (error) {
+    console.error('Error updating contract status:', error);
+    res.status(500).json({ message: 'Server error while updating contract status' });
+  }
+});
+
+
+app.put('/fabrication-requests/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { approvedBy } = req.body;
+
+    if (!approvedBy) {
+      return res.status(400).json({ message: 'Approved by field is required' });
+    }
+
+    const db = getDB();
+    const fabricationRequestsCollection = db.collection('fabrication_requests');
+
+    const request = await fabricationRequestsCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!request) {
+      return res.status(404).json({ message: 'Fabrication request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ message: 'Only pending requests can be approved' });
+    }
+
+    const result = await fabricationRequestsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { 
+        $set: { 
+          status: 'approved',
+          approvedBy,
+          approvedAt: new Date(),
+          updatedAt: new Date()
+        } 
+      }
+    );
+
+    res.json({ 
+      message: 'Fabrication request approved successfully',
+      status: 'approved'
+    });
+
+  } catch (error) {
+    console.error('Error approving fabrication request:', error);
+    res.status(500).json({ message: 'Server error while approving request' });
+  }
+});
+
+app.put('/fabrication-requests/:id/received', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { receivedBy } = req.body;
+
+    if (!receivedBy) {
+      return res.status(400).json({ message: 'Received by field is required' });
+    }
+
+    const db = getDB();
+    const fabricationRequestsCollection = db.collection('fabrication_requests');
+    const inventoryCollection = db.collection('inventory');
+
+    const request = await fabricationRequestsCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!request) {
+      return res.status(404).json({ message: 'Fabrication request not found' });
+    }
+
+    if (request.status !== 'approved') {
+      return res.status(400).json({ message: 'Only approved requests can be marked as received' });
+    }
+
+    // Update inventory quantity
+    const inventoryUpdate = await inventoryCollection.updateOne(
+      { 
+        $or: [
+          { _id: new ObjectId(request.itemId) },
+          { "Item Id": request.itemId }
+        ]
+      },
+      { 
+        $inc: { Quantity: parseInt(request.quantity) },
+        $set: { updatedAt: new Date() }
+      }
+    );
+
+    if (inventoryUpdate.matchedCount === 0) {
+      return res.status(404).json({ message: 'Inventory item not found' });
+    }
+
+    // Update request status
+    const result = await fabricationRequestsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { 
+        $set: { 
+          status: 'completed',
+          receivedBy,
+          receivedAt: new Date(),
+          updatedAt: new Date()
+        } 
+      }
+    );
+
+    res.json({ 
+      message: 'Items received and inventory updated successfully',
+      status: 'completed'
+    });
+
+  } catch (error) {
+    console.error('Error marking request as received:', error);
+    res.status(500).json({ message: 'Server error while updating request' });
+  }
+});
+
+app.get('/fabrication-requests', async (req, res) => {
+  try {
+    const db = getDB();
+    const fabricationRequestsCollection = db.collection('fabrication_requests');
+
+    const requests = await fabricationRequestsCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json(requests);
+
+  } catch (error) {
+    console.error('Error fetching fabrication requests:', error);
+    res.status(500).json({ message: 'Server error while fetching requests' });
+  }
+});
+app.post('/fabrication-requests', async (req, res) => {
+  try {
+    const { username, item, itemId, quantity, remarks, requestType, currentStock, department } = req.body;
+
+    // Validate required fields
+    if (!username || !item || !quantity) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const db = getDB();
+    const fabricationRequestsCollection = db.collection('fabrication_requests');
+
+    const requestData = {
+      username,
+      item,
+      itemId: itemId || null,
+      quantity: parseInt(quantity),
+      remarks: remarks || '',
+      requestType: requestType || 'restock',
+      currentStock: parseInt(currentStock) || 0,
+      department: department || 'creative',
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await fabricationRequestsCollection.insertOne(requestData);
+
+    res.status(201).json({
+      message: 'Fabrication request created successfully',
+      requestId: result.insertedId
+    });
+
+  } catch (error) {
+    console.error('Error creating fabrication request:', error);
+    res.status(500).json({ message: 'Server error while creating request' });
   }
 });
 
@@ -1867,67 +2237,135 @@ const validateContractForApproval = (contract) => {
 
   // Required fields in page1
   const requiredP1Fields = [
-    'celebratorName', 'representativeName', 'representativeRelationship', 'representativeEmail', 'representativeAddress', 'representativeMobile',
-    'coordinatorName', 'coordinatorMobile', 'coordinatorEmail', 'coordinatorAddress', 'eventDate', 'occasion', 'serviceStyle', 'venue', 'hall', 'address',
-    'arrivalOfGuests', 'ingressTime', 'cocktailTime', 'servingTime', 'totalVIP', 'totalRegular', 'totalGuests', 'themeSetup', 'colorMotif',
-    'vipTableType', 'vipTableSeats', 'vipTableQuantity', 'regularTableType', 'regularTableSeats', 'regularTableQuantity',
+    'celebratorName', 'representativeName', 'representativeRelationship', 
+    'representativeEmail', 'representativeAddress', 'representativeMobile',
+    'coordinatorName', 'coordinatorMobile', 'coordinatorEmail', 'coordinatorAddress', 
+    'eventDate', 'occasion', 'serviceStyle', 'venue', 'hall', 'address',
+    'arrivalOfGuests', 'ingressTime', 'cocktailTime', 'servingTime', 
+    'totalVIP', 'totalRegular', 'totalGuests', 'themeSetup', 'colorMotif',
+    'vipTableType', 'vipChairs', 'vipTableQuantity', // ADDED vipChairs
+    'regularTableType', 'regularChairs', 'regularTableQuantity', // ADDED regularChairs
     'vipUnderliner', 'vipNapkin', 'guestUnderliner', 'guestNapkin'
   ];
+  
   requiredP1Fields.forEach(field => {
-    if (!p1[field] || !p1[field].trim()) {
-      errors.push(`Page 1 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    if (!p1[field] || !p1[field].toString().trim()) {
+      const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+      errors.push(`Page 1 - ${fieldName} is required`);
     }
   });
+
+  // Validate color motif has at least one color
+  if (!p1.colorMotif || p1.colorMotif.split(',').filter(color => color.trim() !== '').length === 0) {
+    errors.push("Page 1 - Color Motif must have at least one color selected");
+  }
 
   // Email validations for required emails
   const validateEmail = (email) => {
-    if (email.toUpperCase() === "N/A") return true;
-    return email.includes("@gmail.com") || email.includes("@yahoo.com");
+    if (!email || email.toUpperCase() === "N/A") return true;
+    return email.includes("@gmail.com") || email.includes("@yahoo.com") || email.includes("@");
   };
+  
   if (p1.representativeEmail && !validateEmail(p1.representativeEmail)) {
-    errors.push("Page 1 - Representative email must end with @gmail.com or @yahoo.com");
+    errors.push("Page 1 - Representative email must be a valid email address");
   }
   if (p1.coordinatorEmail && !validateEmail(p1.coordinatorEmail)) {
-    errors.push("Page 1 - Coordinator email must end with @gmail.com or @yahoo.com");
+    errors.push("Page 1 - Coordinator email must be a valid email address");
   }
 
   // Phone validations for required phones
-  if (p1.representativeMobile && p1.representativeMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.representativeMobile)) {
-    errors.push("Page 1 - Representative mobile must be 11 digits or N/A");
+  if (p1.representativeMobile && p1.representativeMobile.toUpperCase() !== "N/A" && !/^\d+$/.test(p1.representativeMobile.replace(/\D/g, ''))) {
+    errors.push("Page 1 - Representative mobile must contain only digits or be N/A");
   }
-  if (p1.coordinatorMobile && p1.coordinatorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.coordinatorMobile)) {
-    errors.push("Page 1 - Coordinator mobile must be 11 digits or N/A");
+  if (p1.coordinatorMobile && p1.coordinatorMobile.toUpperCase() !== "N/A" && !/^\d+$/.test(p1.coordinatorMobile.replace(/\D/g, ''))) {
+    errors.push("Page 1 - Coordinator mobile must contain only digits or be N/A");
   }
 
-  // Required fields in page2 (chairs)
-  const requiredP2Fields = ['chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'premiumChairs', 'totalChairs'];
+  // Validate guest counts consistency
+  const vipGuests = parseInt(p1.totalVIP) || 0;
+  const regularGuests = parseInt(p1.totalRegular) || 0;
+  const totalGuests = parseInt(p1.totalGuests) || 0;
+  
+  if (vipGuests + regularGuests !== totalGuests) {
+    errors.push(`Page 1 - VIP guests (${vipGuests}) + Regular guests (${regularGuests}) must equal Total guests (${totalGuests})`);
+  }
+
+  // Validate table configuration makes sense
+  const vipTableQty = parseInt(p1.vipTableQuantity) || 0;
+  const regularTableQty = parseInt(p1.regularTableQuantity) || 0;
+  
+  if (vipTableQty === 0 && vipGuests > 0) {
+    errors.push("Page 1 - VIP tables required for VIP guests");
+  }
+  if (regularTableQty === 0 && regularGuests > 0) {
+    errors.push("Page 1 - Regular tables required for Regular guests");
+  }
+
+  // Required fields in page2 (chairs) - updated to match your current structure
+  const requiredP2Fields = ['chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'chairsKiddie', 'totalChairs'];
+  // REMOVED: 'premiumChairs' since it's not in your current form
+  
   requiredP2Fields.forEach(field => {
-    if (!p2[field] || !p2[field].trim()) {
-      errors.push(`Page 2 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    if (!p2[field] || !p2[field].toString().trim()) {
+      const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+      errors.push(`Page 2 - ${fieldName} is required`);
     }
   });
 
-  // Check chairs sum
-  const sum = (parseInt(p2.chairsMonoblock) || 0) + (parseInt(p2.chairsTiffany) || 0) + (parseInt(p2.chairsCrystal) || 0) +
-              (parseInt(p2.chairsRustic) || 0) + (parseInt(p2.chairsKiddie) || 0) + (parseInt(p2.premiumChairs) || 0);
-  const total = parseInt(p2.totalChairs) || 0;
-  if (sum !== total) {
-    errors.push(`Page 2 - The total number of chairs entered (${sum}) must equal the Total Chairs (${total}).`);
+  // Check chairs sum - updated calculation
+  const sum = (parseInt(p2.chairsMonoblock) || 0) + 
+              (parseInt(p2.chairsTiffany) || 0) + 
+              (parseInt(p2.chairsCrystal) || 0) +
+              (parseInt(p2.chairsRustic) || 0) + 
+              (parseInt(p2.chairsKiddie) || 0);
+  const totalChairs = parseInt(p2.totalChairs) || 0;
+  
+  if (sum !== totalChairs) {
+    errors.push(`Page 2 - Chair counts sum (${sum}) must equal Total Chairs (${totalChairs})`);
   }
 
-  // Check at least one knowUs
-  const knowUsFields = ['knowUsWebsite', 'knowUsFacebook', 'knowUsInstagram', 'knowUsFlyers', 'knowUsBillboard', 'knowUsWordOfMouth',
-                        'knowUsVenueReferral', 'knowUsRepeatClient', 'knowUsBridalFair', 'knowUsFoodTasting', 'knowUsCelebrityReferral', 'knowUsOthers'];
-  const hasKnowUs = knowUsFields.some(field => p2[field]);
-  if (!hasKnowUs) {
-    errors.push("Page 2 - At least one 'How did you know our company' option must be selected");
+  // Validate creative fields (backdrop, flower, decor)
+  const creativeFields = ['backdrop', 'flower', 'decor'];
+  creativeFields.forEach(field => {
+    const value = p2[field];
+    if (!value || 
+        (Array.isArray(value) && value.length === 0) || 
+        (typeof value === 'string' && !value.trim())) {
+      const fieldName = field.charAt(0).toUpperCase() + field.slice(1);
+      errors.push(`Page 2 - ${fieldName} is required`);
+    }
+  });
+
+  // Validate special requirement fields
+  const specialRequirementFields = ['entrance', 'staging', 'equipment', 'miscellaneous'];
+  specialRequirementFields.forEach(field => {
+    const value = p2[field];
+    if (!value || 
+        (Array.isArray(value) && value.length === 0) || 
+        (typeof value === 'string' && !value.trim())) {
+      const fieldName = field.charAt(0).toUpperCase() + field.slice(1);
+      errors.push(`Page 2 - ${fieldName} is required`);
+    }
+  });
+
+  // Check buffet package if service style is Buffet
+  if (p1.serviceStyle === "Buffet") {
+    const pageBuffet = contract.pageBuffet || {};
+    if (!pageBuffet.selectedPackage || !pageBuffet.selectedPackage.trim()) {
+      errors.push("Buffet - Selected Package is required");
+    }
   }
 
   // Required fields in page3
-  const requiredP3Fields = ['pricePerPlate'];
+  const requiredP3Fields = ['pricePerPlate', 'mobilizationCharge'];
+  if (p1.serviceStyle === "Buffet") {
+    requiredP3Fields.push('cocktailHour', 'soup', 'mainEntree', 'rice', 'dessert', 'drinks');
+  }
+  
   requiredP3Fields.forEach(field => {
-    if (!p3[field] || !p3[field].trim()) {
-      errors.push(`Page 3 - ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
+    if (!p3[field] || !p3[field].toString().trim()) {
+      const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+      errors.push(`Page 3 - ${fieldName} is required`);
     }
   });
 
@@ -2105,7 +2543,7 @@ function getModelAndProjectionBySource(source) {
     return { Model: CreativeRequest, proj: {} };
   }
   // default to FabricationRequest
-  return { Model: require("./models/fabricationRequest"), proj: {} };
+  return { Model: (import("./models/fabricationRequest.js")).default, proj: {} };
 }
 
 /**
@@ -2153,6 +2591,138 @@ app.patch("/purchasing/budget/approve", async (req, res) => {
   } catch (error) {
     console.error("Purchasing approve error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+});
+// Import the services at the top
+// Replace these lines:
+// const LocalSignatureService = require('./services/LocalSignatureService');
+// const SignatureValidationService = require('./services/SignatureValidationService');
+
+// With ES module imports:
+import LocalSignatureService from './services/LocalSignatureService.js';
+import SignatureValidationService from './services/SignatureValidationService.js';
+
+// Configure file upload
+import multer from 'multer';
+import rateLimit from 'express-rate-limit';
+
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
+
+// Add rate limiting
+const signatureLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per 15 minutes
+  message: { success: false, message: 'Too many upload attempts' }
+});
+
+
+// ===== LOCAL SIGNATURE ROUTES =====
+
+// Generate contract PDF
+app.post('/api/contracts/generate-for-signature', async (req, res) => {
+  try {
+    const { contractData } = req.body;
+
+    const result = await LocalSignatureService.createSignatureRequest(contractData);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Contract generation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate contract',
+      error: error.message
+    });
+  }
+});
+
+// Upload and validate signed contract
+app.post('/api/contracts/upload-signed', upload.single('signedContract'), async (req, res) => {
+  try {
+    console.log('🔍 Upload route hit');
+    console.log('Request body:', req.body);
+    console.log('Request file:', req.file);
+    
+    if (!req.file) {
+      console.log('No file received');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No file uploaded. Please select a signature image.' 
+      });
+    }
+
+    const { contractId, clientName } = req.body;
+    console.log('Upload details:', { contractId, clientName });
+    
+    // Basic file validation
+    if (req.file.size === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Uploaded file is empty'
+      });
+    }
+
+    console.log('File uploaded successfully:', {
+      name: req.file.originalname,
+      size: req.file.size,
+      type: req.file.mimetype
+    });
+
+    // Return success response
+    res.json({
+      success: true,
+      message: 'Signature uploaded successfully!',
+      fileInfo: {
+        name: req.file.originalname,
+        size: req.file.size,
+        type: req.file.mimetype
+      },
+      nextSteps: [
+        'Signed contract received successfully',
+        'Our team will process your contract',
+        'You will receive confirmation within 24 hours'
+      ]
+    });
+
+  } catch (error) {
+    console.error('❌ Upload error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to upload signed contract: ' + error.message
+    });
+  }
+});
+
+// Download contract PDF
+app.get('/api/contracts/download/:contractId', async (req, res) => {
+  try {
+    const { contractData } = req.query;
+    
+    if (!contractData) {
+      return res.status(400).json({ message: 'Contract data required' });
+    }
+
+    const pdfBuffer = await LocalSignatureService.generateContractPDF(JSON.parse(contractData));
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="contract-${req.params.contractId}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ message: 'Failed to download contract' });
   }
 });
 
@@ -2571,7 +3141,7 @@ app.get("/api/logistics/bookings", async (req, res) => {
 });
 
 // --- Get Best Route to Venue (for Leaflet Map) ---
-const axios = require("axios");
+import axios from "axios";
  // make sure axios is imported at the top if not yet
 
 app.get("/api/logistics/route", async (req, res) => {

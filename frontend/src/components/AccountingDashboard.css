@@ -1,3 +1,80 @@
+.payment-schedule-preview {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 10px;
+}
+
+.payment-item-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.payment-item-preview:last-child {
+  border-bottom: none;
+}
+
+.payment-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.payment-label {
+  font-weight: bold;
+}
+
+.payment-due-date {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.payment-total {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px solid #333;
+  text-align: right;
+  font-size: 1.1em;
+}
+
+.contract-summary {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.summary-details p {
+  margin: 5px 0;
+}
+
+.invoice-type-badge {
+  background: #007bff;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.preview-table th,
+.preview-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.preview-table th {
+  background-color: #f5f5f5;
+}
 .accounting-dashboard {
   min-height: 100vh;
   background-color: #410d1d;

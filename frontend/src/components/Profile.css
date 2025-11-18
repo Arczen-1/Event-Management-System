@@ -327,7 +327,6 @@ textarea.form-input {
   background: white;
   padding: 35px;
   border-radius: 16px;
-  width: 480px;
   max-width: 90%;
   box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
   animation: slideUp 0.3s ease;

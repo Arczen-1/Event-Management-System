@@ -15,6 +15,7 @@ import KitchenDashboard from "./components/KitchenDashboard";
 import StockroomDashboard from "./components/StockroomDashboard";
 import PurchasingDashboard from "./components/PurchasingDashboard";
 import BanquetStaffDashboard from "./components/BanquetStaffDashboard";
+import logo from './logo.png'; 
 
 function App() {
   const [currentView, setCurrentView] = useState("login"); // login, register, admin, sales, specific departments
@@ -140,6 +141,7 @@ function App() {
   return (
     <div className="App">
       <div className="login-box">
+        <img src={logo} alt="Logo" className="logo" />
         <h1>Welcome</h1>
         <p className="subtitle">Input your credentials</p>
         <input

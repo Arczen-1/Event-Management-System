@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { DatabaseService } from './DatabaseService';
 import "./ContractForm.css";
+import PrintPreview from './PrintPreview';
+import ESignatureModal from './EsignatureModal';
+import ContractSignature from './ContractSignature';
 
 // Menu options for buffet
 const SOUP_OPTIONS = [
@@ -439,7 +442,7 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     coordinatorEmail: "",
     eventDate: "",
     occasion: "",
-    serviceStyle: "",
+    serviceStyle: "Buffet",
     venue: "",
     hall: "",
     ingressTime: "",
@@ -454,8 +457,6 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     colorMotif: "",
     vipTableType: "",
     regularTableType: "",
-    vipTableSeats: "",
-    regularTableSeats: "",
     vipTableQuantity: "",
     regularTableQuantity: "",
     vipUnderliner: "",
@@ -465,6 +466,10 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     guestTopper: "",
     guestNapkin: "",
     setupRemarks: "",
+    otherOccasion: "",
+  otherVenueName: "",
+  otherVenueCapacity: "",
+  otherThemeSetup: "",
   });
 
   const totalPages = useMemo(() => p1.serviceStyle === "Buffet" ? 5 : 3, [p1.serviceStyle]);
@@ -478,21 +483,44 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     premiumChairs: "0",
     totalChairs: "",
     chairsRemarks: "",
-    backdrop: "",
-    flower: "",
-    decor: "",
-    equipment: "",
-    staging: "",
-    miscellaneous: "",
-    entrance: "",
-    cakeSupplier: "",
-    cakeSpecifications: "",
-    celebratorsCar: "",
-    emcee: "",
+    backdrop: [],
+  flower: [],
+  decor: [],
+  flowerRemarks:"",
+   entrance: [],
+  staging: [],
+  equipment: [],
+  miscellaneous: [],
+  emcee: "",
     soundSystem: "",
     tent: "",
     celebratorsChair: "",
   });
+
+  // When loading contract data
+// When loading contract data
+useEffect(() => {
+  if (existing) {
+    setP1(existing.page1 || {});
+    
+    // Convert string fields back to arrays
+    const page2Data = existing.page2 || {};
+    const arrayFields = ['backdrop', 'flower', 'decor', 'entrance', 'staging', 'equipment', 'miscellaneous'];
+    
+    const convertedPage2 = { ...page2Data };
+    arrayFields.forEach(field => {
+      if (typeof convertedPage2[field] === 'string') {
+        convertedPage2[field] = convertedPage2[field].split(',').map(item => item.trim()).filter(item => item);
+      } else if (!Array.isArray(convertedPage2[field])) {
+        convertedPage2[field] = [];
+      }
+    });
+    
+    setP2(convertedPage2);
+    setPBuffet(existing.pageBuffet || {});
+    setP3(existing.page3 || {});
+  }
+}, [existing]);
 
   // Page 3 fields (Buffet)
   const [pBuffet, setPBuffet] = useState({
@@ -1027,29 +1055,35 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
   }, [existing, user]);
 
   // Auto-compute ingress time (10 hours before arrival of guests)
-  useEffect(() => {
-    if (p1.arrivalOfGuests && isTimeFieldValid(p1.arrivalOfGuests)) {
-      // Parse time string HH:MM AM/PM
-      const timeParts = p1.arrivalOfGuests.match(/(\d{1,2}):(\d{2})\s?(AM|PM)/i);
-      if (timeParts) {
-        let hours = parseInt(timeParts[1], 10);
-        const minutes = parseInt(timeParts[2], 10);
-        const ampm = timeParts[3].toUpperCase();
-        if (ampm === "PM" && hours !== 12) hours += 12;
-        if (ampm === "AM" && hours === 12) hours = 0;
+useEffect(() => {
+  if (p1.arrivalOfGuests) {
+    try {
+      // Parse 24-hour format (HH:MM)
+      const [hours, minutes] = p1.arrivalOfGuests.split(':').map(Number);
+      
+      if (!isNaN(hours) && !isNaN(minutes)) {
         // Subtract 10 hours
-        hours -= 10;
-        if (hours < 0) hours += 24;
-        // Format back to HH:MM AM/PM
-        const newAmpm = hours >= 12 ? "PM" : "AM";
-        let displayHours = hours % 12;
-        if (displayHours === 0) displayHours = 12;
-        const ingressTime = `${displayHours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")} ${newAmpm}`;
+        let totalMinutes = hours * 60 + minutes;
+        totalMinutes -= 6 * 60; // Subtract 10 hours in minutes
+        
+        // Handle negative time (previous day)
+        if (totalMinutes < 0) {
+          totalMinutes += 24 * 60; // Add one day in minutes
+        }
+        
+        // Convert back to hours and minutes
+        let newHours = Math.floor(totalMinutes / 60) % 24;
+        const newMinutes = totalMinutes % 60;
+        
+        // Format as 24-hour time for the input field
+        const ingressTime = `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
         setP1(prev => ({ ...prev, ingressTime }));
       }
+    } catch (error) {
+      console.error('Error calculating ingress time:', error);
     }
-  }, [p1.arrivalOfGuests]);
-
+  }
+}, [p1.arrivalOfGuests]);
 
 
   // Auto-compute total chairs
@@ -1290,6 +1324,13 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     setP3((prev) => ({ ...prev, taxes: tax.toString() }));
   }, [p3.totalMenuCost, p3.totalSpecialReqCost, p3.mobilizationCharge]);
 
+  const [isBackdropDropdownOpen, setIsBackdropDropdownOpen] = useState(false);
+const [isFlowersDropdownOpen, setIsFlowersDropdownOpen] = useState(false);
+const [isDecorDropdownOpen, setIsDecorDropdownOpen] = useState(false);
+const [isEntranceDropdownOpen, setIsEntranceDropdownOpen] = useState(false);
+const [isStagingDropdownOpen, setIsStagingDropdownOpen] = useState(false);
+const [isEquipmentDropdownOpen, setIsEquipmentDropdownOpen] = useState(false);
+const [isMiscellaneousDropdownOpen, setIsMiscellaneousDropdownOpen] = useState(false);
   // Auto-compute grand total
   useEffect(() => {
     const menu = parseFloat(p3.totalMenuCost) || 0;
@@ -1373,230 +1414,419 @@ function ContractForm({ onCancel, onCreated, existing, user }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateTimeField = (value) => {
-    // Allow time format (HH:MM AM/PM) or "N/A"
-    const time12Regex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?(AM|PM|am|pm)$/;
-    const time24Regex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    const naRegex = /^N\/A$/i;
-    
-    if (value === "" || time12Regex.test(value) || time24Regex.test(value) || naRegex.test(value)) {
-      return value.toUpperCase();
-    }
-    return value; // Return as-is if invalid (will show validation error)
-  };
 
-  const isTimeFieldValid = (value) => {
-    if (value === "") return true; // Empty is allowed
-    const time12Regex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?(AM|PM|am|pm)$/;
-    const time24Regex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    const naRegex = /^N\/A$/i;
-    return time12Regex.test(value) || time24Regex.test(value) || naRegex.test(value);
-  };
+  const isTimeFieldValid = (time) => {
+  if (!time) return false;
+  if (time === "N/A") return true;
+  
+  // Validate 24-hour format (HH:MM)
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  return timeRegex.test(time);
+};
+
+const validateTimeField = (value) => {
+  if (value === "N/A") return value;
+  // For time input, just return the value as is
+  return value;
+};
 
   const validatePhone = (phone) => {
     const phoneRegex = /^[\+]?[0-9\-\(\)\s]+$/;
     return phoneRegex.test(phone);
   };
 
-  const isFormValid = () => {
-    // Check required fields in page1 (only those with asterisks)
-    const requiredP1Fields = [
-      'celebratorName',
-      'representativeName',
-      'representativeRelationship',
-      'representativeEmail',
-      'representativeAddress',
-      'representativeMobile',
-      'coordinatorName',
-      'coordinatorMobile',
-      'coordinatorEmail',
-      'coordinatorAddress',
-      'eventDate',
-      'occasion',
-      'serviceStyle',
-      'venue',
-      'hall',
-      'address',
-      'arrivalOfGuests',
-      'ingressTime',
-      'cocktailTime',
-      'servingTime',
-      'totalVIP',
-      'totalRegular',
-      'totalGuests',
-      'themeSetup',
-      'colorMotif',
-      'vipTableType',
-      'vipTableSeats',
-      'vipTableQuantity',
-      'regularTableType',
-      'regularTableSeats',
-      'regularTableQuantity',
-      'vipUnderliner',
-      'vipNapkin',
-      'guestUnderliner',
-      'guestNapkin',
-    ];
-    for (const field of requiredP1Fields) {
-      if (!p1[field] || !p1[field].trim()) return false;
+const getValidationErrors = () => {
+  const errors = [];
+
+  // Check required fields in page1
+  const requiredP1Fields = [
+    'celebratorName',
+    'representativeName',
+    'representativeRelationship',
+    'representativeEmail',
+    'representativeAddress',
+    'representativeMobile',
+    'coordinatorName',
+    'coordinatorMobile',
+    'coordinatorEmail',
+    'coordinatorAddress',
+    'eventDate',
+    'occasion',
+    'serviceStyle',
+    'venue',
+    'hall',
+    'address',
+    'arrivalOfGuests',
+    'ingressTime',
+    'cocktailTime',
+    'servingTime',
+    'totalVIP',
+    'totalRegular',
+    'totalGuests',
+    'themeSetup',
+    'colorMotif',
+    'vipTableType',
+    'vipChairs', // ADDED: VIP chair type
+    'vipTableQuantity',
+    'regularTableType',
+    'regularChairs', // ADDED: Regular chair type
+    'regularTableQuantity',
+    'vipUnderliner',
+    'vipNapkin',
+    'guestUnderliner',
+    'guestNapkin',
+  ];
+  
+  requiredP1Fields.forEach(field => {
+    if (!p1[field] || !p1[field].toString().trim()) {
+      const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+      errors.push(`Page 1: ${fieldName}`);
     }
+  });
 
-    // Check required fields in page2 (chairs with asterisks)
-    const requiredP2Fields = [
-      'chairsMonoblock', 'chairsTiffany', 'chairsCrystal', 'chairsRustic', 'premiumChairs', 'totalChairs'
-    ];
-    for (const field of requiredP2Fields) {
-      if (!p2[field] || !p2[field].trim()) return false;
+  // Validate color motif has at least one color selected
+  if (!p1.colorMotif || !p1.colorMotif.toString().trim() || p1.colorMotif.split(',').filter(color => color.trim() !== '').length === 0) {
+    errors.push('Page 1: Color Motif (at least one color must be selected)');
+  }
+
+  // Check if table quantities make sense with guest counts
+  const vipGuests = parseInt(p1.totalVIP) || 0;
+  const regularGuests = parseInt(p1.totalRegular) || 0;
+  const totalGuests = parseInt(p1.totalGuests) || 0;
+  
+  // Validate guest counts consistency
+  if (vipGuests + regularGuests !== totalGuests) {
+    errors.push('Page 1: VIP + Regular guest counts must equal Total Guests');
+  }
+
+  // Check chair counts in page2 - these are calculated automatically but should be validated
+  const chairCounts = calculateChairCounts();
+  if (chairCounts.totalChairs === 0) {
+    errors.push('Page 2: No chairs calculated. Please check table configuration in Page 1');
+  }
+
+  // Check if calculated chairs match total guests
+  if (chairCounts.totalChairs > 0 && chairCounts.totalChairs < totalGuests) {
+    errors.push(`Page 2: Insufficient chairs (${chairCounts.totalChairs}) for total guests (${totalGuests})`);
+  }
+
+  // Check creative fields - these are now arrays from dropdowns
+  const creativeFields = ['backdrop', 'flower', 'decor'];
+  creativeFields.forEach(field => {
+    const value = p2[field];
+    if (!value || 
+        (Array.isArray(value) && value.length === 0) || 
+        (typeof value === 'string' && (!value.trim() || value === 'Click to choose ' + field))) {
+      const fieldName = field.charAt(0).toUpperCase() + field.slice(1);
+      errors.push(`Creatives: ${fieldName}`);
     }
+  });
 
-    // Check required fields in buffet page if Buffet
-    if (p1.serviceStyle === "Buffet") {
-      if (!pBuffet.selectedPackage) return false;
+  // Check special requirement fields - these are also arrays now
+  const specialRequirementFields = ['entrance', 'staging', 'equipment', 'miscellaneous'];
+  specialRequirementFields.forEach(field => {
+    const value = p2[field];
+    if (!value || 
+        (Array.isArray(value) && value.length === 0) || 
+        (typeof value === 'string' && (!value.trim() || value === 'Click to choose ' + field))) {
+      const fieldName = field.charAt(0).toUpperCase() + field.slice(1);
+      errors.push(`Special Requirements: ${fieldName}`);
     }
+  });
 
-    // Check required fields in page3 (only essential ones)
-    const requiredP3Fields = [
-      'pricePerPlate'
-    ];
-    if (p1.serviceStyle === "Buffet") {
-      requiredP3Fields.push('cocktailHour', 'soup', 'mainEntree', 'rice', 'dessert', 'drinks');
+  // Validate time fields format
+  const timeFields = ['arrivalOfGuests', 'ingressTime', 'cocktailTime', 'servingTime'];
+  timeFields.forEach(field => {
+    if (p1[field] && !isTimeFieldValid(p1[field])) {
+      errors.push(`Page 1: ${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} format is invalid`);
     }
-    for (const field of requiredP3Fields) {
-      if (!p3[field] || !p3[field].trim()) return false;
+  });
+
+  // Check buffet package
+  if (p1.serviceStyle === "Buffet" && !pBuffet.selectedPackage) {
+    errors.push('Buffet: Selected Package');
+  }
+
+  // Check page3 fields
+  const requiredP3Fields = ['pricePerPlate', 'mobilizationCharge'];
+  if (p1.serviceStyle === "Buffet") {
+    requiredP3Fields.push('cocktailHour', 'soup', 'mainEntree', 'rice', 'dessert', 'drinks');
+  }
+  
+  requiredP3Fields.forEach(field => {
+    if (!p3[field] || !p3[field].toString().trim()) {
+      const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+      errors.push(`Page 3: ${fieldName}`);
     }
+  });
 
-    return true;
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Check required fields in page1
-    const requiredP1Fields = [
-      'celebratorName',
-      'representativeName',
-      'representativeRelationship',
-      'representativeEmail',
-      'representativeAddress',
-      'representativeMobile',
-      'coordinatorName',
-      'coordinatorMobile',
-      'coordinatorEmail',
-      'coordinatorAddress',
-      'eventDate',
-      'occasion',
-      'serviceStyle',
-      'venue',
-      'hall',
-      'address',
-      'arrivalOfGuests',
-      'ingressTime',
-      'cocktailTime',
-      'servingTime',
-      'totalVIP',
-      'totalRegular',
-      'totalGuests',
-      'themeSetup',
-      'colorMotif',
-      'vipTableType',
-      'vipTableSeats',
-      'vipTableQuantity',
-      'regularTableType',
-      'regularTableSeats',
-      'regularTableQuantity',
-      'vipUnderliner',
-      'vipNapkin',
-      'guestUnderliner',
-      'guestNapkin',
-    ];
-    for (const field of requiredP1Fields) {
-      if (!p1[field] || !p1[field].trim()) {
-        newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
+  // Validate venue and hall selection
+  if (p1.venue && p1.venue !== "OTHERS" && p1.hall) {
+    const venueData = VENUES[p1.venue];
+    if (venueData) {
+      const hallCapacity = venueData.halls[p1.hall] || 0;
+      if (totalGuests > hallCapacity) {
+        errors.push(`Page 1: Total guests (${totalGuests}) exceeds ${p1.hall} capacity (${hallCapacity})`);
       }
     }
+  }
 
-    // Check required fields in page3
-    const requiredP3Fields = [
-      'pricePerPlate', 'totalMenuCost', 'totalSpecialReqCost', 'mobilizationCharge', 'taxes', 'serviceCharge', 'fortyPercentAmount', 'fullPaymentDueOn', 'fullPaymentAmount'
-    ];
-    if (p1.serviceStyle === "Buffet") {
-      requiredP3Fields.push('cocktailHour', 'soup', 'mainEntree', 'rice', 'dessert', 'drinks');
-    }
-    for (const field of requiredP3Fields) {
-      if (!p3[field] || !p3[field].trim()) {
-        newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
-      }
-    }
+  return errors;
+};
 
-    // Email validations
-    if (p1.celebratorEmail && !validateEmail(p1.celebratorEmail)) {
-      newErrors.celebratorEmail = "Email must end with @gmail.com or @yahoo.com";
-    }
-    if (p1.representativeEmail && !validateEmail(p1.representativeEmail)) {
-      newErrors.representativeEmail = "Email must end with @gmail.com or @yahoo.com";
-    }
-    if (p1.coordinatorEmail && !validateEmail(p1.coordinatorEmail)) {
-      newErrors.coordinatorEmail = "Email must end with @gmail.com or @yahoo.com";
-    }
+// Helper function to validate the form and set error states
+const validateForm = () => {
+  const validationErrors = getValidationErrors();
+  
+  // Set individual field errors for display
+  const fieldErrors = {};
 
-    // Phone validations
-    if (p1.celebratorMobile && p1.celebratorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.celebratorMobile)) {
-      newErrors.celebratorMobile = "Mobile number must be 11 digits or N/A";
+  // Convert validationErrors array to fieldErrors object
+  validationErrors.forEach(error => {
+    // Map error messages to field names based on content
+    if (error.includes('Celebrator Name') || error.includes('celebratorName')) fieldErrors.celebratorName = error;
+    else if (error.includes('Representative Name') || error.includes('representativeName')) fieldErrors.representativeName = error;
+    else if (error.includes('Representative Email') || error.includes('representativeEmail')) fieldErrors.representativeEmail = error;
+    else if (error.includes('Representative Mobile') || error.includes('representativeMobile')) fieldErrors.representativeMobile = error;
+    else if (error.includes('Representative Address') || error.includes('representativeAddress')) fieldErrors.representativeAddress = error;
+    else if (error.includes('Coordinator Name') || error.includes('coordinatorName')) fieldErrors.coordinatorName = error;
+    else if (error.includes('Coordinator Mobile') || error.includes('coordinatorMobile')) fieldErrors.coordinatorMobile = error;
+    else if (error.includes('Coordinator Email') || error.includes('coordinatorEmail')) fieldErrors.coordinatorEmail = error;
+    else if (error.includes('Coordinator Address') || error.includes('coordinatorAddress')) fieldErrors.coordinatorAddress = error;
+    else if (error.includes('Event Date') || error.includes('eventDate')) fieldErrors.eventDate = error;
+    else if (error.includes('Occasion') || error.includes('occasion')) fieldErrors.occasion = error;
+    else if (error.includes('Venue') || error.includes('venue')) fieldErrors.venue = error;
+    else if (error.includes('Hall') || error.includes('hall')) fieldErrors.hall = error;
+    else if (error.includes('Address') || error.includes('address')) fieldErrors.address = error;
+    else if (error.includes('Arrival of Guests') || error.includes('arrivalOfGuests')) fieldErrors.arrivalOfGuests = error;
+    else if (error.includes('Serving Time') || error.includes('servingTime')) fieldErrors.servingTime = error;
+    else if (error.includes('VIP') && error.includes('count')) fieldErrors.totalVIP = error;
+    else if (error.includes('Regular') && error.includes('count')) fieldErrors.totalRegular = error;
+    else if (error.includes('Total Guests') || error.includes('totalGuests')) fieldErrors.totalGuests = error;
+    else if (error.includes('VIP Table') || error.includes('vipTableType')) fieldErrors.vipTableType = error;
+    else if (error.includes('VIP Chair') || error.includes('vipChairs')) fieldErrors.vipChairs = error;
+    else if (error.includes('Regular Table') || error.includes('regularTableType')) fieldErrors.regularTableType = error;
+    else if (error.includes('Regular Chair') || error.includes('regularChairs')) fieldErrors.regularChairs = error;
+    else if (error.includes('Theme Setup') || error.includes('themeSetup')) fieldErrors.themeSetup = error;
+    else if (error.includes('Color Motif') || error.includes('colorMotif')) fieldErrors.colorMotif = error;
+    else if (error.includes('VIP Underliner') || error.includes('vipUnderliner')) fieldErrors.vipUnderliner = error;
+    else if (error.includes('VIP Napkin') || error.includes('vipNapkin')) fieldErrors.vipNapkin = error;
+    else if (error.includes('Guest Underliner') || error.includes('guestUnderliner')) fieldErrors.guestUnderliner = error;
+    else if (error.includes('Guest Napkin') || error.includes('guestNapkin')) fieldErrors.guestNapkin = error;
+    else if (error.includes('Buffet Package') || error.includes('selectedPackage')) fieldErrors.selectedPackage = error;
+    else if (error.includes('otherOccasion')) fieldErrors.otherOccasion = error;
+    else if (error.includes('otherVenueName')) fieldErrors.otherVenueName = error;
+    else if (error.includes('otherVenueCapacity')) fieldErrors.otherVenueCapacity = error;
+    else if (error.includes('otherThemeSetup')) fieldErrors.otherThemeSetup = error;
+    // For any unmapped errors, log them to console for debugging
+    else {
+      console.warn('Unmapped validation error:', error);
     }
-    if (p1.celebratorLandline && p1.celebratorLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.celebratorLandline)) {
-      newErrors.celebratorLandline = "Landline number must be 7 digits or N/A";
-    }
-    if (p1.representativeMobile && p1.representativeMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.representativeMobile)) {
-      newErrors.representativeMobile = "Mobile number must be 11 digits or N/A";
-    }
-    if (p1.representativeLandline && p1.representativeLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.representativeLandline)) {
-      newErrors.representativeLandline = "Landline number must be 7 digits or N/A";
-    }
-    if (p1.coordinatorMobile && p1.coordinatorMobile.toUpperCase() !== "N/A" && !/^\d{11}$/.test(p1.coordinatorMobile)) {
-      newErrors.coordinatorMobile = "Mobile number must be 11 digits or N/A";
-    }
-    if (p1.coordinatorLandline && p1.coordinatorLandline.toUpperCase() !== "N/A" && !/^\d{7}$/.test(p1.coordinatorLandline)) {
-      newErrors.coordinatorLandline = "Landline number must be 7 digits or N/A";
-    }
+  });
 
-    // Buffet validations
-    if (p1.serviceStyle === "Buffet") {
-      if (!pBuffet.selectedPackage) {
-        newErrors.selectedPackage = "Please select a buffet package.";
-      }
-      const cocktailLimit = !pBuffet.selectedPackage ? 0 : (pBuffet.selectedPackage === "Buffet Package 3" ? 3 : 2);
-      const totalCocktailSelections = (pBuffet.cocktailSelections || []).length + (pBuffet.upgradeSelections125 || []).length + (pBuffet.upgradeSelections150 || []).length;
-      if (totalCocktailSelections !== cocktailLimit) {
-        newErrors.cocktailSelections = `Please select exactly ${cocktailLimit} cocktail hour options (including upgrades).`;
-      }
+  // Validate email fields
+  const emailFields = [
+    'celebratorEmail', 'representativeEmail', 'coordinatorEmail'
+  ];
+  
+  emailFields.forEach(field => {
+    if (p1[field] && p1[field].trim() && !isValidEmail(p1[field])) {
+      fieldErrors[field] = 'Please enter a valid email address';
+    }
+  });
+
+  // Validate phone fields
+  const phoneFields = [
+    'celebratorMobile', 'celebratorLandline', 
+    'representativeMobile', 'representativeLandline',
+    'coordinatorMobile', 'coordinatorLandline'
+  ];
+  
+  phoneFields.forEach(field => {
+    if (p1[field] && p1[field].trim() && !isValidPhone(p1[field])) {
+      fieldErrors[field] = 'Please enter a valid phone number';
+    }
+  });
+
+  // Validate event date is not in the past
+  if (p1.eventDate) {
+    const eventDate = new Date(p1.eventDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (eventDate < today) {
+      fieldErrors.eventDate = 'Event date cannot be in the past';
+    }
+  }
+
+  // Validate guest counts
+  if (p1.totalVIP && p1.totalRegular && p1.totalGuests) {
+    const vip = parseInt(p1.totalVIP) || 0;
+    const regular = parseInt(p1.totalRegular) || 0;
+    const total = parseInt(p1.totalGuests) || 0;
     
-      const soupUpgradeLimit = !pBuffet.selectedPackage ? 0 : (pBuffet.selectedPackage === "Buffet Package 1" ? 0 : (pBuffet.selectedPackage === "Buffet Package 2" ? 1 : 2));
-      if ((pBuffet.upgradeSoupSelections100 || []).length > soupUpgradeLimit) {
-        newErrors.upgradeSoupSelections100 = `Please select at most ${soupUpgradeLimit} soup upgrade options.`;
-      }
-      if ((pBuffet.foodStations || []).some(s => s.name === "Oyster Bar") && (pBuffet.oysterBarSelections || []).length !== 4) {
-        newErrors.oysterBarSelections = "Please select exactly 4 oyster options.";
-      }
+    if (vip + regular !== total) {
+      fieldErrors.totalGuests = 'VIP + Regular must equal Total Guests';
     }
+  }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  // Validate conditional fields
+  if (p1.occasion === "OTHERS" && !p1.otherOccasion?.trim()) {
+    fieldErrors.otherOccasion = "Please specify the occasion";
+  }
+
+  if (p1.venue === "OTHERS") {
+    if (!p1.otherVenueName?.trim()) {
+      fieldErrors.otherVenueName = "Please specify the venue name";
+    }
+    if (!p1.otherVenueCapacity) {
+      fieldErrors.otherVenueCapacity = "Please specify the venue capacity";
+    }
+  }
+
+  if (p1.themeSetup === "OTHERS" && !p1.otherThemeSetup?.trim()) {
+    fieldErrors.otherThemeSetup = "Please specify the theme setup";
+  }
+
+  // Debug logging
+  console.log('Validation results:', {
+    validationErrorsFromGet: validationErrors,
+    fieldErrors: fieldErrors,
+    isValid: Object.keys(fieldErrors).length === 0
+  });
+
+  // Set the errors state
+  setErrors(fieldErrors);
+  
+  // Return true only if there are no errors
+  return Object.keys(fieldErrors).length === 0;
+};
+
+
+
+// Email validation helper
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+// Phone validation helper (basic)
+const isValidPhone = (phone) => {
+  const phoneRegex = /^[\d\s\-\+\(\)]{7,}$/;
+  return phoneRegex.test(phone);
+};
+
+const isFormValid = () => {
+  return getValidationErrors().length === 0;
+};
+
+ 
 
   // CORRECTED VERSION for ContractForm.js
+ const [creativeCosts, setCreativeCosts] = useState({
+    backdrop: 0,
+    flower: 0,
+    decor: 0,
+    entrance: 0,
+    staging: 0,
+    equipment: 0,
+    miscellaneous: 0
+  });
+  // When loading contract data
+useEffect(() => {
+  if (existing) {
+    setP1(existing.page1 || {});
+    
+    // Convert string fields back to arrays
+    const page2Data = existing.page2 || {};
+    const arrayFields = ['backdrop', 'flower', 'decor', 'entrance', 'staging', 'equipment', 'miscellaneous'];
+    
+    const convertedPage2 = { ...page2Data };
+    arrayFields.forEach(field => {
+      if (typeof convertedPage2[field] === 'string') {
+        convertedPage2[field] = convertedPage2[field].split(',').map(item => item.trim()).filter(item => item);
+      } else if (!Array.isArray(convertedPage2[field])) {
+        convertedPage2[field] = [];
+      }
+    });
+    
+    setP2(convertedPage2);
+    setPBuffet(existing.pageBuffet || {});
+    setP3(existing.page3 || {});
+    
+    // Load saved cost data if it exists
+  }
+}, [existing]);
+
+const totalCreativeRequirementCost = Object.values(creativeCosts).reduce((sum, cost) => sum + cost, 0);
+
+// Trigger auto-save when costs change (for existing contracts)
+useEffect(() => {
+  if (existing && (creativeCosts.backdrop > 0 || creativeCosts.flower > 0 || creativeCosts.decor > 0 || 
+      creativeCosts.entrance > 0 || creativeCosts.staging > 0 || creativeCosts.equipment > 0 || 
+      creativeCosts.miscellaneous > 0)) {
+    handleAutoSave();
+  }
+}, [creativeCosts, totalCreativeRequirementCost]);
+
+
 
 const [isColorDropdownOpen, setIsColorDropdownOpen] = useState(false);
+// Add this to your main component
+useEffect(() => {
+  if (existing && p2.totalChairs && p2.totalChairs > 0) {
+    console.log('Chair counts changed, triggering auto-save:', p2);
+    handleAutoSave();
+  }
+}, [p2.chairsMonoblock, p2.chairsRustic, p2.chairsTiffany, p2.chairsCrystal, p2.chairsKiddie, p2.totalChairs]);
+
+// Helper function to prepare page2 data
+// Helper function to prepare page2 data
+
+
+// Updated helper function that includes chair types in page1
+const preparePage1Data = () => {
+  return {
+    ...p1,
+    // Ensure these fields have proper values
+    vipTableType: p1.vipTableType || "",
+    vipChairs: p1.vipChairs || "",
+    vipTableQuantity: p1.vipTableQuantity || "0",
+    regularTableType: p1.regularTableType || "",
+    regularChairs: p1.regularChairs || "",
+    regularTableQuantity: p1.regularTableQuantity || "0"
+  };
+};
 
 const handleAutoSave = async () => {
-  if (!existing) return; // Only auto-save for existing contracts
+  if (!existing) return;
 
   try {
+    const page1Data = preparePage1Data();
+    const page2Data = preparePage2Data();
+
+    console.log('Auto-saving table configuration (page1):', {
+      vipTableType: page1Data.vipTableType,
+      vipChairs: page1Data.vipChairs,
+      vipTableQuantity: page1Data.vipTableQuantity,
+      regularTableType: page1Data.regularTableType,
+      regularChairs: page1Data.regularChairs,
+      regularTableQuantity: page1Data.regularTableQuantity
+    });
+
     const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3 }),
+      body: JSON.stringify({ 
+        page1: page1Data, 
+        page2: page2Data, 
+        pageBuffet: pBuffet, 
+        page3: p3 
+      }),
     });
-    if (!res.ok) {
+    
+    if (res.ok) {
+      console.log('Auto-save successful');
+    } else {
       console.error("Auto-save failed");
     }
   } catch (error) {
@@ -1604,92 +1834,189 @@ const handleAutoSave = async () => {
   }
 };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
+const handleSave = async (e) => {
+  e.preventDefault();
 
-    try {
-      if (existing) {
+  try {
+    const page1Data = preparePage1Data();
+    const page2Data = preparePage2Data();
+
+    console.log('Saving table configuration (page1):', page1Data);
+    console.log('Saving chair counts (page2):', {
+      monoblock: p2.chairsMonoblock,
+      rustic: p2.chairsRustic,
+      tiffany: p2.chairsTiffany,
+      crystal: p2.chairsCrystal,
+      kiddie: p2.chairsKiddie,
+      total: p2.totalChairs
+    });
+
+    let result;
+    if (existing) {
       const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3, status: "Draft" }),
+        body: JSON.stringify({ 
+          page1: page1Data, 
+          page2: page2Data, 
+          pageBuffet: pBuffet, 
+          page3: p3, 
+          status: "Draft" 
+        }),
       });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to save contract");
-        if (onCreated) {
-          onCreated({
-            id: data.contract._id,
-            contractNumber: data.contract.contractNumber,
-            name: p1.occasion || "Contract",
-            client: p1.celebratorName || "",
-            value: p3.grandTotal || "",
-            startDate: p1.eventDate || "",
-            endDate: p1.eventDate || "",
-            status: "Draft",
-          });
-        }
-        return true;
-      } else {
-        const payload = { department: "Sales", status: "Draft", page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3 };
-        const res = await fetch("http://localhost:5000/contracts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to save contract");
-        if (onCreated) {
-          onCreated({
-            id: data.contract._id,
-            contractNumber: data.contract.contractNumber,
-            name: p1.occasion || "Contract",
-            client: p1.celebratorName || "",
-            value: p3.grandTotal || "",
-            startDate: p1.eventDate || "",
-            endDate: p1.eventDate || "",
-            status: "Draft",
-          });
-        }
-        return true;
-      }
-    } catch (err) {
-      alert("Failed to save contract. Please try again.");
-      return false;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to save contract");
+      result = data;
+    } else {
+      const payload = { 
+        department: "Sales", 
+        status: "Draft", 
+        page1: page1Data, 
+        page2: page2Data, 
+        pageBuffet: pBuffet, 
+        page3: p3 
+      };
+      const res = await fetch("http://localhost:5000/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to save contract");
+      result = data;
     }
+
+    // Verify the saved data
+    console.log('Saved contract data:', result.contract);
+    
+    if (onCreated) {
+      onCreated({
+        id: result.contract._id,
+        contractNumber: result.contract.contractNumber,
+        name: page1Data.occasion || "Contract",
+        client: page1Data.celebratorName || "",
+        value: p3.grandTotal || "",
+        startDate: page1Data.eventDate || "",
+        endDate: page1Data.eventDate || "",
+        status: "Draft",
+      });
+    }
+    return true;
+  } catch (err) {
+    console.error("Save error:", err);
+    alert("Failed to save contract. Please try again.");
+    return false;
+  }
+};
+
+const [showPrintPreview, setShowPrintPreview] = useState(false);
+const [showESignature, setShowESignature] = useState(false);
+const [isContractSigned, setIsContractSigned] = useState(false);
+
+const processFormData = (data) => {
+  const processed = { ...data };
+  
+  if (processed.page2) {
+    Object.keys(processed.page2).forEach(key => {
+      if (Array.isArray(processed.page2[key])) {
+        processed.page2[key] = processed.page2[key].join(', ');
+      }
+    });
+  }
+  
+  return processed;
+};
+
+// Then in your handleSubmit:
+const processedData = processFormData({ page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3 });
+
+// Update your preparePage2Data to be the single source of truth for page2 data formatting
+const preparePage2Data = () => {
+  // Convert arrays to strings before saving
+  const page2WithStrings = {
+    ...p2,
+    backdrop: Array.isArray(p2.backdrop) ? p2.backdrop.join(', ') : p2.backdrop,
+    flower: Array.isArray(p2.flower) ? p2.flower.join(', ') : p2.flower,
+    decor: Array.isArray(p2.decor) ? p2.decor.join(', ') : p2.decor,
+    entrance: Array.isArray(p2.entrance) ? p2.entrance.join(', ') : p2.entrance,
+    staging: Array.isArray(p2.staging) ? p2.staging.join(', ') : p2.staging,
+    equipment: Array.isArray(p2.equipment) ? p2.equipment.join(', ') : p2.equipment,
+    miscellaneous: Array.isArray(p2.miscellaneous) ? p2.miscellaneous.join(', ') : p2.miscellaneous,
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Always include the current cost data
+  return {
+    ...page2WithStrings,
+    creativeCosts: creativeCosts,
+    totalCreativeRequirementCost: totalCreativeRequirementCost,
+    // Include all chair count fields
+    chairsMonoblock: p2.chairsMonoblock || "0",
+    chairsRustic: p2.chairsRustic || "0",
+    chairsTiffany: p2.chairsTiffany || "0",
+    chairsCrystal: p2.chairsCrystal || "0",
+    chairsKiddie: p2.chairsKiddie || "0",
+    totalChairs: p2.totalChairs || "0"
+  };
+};
 
-    // Validate form before submission
-    if (!validateForm()) {
-      alert("Please fix validation errors");
-      return;
-    }
+// Update handleSubmit to use preparePage2Data consistently
+const handleSubmit = async () => {
+  try {
+    console.log('handleSubmit called');
+    console.log('Signature complete:', signatureComplete);
+    console.log('Existing contract:', existing);
 
-    try {
+    // If signature is complete, submit the contract
+    if (signatureComplete) {
+      console.log('Submitting contract after signature...');
+      
+      const signedDocument = {
+        status: "locally_signed",
+        signedAt: new Date().toISOString(),
+        method: "local_upload"
+      };
+
+      // Use preparePage2Data for consistent formatting
+      const processedPage2 = preparePage2Data();
+
+      let result;
+
+      // Handle existing contract (UPDATE)
       if (existing) {
+        console.log('Updating existing contract:', existing._id);
+        
         const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3, status: "For Approval" }),
+          body: JSON.stringify({ 
+            page1: p1, 
+            page2: processedPage2, // Use the consistently formatted data
+            pageBuffet: pBuffet, 
+            page3: p3, 
+            status: "For Accounting Review",
+            signedDocument: signedDocument,
+            signedAt: signedDocument.signedAt
+          }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to update contract");
-        if (onCreated) {
-          onCreated({
-            id: data.contract._id,
-            contractNumber: data.contract.contractNumber,
-            name: p1.occasion || "Contract",
-            client: p1.celebratorName || "",
-            value: p3.grandTotal || "",
-            startDate: p1.eventDate || "",
-            endDate: p1.eventDate || "",
-            status: data.contract.status || "For Approval",
-          });
-        }
+        result = data;
+
       } else {
-        const payload = { department: "Sales", status: "For Approval", page1: p1, page2: p2, pageBuffet: pBuffet, page3: p3 };
+        // Handle new contract (CREATE)
+        console.log('Creating new contract...');
+        
+        const payload = { 
+          department: "Sales", 
+          status: "For Accounting Review", 
+          page1: p1, 
+          page2: processedPage2, // Use the consistently formatted data
+          pageBuffet: pBuffet, 
+          page3: p3,
+          signedDocument: signedDocument,
+          signedAt: signedDocument.signedAt
+        };
+
         const res = await fetch("http://localhost:5000/contracts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1697,23 +2024,338 @@ const handleAutoSave = async () => {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to save contract");
-        if (onCreated) {
-          onCreated({
-            id: data.contract._id,
-            contractNumber: data.contract.contractNumber,
-            name: p1.occasion || "Contract",
-            client: p1.celebratorName || "",
-            value: p3.grandTotal || "",
-            startDate: p1.eventDate || "",
-            endDate: p1.eventDate || "",
-            status: "For Approval",
-          });
-        }
+        result = data;
       }
-    } catch (err) {
-      alert("Failed to submit contract. Please try again.");
+
+      console.log('Submitted signed contract:', result.contract);
+      
+      // Success handling
+      if (onCreated) {
+        onCreated({
+          id: result.contract._id,
+          contractNumber: result.contract.contractNumber,
+          name: p1.occasion || "Contract",
+          client: p1.celebratorName || "",
+          value: p3.grandTotal || "",
+          startDate: p1.eventDate || "",
+          endDate: p1.eventDate || "",
+          status: result.contract.status || "For Accounting Review",
+        });
+      }
+
+      alert('Contract successfully signed and submitted!');
+      onCancel(); // Return to dashboard
+      
+    } else {
+      // If no signature yet, show the signature process
+      console.log(' Showing signature process');
+      setShowSignatureProcess(true);
     }
+  } catch (err) {
+    console.error("Submit error:", err);
+    alert("Failed to submit contract. Please try again.");
+  }
+};
+
+// Remove the duplicate processFormData function since we're using preparePage2Data consistently
+// const processFormData = (data) => { ... } // DELETE THIS FUNCTION
+
+// Also update your loading useEffect to be more robust about detecting string vs array
+useEffect(() => {
+  if (existing) {
+    console.log('Loading existing contract:', existing);
+    
+    setP1(existing.page1 || {});
+    
+    // Convert string fields back to arrays with better handling
+    const page2Data = existing.page2 || {};
+    const arrayFields = ['backdrop', 'flower', 'decor', 'entrance', 'staging', 'equipment', 'miscellaneous'];
+    
+    const convertedPage2 = { ...page2Data };
+    arrayFields.forEach(field => {
+      // Check if it's a string that needs conversion
+      if (typeof convertedPage2[field] === 'string' && convertedPage2[field].trim() !== '') {
+        convertedPage2[field] = convertedPage2[field]
+          .split(',')
+          .map(item => item.trim())
+          .filter(item => item !== '' && item !== ' ');
+        console.log(`Converted ${field} from string to array:`, convertedPage2[field]);
+      } else if (!Array.isArray(convertedPage2[field])) {
+        convertedPage2[field] = [];
+      }
+    });
+    
+    console.log('Final converted page2 data for form:', convertedPage2);
+    setP2(convertedPage2);
+    setPBuffet(existing.pageBuffet || {});
+    setP3(existing.page3 || {});
+    
+    // Load saved cost data if it exists
+    
+  }
+}, [existing]);
+
+const handlePrintConfirm = () => {
+  setShowPrintPreview(false);
+  setShowESignature(true);
+};
+
+const handleSignatureComplete = (signedDocument) => {
+  setShowESignature(false);
+  setIsContractSigned(true);
+  
+  // Now submit the contract with the signature
+  submitFinalContract(signedDocument);
+};
+
+
+
+const submitFinalContract = async (signedDocument) => {
+  try {
+    const page1Data = preparePage1Data();
+    const page2Data = preparePage2Data();
+
+    console.log('Submitting signed contract...');
+
+    let result;
+     if (existing) {
+      const res = await fetch(`http://localhost:5000/contracts/${existing._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          page1: page1Data, 
+          page2: page2Data, 
+          pageBuffet: pBuffet, 
+          page3: p3, 
+          status: signedDocument.envelopeId ? "Pending Signature" : "Signed - For Accounting Review",
+          signedDocument: signedDocument,
+          docusignEnvelopeId: signedDocument.envelopeId,
+          signedAt: signedDocument.signedAt || new Date().toISOString()
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update contract");
+      result = data;
+    } else {
+      const payload = { 
+        department: "Sales", 
+        status: "Signed - For Accounting Review", 
+        page1: page1Data, 
+        page2: page2Data, 
+        pageBuffet: pBuffet, 
+        page3: p3,
+        signedDocument: signedDocument,
+        signedAt: new Date().toISOString()
+      };
+      const res = await fetch("http://localhost:5000/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to save contract");
+      result = data;
+    }
+
+    console.log('Submitted signed contract:', result.contract);
+    
+    if (onCreated) {
+      onCreated({
+        id: result.contract._id,
+        contractNumber: result.contract.contractNumber,
+        name: page1Data.occasion || "Contract",
+        client: page1Data.celebratorName || "",
+        value: p3.grandTotal || "",
+        startDate: page1Data.eventDate || "",
+        endDate: page1Data.eventDate || "",
+        status: result.contract.status || "Signed - For Accounting Review",
+      });
+    }
+
+    alert('Contract successfully signed and submitted!');
+    alert(signedDocument.envelopeId 
+      ? 'Contract sent to DocuSign for signing!' 
+      : 'Contract signed and submitted successfully!'
+    );
+    
+  } catch (err) {
+    console.error("Submit error:", err);
+    alert("Failed to submit contract. Please try again.");
+  }
+};
+
+// Prepare contract data for print preview and e-signature
+const getContractDataForPreview = () => {
+  const totalCreativeRequirementCost = Object.values(creativeCosts).reduce((sum, cost) => sum + cost, 0);
+  const totalMenuCostWithExtras = parseFloat(String(p3.totalMenuCost).replace(/,/g, '')) + totalCreativeRequirementCost;
+  const tax = totalMenuCostWithExtras * 0.12;
+  const serviceCharge = totalMenuCostWithExtras * 0.10;
+  const grandTotal = totalMenuCostWithExtras + tax + serviceCharge;
+
+  // Return the full nested structure that the PDF generator expects
+  return {
+    contractNumber: existing?.contractNumber || `CONTRACT-${Date.now()}`,
+    status: "Draft",
+    department: "Sales",
+    
+    // Include all the nested page structures
+    page1: {
+      celebratorName: p1.celebratorName,
+      celebratorEmail: p1.celebratorEmail,
+      celebratorMobile: p1.celebratorMobile,
+      celebratorAddress: p1.celebratorAddress,
+      celebratorLandline: p1.celebratorLandline,
+      representativeName: p1.representativeName,
+      representativeRelationship: p1.representativeRelationship,
+      representativeEmail: p1.representativeEmail,
+      representativeAddress: p1.representativeAddress,
+      representativeMobile: p1.representativeMobile,
+      representativeLandline: p1.representativeLandline,
+      coordinatorName: p1.coordinatorName,
+      coordinatorMobile: p1.coordinatorMobile,
+      coordinatorLandline: p1.coordinatorLandline,
+      coordinatorAddress: p1.coordinatorAddress,
+      coordinatorEmail: p1.coordinatorEmail,
+      eventDate: p1.eventDate,
+      occasion: p1.occasion === "OTHERS" ? p1.otherOccasion : p1.occasion,
+      serviceStyle: p1.serviceStyle,
+      venue: p1.venue,
+      hall: p1.hall,
+      ingressTime: p1.ingressTime,
+      cocktailTime: p1.cocktailTime,
+      address: p1.address,
+      arrivalOfGuests: p1.arrivalOfGuests,
+      servingTime: p1.servingTime,
+      totalGuests: p1.totalGuests,
+      totalVIP: p1.totalVIP,
+      totalRegular: p1.totalRegular,
+      themeSetup: p1.themeSetup,
+      colorMotif: p1.colorMotif,
+      vipTableType: p1.vipTableType,
+      vipChairs: p1.vipChairs,
+      vipTableQuantity: p1.vipTableQuantity,
+      regularTableType: p1.regularTableType,
+      regularChairs: p1.regularChairs,
+      regularTableQuantity: p1.regularTableQuantity,
+      vipUnderliner: p1.vipUnderliner,
+      vipTopper: p1.vipTopper,
+      vipNapkin: p1.vipNapkin,
+      guestUnderliner: p1.guestUnderliner,
+      guestTopper: p1.guestTopper,
+      guestNapkin: p1.guestNapkin,
+      setupRemarks: p1.setupRemarks
+    },
+    
+    page2: {
+      chairsMonoblock: p2.chairsMonoblock,
+      chairsTiffany: p2.chairsTiffany,
+      chairsCrystal: p2.chairsCrystal,
+      chairsRustic: p2.chairsRustic,
+      chairsKiddie: p2.chairsKiddie,
+      premiumChairs: p2.premiumChairs,
+      totalChairs: p2.totalChairs,
+      chairsRemarks: p2.chairsRemarks,
+      backdrop: p2.backdrop,
+      flower: p2.flower,
+      decor: p2.decor,
+      entrance: p2.entrance,
+      staging: p2.staging,
+      equipment: p2.equipment,
+      miscellaneous: p2.miscellaneous,
+      cakeSupplier: p2.cakeSupplier,
+      cakeSpecifications: p2.cakeSpecifications,
+      celebratorsCar: p2.celebratorsCar,
+      emcee: p2.emcee,
+      soundSystem: p2.soundSystem,
+      tent: p2.tent,
+      celebratorsChair: p2.celebratorsChair,
+      creativeCosts: creativeCosts,
+      totalCreativeRequirementCost: totalCreativeRequirementCost,
+      flowerRemarks: p2.flowerRemarks
+    },
+    
+    pageBuffet: {
+      selectedPackage: pBuffet.selectedPackage,
+      cocktailSelections: pBuffet.cocktailSelections || [],
+      upgradeSelections125: pBuffet.upgradeSelections125 || [],
+      upgradeSelections150: pBuffet.upgradeSelections150 || [],
+      foodStations: pBuffet.foodStations || [],
+      appetizerUpgradeSelections125: pBuffet.appetizerUpgradeSelections125 || [],
+      appetizerUpgradeSelections150: pBuffet.appetizerUpgradeSelections150 || [],
+      soupSelections: pBuffet.soupSelections || [],
+      upgradeSoupSelections100: pBuffet.upgradeSoupSelections100 || [],
+      saladUpgradeSelections125: pBuffet.saladUpgradeSelections125 || [],
+      saladUpgradeSelections150: pBuffet.saladUpgradeSelections150 || [],
+      mainBeefSelections: pBuffet.mainBeefSelections || [],
+      mainPorkSelections: pBuffet.mainPorkSelections || [],
+      mainFishSelections: pBuffet.mainFishSelections || [],
+      mainSeafoodSelections: pBuffet.mainSeafoodSelections || [],
+      mainChickenSelections: pBuffet.mainChickenSelections || [],
+      mainPastaSelections: pBuffet.mainPastaSelections || [],
+      mainNoodlesSelections: pBuffet.mainNoodlesSelections || [],
+      mainVegSelections: pBuffet.mainVegSelections || [],
+      mainSideDishSelections: pBuffet.mainSideDishSelections || [],
+      riceSelections: pBuffet.riceSelections || [],
+      dessertSelections: pBuffet.dessertSelections || [],
+      drinksSelections: pBuffet.drinksSelections || [],
+      breadSelections: pBuffet.breadSelections || []
+    },
+    
+    page3: {
+      pricePerPlate: p3.pricePerPlate,
+      cocktailHour: p3.cocktailHour,
+      foodStations: p3.foodStations,
+      appetizer: p3.appetizer,
+      soup: p3.soup,
+      bread: p3.bread,
+      salad: p3.salad,
+      mainEntree: p3.mainEntree,
+      rice: p3.rice,
+      dessert: p3.dessert,
+      drinks: p3.drinks,
+      cakeName: p3.cakeName,
+      roastedPig: p3.roastedPig,
+      roastedCalf: p3.roastedCalf,
+      totalMenuCost: p3.totalMenuCost,
+      totalSpecialReqCost: p3.totalSpecialReqCost,
+      mobilizationCharge: p3.mobilizationCharge,
+      taxes: tax.toFixed(2),
+      grandTotal: grandTotal.toFixed(2),
+      fortyPercentDueOn: p3.fortyPercentDueOn,
+      fortyPercentAmount: p3.fortyPercentAmount,
+      fortyPercentReceivedBy: p3.fortyPercentReceivedBy,
+      fortyPercentDateReceived: p3.fortyPercentDateReceived,
+      fullPaymentDueOn: p3.fullPaymentDueOn,
+      fullPaymentAmount: p3.fullPaymentAmount,
+      fullPaymentReceivedBy: p3.fullPaymentReceivedBy,
+      fullPaymentDateReceived: p3.fullPaymentDateReceived,
+      remarks: p3.remarks
+    },
+    
+    // Also include the flat structure for backward compatibility
+    celebratorName: p1.celebratorName,
+    celebratorEmail: p1.celebratorEmail,
+    celebratorMobile: p1.celebratorMobile,
+    representativeName: p1.representativeName,
+    representativeRelationship: p1.representativeRelationship,
+    occasion: p1.occasion === "OTHERS" ? p1.otherOccasion : p1.occasion,
+    eventDate: p1.eventDate,
+    venue: p1.venue,
+    hall: p1.hall,
+    totalGuests: p1.totalGuests,
+    serviceStyle: p1.serviceStyle,
+    selectedPackage: pBuffet.selectedPackage,
+    pricePerPlate: p3.pricePerPlate,
+    creativeCosts: creativeCosts,
+    totalCreativeRequirementCost: totalCreativeRequirementCost,
+    totalMenuCost: p3.totalMenuCost,
+    mobilizationCharge: p3.mobilizationCharge,
+    subtotal: totalMenuCostWithExtras,
+    tax: tax,
+    serviceCharge: serviceCharge,
+    grandTotal: grandTotal
   };
+};
 
   const next = () => {
     if (existing) handleAutoSave();
@@ -1747,168 +2389,542 @@ const handleAutoSave = async () => {
   });
 
   // Load database options on component mount
-  useEffect(() => {
-    const loadDatabaseOptions = async () => {
-      try {
-        const [
-          themeSetups,
-          napkins,
-          underliners,
-          toppers,
-          backdrop,
-          flowers,
-          decor,
-          chairs,
-          entrance,
-          staging,
-          equipments,
-          miscellaneous,
-          specialRequirements,
-        ] = await Promise.all([
-          DatabaseService.getThemeSetups(),
-          DatabaseService.getNapkin(),
-          DatabaseService.getUnderliners(),
-          DatabaseService.getToppers(),
-          DatabaseService.getBackdrop(),
-          DatabaseService.getFlowers(),
-          DatabaseService.getDecor(),
-          DatabaseService.getChairs(),
-          DatabaseService.getEntrance(),
-          DatabaseService.getStaging(),
-          DatabaseService.getEquipments(),
-          DatabaseService.getMiscellaneous(),
-          DatabaseService.getSpecialRequirements()
-        ]);
+ useEffect(() => {
+  const loadDatabaseOptions = async () => {
+    try {
+      const [
+        themeSetups,
+        napkins,
+        underliners,
+        toppers,
+        backdrop,
+        flowers,
+        decor,
+        chairs, // Add this
+        tables, // Add this
+        entrance,
+        staging,
+        equipments,
+        miscellaneous,
+        specialRequirements,
+      ] = await Promise.all([
+        DatabaseService.getThemeSetups(),
+        DatabaseService.getNapkin(),
+        DatabaseService.getUnderliners(),
+        DatabaseService.getToppers(),
+        DatabaseService.getBackdrop(),
+        DatabaseService.getFlowers(),
+        DatabaseService.getDecor(),
+        DatabaseService.getChairs(), // Add this
+        DatabaseService.getTables(), // Add this
+        DatabaseService.getEntrance(),
+        DatabaseService.getStaging(),
+        DatabaseService.getEquipments(),
+        DatabaseService.getMiscellaneous(),
+        DatabaseService.getSpecialRequirements()
+      ]);
 
-        setDbOptions(prev => ({
-          ...prev,
-          themeSetups,
-          napkins,
-          underliners,
-          toppers,
-          backdrop,
-          flowers,
-          decor,
-          chairs,
-          entrance,
-          staging,
-          equipments,
-          miscellaneous,
-          specialRequirements,
-        }));
-      } catch (error) {
-        console.error('Error loading database options:', error);
+      setDbOptions(prev => ({
+        ...prev,
+        themeSetups,
+        napkins,
+        underliners,
+        toppers,
+        backdrop,
+        flowers,
+        decor,
+        chairs, 
+        tables, 
+        entrance,
+        staging,
+        equipments,
+        miscellaneous,
+        specialRequirements,
+      }));
+    } catch (error) {
+      console.error('Error loading database options:', error);
+    }
+  };
+
+  loadDatabaseOptions();
+}, []);
+
+// Recalculate costs when database options load (for existing contracts)
+// Calculate creative costs whenever selections change OR when dbOptions loads
+
+// Add this with your other state declarations at the top of the component
+const [isDbOptionsLoading, setIsDbOptionsLoading] = useState(true);
+
+// Consolidated creative costs calculation
+
+
+const [isLoadingContract, setIsLoadingContract] = useState(false);
+
+// Update your existing contract loading
+useEffect(() => {
+  if (existing) {
+    setIsLoadingContract(true);
+    console.log('Loading existing contract:', existing);
+    
+    setP1(existing.page1 || {});
+    
+    // Convert string fields back to arrays
+    const page2Data = existing.page2 || {};
+    const arrayFields = ['backdrop', 'flower', 'decor', 'entrance', 'staging', 'equipment', 'miscellaneous'];
+    
+    const convertedPage2 = { ...page2Data };
+    arrayFields.forEach(field => {
+      if (typeof convertedPage2[field] === 'string' && convertedPage2[field].trim() !== '') {
+        convertedPage2[field] = convertedPage2[field]
+          .split(',')
+          .map(item => item.trim())
+          .filter(item => item !== '' && item !== ' ');
+      } else if (!Array.isArray(convertedPage2[field])) {
+        convertedPage2[field] = [];
       }
+    });
+    
+    setP2(convertedPage2);
+    setPBuffet(existing.pageBuffet || {});
+    setP3(existing.page3 || {});
+    
+    // Load saved cost data if it exists
+   
+    
+    setIsLoadingContract(false);
+  }
+}, [existing]);
+
+// Update creative costs calculation to skip during loading
+
+
+// Try this version of the creative costs useEffect with forced updates
+
+
+// Replace your creative costs useEffect with this simplified version:
+
+
+// Add this test function
+const testCostCalculation = () => {
+  console.log('=== MANUAL COST CALCULATION TEST ===');
+  
+  // Test with known data that should work
+  const testBackdrop = ['ARKO'];
+  const testFlowers = ['ROSE WHITE', 'HYDRA WHITE'];
+  
+  console.log('Testing backdrop calculation:');
+  const backdropCost = calculateArrayCost(testBackdrop, dbOptions.backdrop);
+  console.log('Backdrop cost should be ₱850, got:', backdropCost);
+  
+  console.log('Testing flowers calculation:');
+  const flowersCost = calculateArrayCost(testFlowers, dbOptions.flowers);
+  console.log('Flowers cost should be ₱680, got:', flowersCost);
+};
+
+// Add this button to your JSX
+
+// Replace your current creative costs useEffect with this:
+
+
+// Helper function to calculate cost for an array of selected items
+// Enhanced calculateArrayCost with detailed matching debug
+const calculateArrayCost = (selectedArray, optionsArray) => {
+  console.log('=== CALCULATE ARRAY COST DEBUG ===');
+  console.log('SELECTED ARRAY TYPE:', typeof selectedArray);
+  console.log('SELECTED ARRAY:', selectedArray);
+  console.log('IS ARRAY?:', Array.isArray(selectedArray));
+  console.log('OPTIONS ARRAY:', optionsArray?.map(opt => `${opt.name} (₱${opt.price})`));
+  
+  // Handle case where selectedArray is a string instead of array
+  let processedSelections = [];
+  
+  if (Array.isArray(selectedArray)) {
+    processedSelections = selectedArray;
+  } else if (typeof selectedArray === 'string') {
+    // If it's a string, split by commas or handle as single item
+    if (selectedArray.includes(',')) {
+      processedSelections = selectedArray.split(',').map(item => item.trim()).filter(item => item);
+    } else if (selectedArray.trim() !== '') {
+      processedSelections = [selectedArray.trim()];
+    }
+  } else if (selectedArray) {
+    // If it's some other type, try to convert to array
+    processedSelections = [String(selectedArray)];
+  }
+  
+  console.log('PROCESSED SELECTIONS:', processedSelections);
+  
+  if (processedSelections.length === 0) {
+    console.log('No valid items selected');
+    return 0;
+  }
+  
+  // Rest of your calculation logic using processedSelections...
+  let total = 0;
+  let foundItems = [];
+  let notFoundItems = [];
+  
+  processedSelections.forEach(selectedItem => {
+    // Your existing matching logic here
+    let foundItem = optionsArray.find(opt => opt.name === selectedItem);
+    
+    if (!foundItem) {
+      foundItem = optionsArray.find(opt => 
+        opt.name.toLowerCase() === selectedItem.toLowerCase()
+      );
+    }
+    
+    if (foundItem) {
+      console.log(`FOUND: "${selectedItem}" matches "${foundItem.name}" = ₱${foundItem.price}`);
+      total += foundItem.price;
+      foundItems.push({ selected: selectedItem, matched: foundItem.name, price: foundItem.price });
+    } else {
+      console.log(`NOT FOUND: "${selectedItem}"`);
+      notFoundItems.push(selectedItem);
+    }
+  });
+  
+  console.log(`RESULTS: Found ${foundItems.length}, Not Found ${notFoundItems.length}, Total: ₱${total}`);
+  return total;
+};
+
+useEffect(() => {
+  const calculateCreativeCosts = () => {
+    console.log('=== CALCULATING CREATIVE COSTS - FINAL VERSION ===');
+    
+    const costs = {
+      backdrop: calculateArrayCost(p2.backdrop, dbOptions.backdrop || []),
+      flower: calculateArrayCost(p2.flower, dbOptions.flowers || []),
+      decor: calculateArrayCost(p2.decor, dbOptions.decor || []),
+      entrance: calculateArrayCost(p2.entrance, dbOptions.entrance || []),
+      staging: calculateArrayCost(p2.staging, dbOptions.staging || []),
+      equipment: calculateArrayCost(p2.equipment, dbOptions.equipments || []),
+      miscellaneous: calculateArrayCost(p2.miscellaneous, dbOptions.miscellaneous || [])
     };
+    
+    console.log('FINAL COSTS TO SET:', costs);
+    
+    // Update state with new costs
+    setCreativeCosts(costs);
+  };
 
-    loadDatabaseOptions();
-  }, []);
+  calculateCreativeCosts();
+}, [
+  p2.backdrop, p2.flower, p2.decor, p2.entrance, p2.staging, p2.equipment, p2.miscellaneous,
+  isDbOptionsLoading, dbOptions.backdrop, dbOptions.flowers, dbOptions.decor, 
+  dbOptions.entrance, dbOptions.staging, dbOptions.equipments, dbOptions.miscellaneous
+]);
+
+// Add this detailed debug function
+const debugAllDbOptions = () => {
+  console.log('=== ALL DATABASE OPTIONS ===');
+  const categories = {
+    backdrop: dbOptions.backdrop,
+    flowers: dbOptions.flowers, 
+    decor: dbOptions.decor,
+    entrance: dbOptions.entrance,
+    staging: dbOptions.staging,
+    equipments: dbOptions.equipments,
+    miscellaneous: dbOptions.miscellaneous
+  };
+  
+  Object.entries(categories).forEach(([category, items]) => {
+    console.log(`${category.toUpperCase()} (${items?.length || 0} items):`);
+    if (items && items.length > 0) {
+      items.slice(0, 10).forEach(item => { // Show first 10 items
+        console.log(`  - ${item.name} (₱${item.price})`);
+      });
+      if (items.length > 10) console.log(`  ... and ${items.length - 10} more`);
+    } else {
+      console.log('  No items found');
+    }
+  });
+};
 
 
+
+
+// Calculate total special requirement cost (including emcee if needed)
+const totalSpecialRequirementCost = 0; 
+
+const [specialReqCosts, setSpecialReqCosts] = useState({
+  // Will be calculated from p2 fields
+});
+
+const [showSignatureProcess, setShowSignatureProcess] = useState(false);
+const [signatureComplete, setSignatureComplete] = useState(false);
   // Updated renderPage1 function
 const renderPage1 = () => (
   <div className="page">
     <div className="form-row">
     </div>
+    <div className="form-header">
+  <h3>Contract {existing ? "(Edit)" : "(New)"}</h3>
+  {nextNumber && <div className="number">Contract No.: {nextNumber}</div>}
+</div>
 
     <h4>Celebrator</h4>
     <div className="form-row two">
-      <div className="form-group"><label>
-        Celebrator/Corporate Name 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.celebratorName} onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} onBlur={handleAutoSave} /></div>
-      <div className="form-group"><label>Email Address</label><input value={p1.celebratorEmail} onChange={(e)=>setP1({...p1, celebratorEmail:e.target.value})} className={errors.celebratorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorEmail}</div></div>
+      <div className="form-group">
+        <label>
+          Celebrator/Corporate Name 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.celebratorName} 
+          onChange={(e)=>setP1({...p1, celebratorName:convertToUppercase(e.target.value)})} 
+          onBlur={handleAutoSave} 
+        />
+      </div>
+      <div className="form-group">
+        <label>Email Address</label>
+        <input 
+          value={p1.celebratorEmail} 
+          onChange={(e)=>setP1({...p1, celebratorEmail:e.target.value})} 
+          className={errors.celebratorEmail ? 'invalid-input' : ''} 
+          onBlur={() => validateForm()} 
+        />
+        <div className="validation-error">{errors.celebratorEmail}</div>
+      </div>
     </div>
+    
     <div className="form-row three">
-      <div className="form-group"><label>Address</label><input value={p1.celebratorAddress} onChange={(e)=>setP1({...p1, celebratorAddress:convertToUppercase(e.target.value)})} /></div>
-      <div className="form-group"><label>Landline No.</label><input value={p1.celebratorLandline} onChange={(e)=>setP1({...p1, celebratorLandline:e.target.value})} className={errors.celebratorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorLandline}</div></div>
-      <div className="form-group"><label>Mobile No.</label><input value={p1.celebratorMobile} onChange={(e)=>setP1({...p1, celebratorMobile:e.target.value})} className={errors.celebratorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.celebratorMobile}</div></div>
+      <div className="form-group">
+        <label>Address</label>
+        <input 
+          value={p1.celebratorAddress} 
+          onChange={(e)=>setP1({...p1, celebratorAddress:convertToUppercase(e.target.value)})} 
+        />
+      </div>
+      <div className="form-group">
+        <label>Landline No.</label>
+        <input 
+          value={p1.celebratorLandline} 
+          onChange={(e)=>setP1({...p1, celebratorLandline:e.target.value})} 
+          className={errors.celebratorLandline ? 'invalid-input' : ''} 
+          onBlur={() => validateForm()} 
+        />
+        <div className="validation-error">{errors.celebratorLandline}</div>
+      </div>
+      <div className="form-group">
+        <label>Mobile No.</label>
+        <input 
+          value={p1.celebratorMobile} 
+          onChange={(e)=>setP1({...p1, celebratorMobile:e.target.value})} 
+          className={errors.celebratorMobile ? 'invalid-input' : ''} 
+          onBlur={() => validateForm()} 
+        />
+        <div className="validation-error">{errors.celebratorMobile}</div>
+      </div>
     </div>
 
     <h4>Representative</h4>
     <div className="form-row two">
-      <div className="form-group"><label>
-        Name 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.representativeName} onChange={(e)=>setP1({...p1, representativeName:convertToUppercase(e.target.value)})} /></div>
-      <div className="form-group"><label>
-        Relationship 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.representativeRelationship} onChange={(e)=>setP1({...p1, representativeRelationship:convertToUppercase(e.target.value)})} /></div>
+      <div className="form-group">
+        <label>
+          Name 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.representativeName} 
+          onChange={(e)=>setP1({...p1, representativeName:convertToUppercase(e.target.value)})} 
+        />
+      </div>
+      <div className="form-group">
+        <label>
+          Relationship 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.representativeRelationship} 
+          onChange={(e)=>setP1({...p1, representativeRelationship:convertToUppercase(e.target.value)})} 
+        />
+      </div>
     </div>
+    
     <div className="form-row three">
-      <div className="form-group"><label>
-        Email Address 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.representativeEmail} onChange={(e)=>setP1({...p1, representativeEmail:e.target.value})} className={errors.representativeEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeEmail}</div></div>
-      <div className="form-group"><label>
-        Address 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.representativeAddress} onChange={(e)=>setP1({...p1, representativeAddress:convertToUppercase(e.target.value)})} /></div>
-      <div className="form-group"><label>Landline No.</label><input value={p1.representativeLandline} onChange={(e)=>setP1({...p1, representativeLandline:e.target.value})} className={errors.representativeLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeLandline}</div></div>
+      <div className="form-group">
+        <label>
+          Email Address 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.representativeEmail} 
+          onChange={(e)=>setP1({...p1, representativeEmail:e.target.value})} 
+          className={errors.representativeEmail ? 'invalid-input' : ''} 
+          onBlur={() => validateForm()} 
+        />
+        <div className="validation-error">{errors.representativeEmail}</div>
+      </div>
+      <div className="form-group">
+        <label>
+          Address 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.representativeAddress} 
+          onChange={(e)=>setP1({...p1, representativeAddress:convertToUppercase(e.target.value)})} 
+        />
+      </div>
+      <div className="form-group">
+        <label>Landline No.</label>
+        <input 
+          value={p1.representativeLandline} 
+          onChange={(e)=>setP1({...p1, representativeLandline:e.target.value})} 
+          className={errors.representativeLandline ? 'invalid-input' : ''} 
+          onBlur={() => validateForm()} 
+        />
+        <div className="validation-error">{errors.representativeLandline}</div>
+      </div>
     </div>
+    
     <div className="form-row two">
-      <div className="form-group"><label>
-        Mobile No. 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.representativeMobile} onChange={(e)=>setP1({...p1, representativeMobile:e.target.value})} className={errors.representativeMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.representativeMobile}</div></div>
+      <div className="form-group">
+        <label>
+          Mobile No. 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.representativeMobile} 
+          onChange={(e)=>setP1({...p1, representativeMobile:e.target.value})} 
+          className={errors.representativeMobile ? 'invalid-input' : ''} 
+          onBlur={() => validateForm()} 
+        />
+        <div className="validation-error">{errors.representativeMobile}</div>
+      </div>
     </div>
 
-    <h4>Coordinator </h4>
+    <h4>Coordinator</h4>
     <div className="form-row three">
-      <div className="form-group"><label>
-        Coordinator Name 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.coordinatorName} onChange={(e)=>setP1({...p1, coordinatorName:convertToUppercase(e.target.value)})} /></div>
-      <div className="form-group"><label>
-        Mobile No. 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.coordinatorMobile} onChange={(e)=>setP1({...p1, coordinatorMobile:e.target.value})} className={errors.coordinatorMobile ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorMobile}</div></div>
-      <div className="form-group"><label>Landline No.</label><input value={p1.coordinatorLandline} onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} className={errors.coordinatorLandline ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorLandline}</div></div>
+      <div className="form-group">
+        <label>
+          Coordinator Name 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.coordinatorName} 
+          onChange={(e)=>setP1({...p1, coordinatorName:convertToUppercase(e.target.value)})} 
+        />
+      </div>
+      <div className="form-group">
+        <label>
+          Mobile No. 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.coordinatorMobile} 
+          onChange={(e)=>setP1({...p1, coordinatorMobile:e.target.value})} 
+          className={errors.coordinatorMobile ? 'invalid-input' : ''} 
+          onBlur={() => validateForm()} 
+        />
+        <div className="validation-error">{errors.coordinatorMobile}</div>
+      </div>
+      <div className="form-group">
+        <label>Landline No.</label>
+        <input 
+          value={p1.coordinatorLandline} 
+          onChange={(e)=>setP1({...p1, coordinatorLandline:e.target.value})} 
+          className={errors.coordinatorLandline ? 'invalid-input' : ''} 
+          onBlur={() => validateForm()} 
+        />
+        <div className="validation-error">{errors.coordinatorLandline}</div>
+      </div>
     </div>
+    
     <div className="form-row two">
-      <div className="form-group"><label>
-        Email Address 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.coordinatorEmail} onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} className={errors.coordinatorEmail ? 'invalid-input' : ''} onBlur={() => validateForm()} /><div className="validation-error">{errors.coordinatorEmail}</div></div>
-      <div className="form-group"><label>
-        Address 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.coordinatorAddress} onChange={(e)=>setP1({...p1, coordinatorAddress:convertToUppercase(e.target.value)})} /></div>
+      <div className="form-group">
+        <label>
+          Email Address 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.coordinatorEmail} 
+          onChange={(e)=>setP1({...p1, coordinatorEmail:e.target.value})} 
+          className={errors.coordinatorEmail ? 'invalid-input' : ''} 
+          onBlur={() => validateForm()} 
+        />
+        <div className="validation-error">{errors.coordinatorEmail}</div>
+      </div>
+      <div className="form-group">
+        <label>
+          Address 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.coordinatorAddress} 
+          onChange={(e)=>setP1({...p1, coordinatorAddress:convertToUppercase(e.target.value)})} 
+        />
+      </div>
     </div>
     
     <h4>Event Details</h4>
     <div className="form-row three">
-      <div className="form-group"><label>
-        Date of Event
-        <span className="required-asterisk">*</span>
-      </label><input type="date" value={p1.eventDate} onChange={(e)=>setP1({...p1, eventDate:e.target.value})} onBlur={handleAutoSave} className={errors.eventDate ? 'invalid-input' : ''} /><div className="validation-error">{errors.eventDate}</div></div>
+      <div className="form-group">
+        <label>
+          Date of Event
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          type="date" 
+          value={p1.eventDate} 
+          onChange={(e)=>setP1({...p1, eventDate:e.target.value})} 
+          onBlur={handleAutoSave} 
+          className={errors.eventDate ? 'invalid-input' : ''} 
+        />
+        <div className="validation-error">{errors.eventDate}</div>
+      </div>
+      
       <div className="form-group">
         <label>
           Occasion
           <span className="required-asterisk">*</span>
         </label>
-        <select value={p1.occasion} onChange={(e)=>setP1({...p1, occasion:e.target.value})}>
+        <select 
+          value={p1.occasion} 
+          onChange={(e)=>setP1({...p1, occasion:e.target.value})}
+          className={errors.occasion ? 'invalid-input' : ''}
+        >
           <option value="">Select Occasion</option>
           <option value="BIRTHDAY">Birthday</option>
           <option value="DEBUT">Debut</option>
           <option value="SPECIAL OCCASION">Special Occasion</option>
           <option value="CORPORATE">Corporate</option>
           <option value="WEDDINGS">Weddings</option>
+          <option value="OTHERS">Others</option>
         </select>
+        {errors.occasion && <div className="validation-error">{errors.occasion}</div>}
+        
+        {p1.occasion === "OTHERS" && (
+          <div className="other-field-group">
+            <label>
+              Specify Occasion
+              <span className="required-asterisk">*</span>
+            </label>
+            <input 
+              value={p1.otherOccasion || ''} 
+              onChange={(e)=>setP1({...p1, otherOccasion:convertToUppercase(e.target.value)})}
+              placeholder="Please specify the occasion"
+              className={errors.otherOccasion ? 'invalid-input' : ''}
+            />
+            {errors.otherOccasion && <div className="validation-error">{errors.otherOccasion}</div>}
+          </div>
+        )}
       </div>
+      
       <div className="form-group">
         <label>
           Service Style
           <span className="required-asterisk">*</span>
         </label>
-        <select value={p1.serviceStyle} onChange={(e)=>setP1({...p1, serviceStyle:e.target.value})}>
-          <option value="">Select Service Style</option>
-          <option value="Buffet">Buffet</option>
-          <option value="Signature Plated">Signature Plated</option>
-        </select>
+        <input 
+          value="Buffet"
+          placeholder="Buffet" 
+          readOnly
+          className="readonly-input"
+        />
       </div>
     </div>
+    
     <div className="form-row four">
       <div className="form-group">
         <label>
@@ -1925,10 +2941,13 @@ const renderPage1 = () => (
               venue,
               address: venueData.address,
               hall: "",
+              otherVenueName: "",
+              otherVenueCapacity: ""
             }));
             setAvailableHalls(Object.keys(venueData.halls));
             setMaxPax(0);
           }}
+          className={errors.venue ? 'invalid-input' : ''}
         >
           <option value="">Select Venue</option>
           {Object.keys(VENUES).map((venue) => (
@@ -1937,7 +2956,50 @@ const renderPage1 = () => (
             </option>
           ))}
         </select>
+        {errors.venue && <div className="validation-error">{errors.venue}</div>}
+        
+        {p1.venue === "OTHERS" && (
+          <div className="other-venue-fields">
+            <div className="form-group">
+              <label>
+                Specify Venue Name
+                <span className="required-asterisk">*</span>
+              </label>
+              <input
+                value={p1.otherVenueName || ''}
+                onChange={(e) => setP1({...p1, otherVenueName:convertToUppercase(e.target.value)})}
+                placeholder="Enter venue name"
+                className={errors.otherVenueName ? 'invalid-input' : ''}
+              />
+              {errors.otherVenueName && <div className="validation-error">{errors.otherVenueName}</div>}
+            </div>
+            <div className="form-group">
+              <label>
+                Venue Capacity (Max Pax)
+                <span className="required-asterisk">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={p1.otherVenueCapacity || ''}
+                onChange={(e) => {
+                  const capacity = e.target.value;
+                  setP1(prev => ({
+                    ...prev, 
+                    otherVenueCapacity: capacity,
+                    totalGuests: capacity // Set total guests equal to venue capacity
+                  }));
+                  setMaxPax(parseInt(capacity) || 0);
+                }}
+                placeholder="Enter maximum capacity"
+                className={errors.otherVenueCapacity ? 'invalid-input' : ''}
+              />
+              {errors.otherVenueCapacity && <div className="validation-error">{errors.otherVenueCapacity}</div>}
+            </div>
+          </div>
+        )}
       </div>
+      
       <div className="form-group">
         <label>
           Hall
@@ -1947,6 +3009,8 @@ const renderPage1 = () => (
           <input
             value={p1.hall}
             onChange={(e) => setP1({ ...p1, hall: e.target.value.toUpperCase() })}
+            placeholder="Enter hall name"
+            className={errors.hall ? 'invalid-input' : ''}
           />
         ) : (
           <select
@@ -1959,6 +3023,7 @@ const renderPage1 = () => (
                 setMaxPax(pax);
               }
             }}
+            className={errors.hall ? 'invalid-input' : ''}
           >
             <option value="">Select Hall</option>
             {availableHalls.map((hall) => (
@@ -1968,27 +3033,40 @@ const renderPage1 = () => (
             ))}
           </select>
         )}
+        {errors.hall && <div className="validation-error">{errors.hall}</div>}
       </div>
-      <div className="form-group"><label>
-        Address
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.address} onChange={(e)=>setP1({...p1, address:convertToUppercase(e.target.value)})} /></div>
+      
+      <div className="form-group">
+        <label>
+          Address
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          value={p1.address} 
+          onChange={(e)=>setP1({...p1, address:convertToUppercase(e.target.value)})} 
+          className={errors.address ? 'invalid-input' : ''}
+        />
+        {errors.address && <div className="validation-error">{errors.address}</div>}
+      </div>
+      
       <div className="form-group">
         <label>
           Arrival of Guests
           <span className="required-asterisk">*</span>
         </label>
         <input
+          type="time"
           value={p1.arrivalOfGuests}
           onChange={(e) => setP1({...p1, arrivalOfGuests: validateTimeField(e.target.value)})}
           placeholder="HH:MM AM/PM or N/A"
           className={!isTimeFieldValid(p1.arrivalOfGuests) ? "invalid-input" : ""}
         />
         {!isTimeFieldValid(p1.arrivalOfGuests) && (
-          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
+          <div className="validation-error">Please enter time in HH:MM AM/PM format or N/A</div>
         )}
       </div>
     </div>
+    
     <div className="form-row three">
       <div className="form-group">
         <label>
@@ -1996,15 +3074,16 @@ const renderPage1 = () => (
           <span className="required-asterisk">*</span>
         </label>
         <input
+          type="time"
           value={p1.ingressTime}
-          onChange={(e) => setP1({ ...p1, ingressTime: validateTimeField(e.target.value) })}
-          placeholder="HH:MM AM/PM or N/A"
-          className={!isTimeFieldValid(p1.ingressTime) ? "invalid-input" : ""}
+          readOnly
+          className={`readonly-input ${!isTimeFieldValid(p1.ingressTime) ? "invalid-input" : ""}`}
         />
         {!isTimeFieldValid(p1.ingressTime) && (
-          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
+          <div className="validation-error">Please enter time in HH:MM AM/PM format or N/A</div>
         )}
       </div>
+      
       <div className="form-group">
         <label>
           Cocktail Time 
@@ -2017,64 +3096,197 @@ const renderPage1 = () => (
           className="readonly-input"
         />
       </div>
+      
       <div className="form-group">
         <label>
           Serving Time 
           <span className="required-asterisk">*</span>
         </label>
         <input
+          type="time"
           value={p1.servingTime}
           onChange={(e) => setP1({ ...p1, servingTime: validateTimeField(e.target.value) })}
           placeholder="HH:MM AM/PM or N/A"
           className={!isTimeFieldValid(p1.servingTime) ? "invalid-input" : ""}
         />
         {!isTimeFieldValid(p1.servingTime) && (
-          <span className="validation-error">Please enter time in HH:MM AM/PM format or N/A</span>
+          <div className="validation-error">Please enter time in HH:MM AM/PM format or N/A</div>
         )}
       </div>
     </div>
+
     <div className="form-row three">
-      <div className="form-group"><label>
-        VIP 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.totalVIP} onChange={(e) => {
-        const vipValue = e.target.value;
-        setP1((prev) => {
-          const newTotalVIP = vipValue;
-          const newTotalRegular = prev.totalRegular;
-          let newTotalGuests = prev.totalGuests;
-          if (newTotalVIP && newTotalRegular) {
-            const vipNum = parseInt(newTotalVIP) || 0;
-            const regularNum = parseInt(newTotalRegular) || 0;
-            newTotalGuests = (vipNum + regularNum).toString();
-          }
-          return { ...prev, totalVIP: newTotalVIP, totalGuests: newTotalGuests };
-        });
-      }} /></div>
-      <div className="form-group"><label>
-        Regular 
-        <span className="required-asterisk">*</span>
-      </label><input value={p1.totalRegular} onChange={(e) => {
-        const regularValue = e.target.value;
-        setP1((prev) => {
-          const newTotalRegular = regularValue;
-          const newTotalVIP = prev.totalVIP;
-          let newTotalGuests = prev.totalGuests;
-          if (newTotalVIP && newTotalRegular) {
-            const vipNum = parseInt(newTotalVIP) || 0;
-            const regularNum = parseInt(newTotalRegular) || 0;
-            newTotalGuests = (vipNum + regularNum).toString();
-          }
-          return { ...prev, totalRegular: newTotalRegular, totalGuests: newTotalGuests };
-        });
-      }} /></div>
+      <div className="form-group">
+        <label>
+          VIP 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          type="number" 
+          placeholder="0" 
+          value={p1.totalVIP} 
+          onChange={(e) => {
+            const vipValue = e.target.value;
+            setP1((prev) => {
+              const newTotalVIP = vipValue;
+              const newTotalRegular = prev.totalRegular;
+              let newTotalGuests = prev.totalGuests;
+              
+              // Only auto-calculate if NOT using "Others" venue
+              if (p1.venue !== "OTHERS" && newTotalVIP && newTotalRegular) {
+                const vipNum = parseInt(newTotalVIP) || 0;
+                const regularNum = parseInt(newTotalRegular) || 0;
+                newTotalGuests = (vipNum + regularNum).toString();
+              }
+              
+              return { ...prev, totalVIP: newTotalVIP, totalGuests: newTotalGuests };
+            });
+          }}
+          className={errors.totalVIP ? 'invalid-input' : ''}
+        />
+        {errors.totalVIP && <div className="validation-error">{errors.totalVIP}</div>}
+      </div>
+      
+      <div className="form-group">
+        <label>
+          Regular 
+          <span className="required-asterisk">*</span>
+        </label>
+        <input 
+          type="number" 
+          placeholder="0" 
+          value={p1.totalRegular} 
+          onChange={(e) => {
+            const regularValue = e.target.value;
+            setP1((prev) => {
+              const newTotalRegular = regularValue;
+              const newTotalVIP = prev.totalVIP;
+              let newTotalGuests = prev.totalGuests;
+              
+              // Only auto-calculate if NOT using "Others" venue
+              if (p1.venue !== "OTHERS" && newTotalVIP && newTotalRegular) {
+                const vipNum = parseInt(newTotalVIP) || 0;
+                const regularNum = parseInt(newTotalRegular) || 0;
+                newTotalGuests = (vipNum + regularNum).toString();
+              }
+              
+              return { ...prev, totalRegular: newTotalRegular, totalGuests: newTotalGuests };
+            });
+          }}
+          className={errors.totalRegular ? 'invalid-input' : ''}
+        />
+        {errors.totalRegular && <div className="validation-error">{errors.totalRegular}</div>}
+      </div>
+      
       <div className="form-group">
         <label>
           Total No. of Guests 
           <span className="required-asterisk">*</span>
         </label>
-        <input value={p1.totalGuests} readOnly className={`readonly-input ${errors.totalGuests ? 'invalid-input' : ''}`} />
+        <input 
+          value={p1.totalGuests} 
+          readOnly 
+          className={`readonly-input ${errors.totalGuests ? 'invalid-input' : ''}`} 
+        />
         {errors.totalGuests && <div className="validation-error">{errors.totalGuests}</div>}
+        {p1.venue === "OTHERS" && (
+          <div className="info-text">(Auto-set from venue capacity)</div>
+        )}
+      </div>
+    </div>
+
+    {/* VIP and Regular Table Configuration */}
+    <h4>Table Configuration</h4>
+
+    {/* VIP Table Configuration */}
+    <div className="form-row three">
+      <div className="form-group">
+        <label>VIP Table Type <span className="required-asterisk">*</span></label>
+        <select 
+          value={p1.vipTableType} 
+          onChange={(e) => setP1({...p1, vipTableType: e.target.value})}
+          className={errors.vipTableType ? 'invalid-input' : ''}
+        >
+          <option value="">Select VIP Table Type</option>
+          {dbOptions.tables && dbOptions.tables.map(table => (
+            <option key={table.id} value={table.name}>{table.name}</option>
+          ))}
+        </select>
+        {errors.vipTableType && <div className="validation-error">{errors.vipTableType}</div>}
+      </div>
+      
+      <div className="form-group">
+        <label>VIP Chair Type <span className="required-asterisk">*</span></label>
+        <select 
+          value={p1.vipChairs} 
+          onChange={(e) => setP1({...p1, vipChairs: e.target.value})}
+          className={errors.vipChairs ? 'invalid-input' : ''}
+        >
+          <option value="">Select VIP Chairs</option>
+          {dbOptions.chairs && dbOptions.chairs.map(chair => (
+            <option key={chair.id} value={chair.name}>{chair.name}</option>
+          ))}
+        </select>
+        {errors.vipChairs && <div className="validation-error">{errors.vipChairs}</div>}
+      </div>
+      
+      <div className="form-group">
+        <label>VIP Table Quantity <span className="required-asterisk">*</span></label>
+        <input 
+          type="number" 
+          min="0"
+          placeholder="0"
+          value={p1.vipTableQuantity} 
+          onChange={(e) => setP1({...p1, vipTableQuantity: e.target.value})}
+          readOnly
+          className="readonly-input"
+        />
+      </div>
+    </div>
+
+    {/* Regular Table Configuration */}
+    <div className="form-row three">
+      <div className="form-group">
+        <label>Regular Table Type <span className="required-asterisk">*</span></label>
+        <select 
+          value={p1.regularTableType} 
+          onChange={(e) => setP1({...p1, regularTableType: e.target.value})}
+          className={errors.regularTableType ? 'invalid-input' : ''}
+        >
+          <option value="">Select Regular Table Type</option>
+          {dbOptions.tables && dbOptions.tables.map(table => (
+            <option key={table.id} value={table.name}>{table.name}</option>
+          ))}
+        </select>
+        {errors.regularTableType && <div className="validation-error">{errors.regularTableType}</div>}
+      </div>
+      
+      <div className="form-group">
+        <label>Regular Chair Type <span className="required-asterisk">*</span></label>
+        <select 
+          value={p1.regularChairs} 
+          onChange={(e) => setP1({...p1, regularChairs: e.target.value})}
+          className={errors.regularChairs ? 'invalid-input' : ''}
+        >
+          <option value="">Select Regular Chairs</option>
+          {dbOptions.chairs && dbOptions.chairs.map(chair => (
+            <option key={chair.id} value={chair.name}>{chair.name}</option>
+          ))}
+        </select>
+        {errors.regularChairs && <div className="validation-error">{errors.regularChairs}</div>}
+      </div>
+      
+      <div className="form-group">
+        <label>Regular Table Quantity <span className="required-asterisk">*</span></label>
+        <input 
+          type="number" 
+          min="0"
+          placeholder="0"
+          value={p1.regularTableQuantity} 
+          onChange={(e) => setP1({...p1, regularTableQuantity: e.target.value})}
+          readOnly
+          className="readonly-input"
+        />
       </div>
     </div>
 
@@ -2085,12 +3297,31 @@ const renderPage1 = () => (
         <select 
           value={p1.themeSetup} 
           onChange={(e) => setP1({...p1, themeSetup: e.target.value})}
+          className={errors.themeSetup ? 'invalid-input' : ''}
         >
           <option value="">Select Theme Setup</option>
           {dbOptions.themeSetups.map(theme => (
             <option key={theme.id} value={theme.name}>{theme.name}</option>
           ))}
+          <option value="OTHERS">Others</option>
         </select>
+        {errors.themeSetup && <div className="validation-error">{errors.themeSetup}</div>}
+        
+        {p1.themeSetup === "OTHERS" && (
+          <div className="other-field-group">
+            <label>
+              Specify Theme Setup
+              <span className="required-asterisk">*</span>
+            </label>
+            <input 
+              value={p1.otherThemeSetup || ''} 
+              onChange={(e)=>setP1({...p1, otherThemeSetup:convertToUppercase(e.target.value)})}
+              placeholder="Please specify the theme setup"
+              className={errors.otherThemeSetup ? 'invalid-input' : ''}
+            />
+            {errors.otherThemeSetup && <div className="validation-error">{errors.otherThemeSetup}</div>}
+          </div>
+        )}
       </div>
     
       <div className="form-group">
@@ -2098,7 +3329,7 @@ const renderPage1 = () => (
         <div className="color-motif-container">
           <div style={{position: 'relative'}}>
             <div 
-              className="color-input-text"
+              className={`color-input-text ${errors.colorMotif ? 'invalid-input' : ''}`}
               onClick={() => setIsColorDropdownOpen(!isColorDropdownOpen)}
             >
               {p1.colorMotif?.split(',').filter(color => color.trim() !== '').length > 0 
@@ -2164,14 +3395,10 @@ const renderPage1 = () => (
             <div className="color-count">
               {p1.colorMotif?.split(',').filter(color => color.trim() !== '').length || 0}/8 colors selected
             </div>
+            {errors.colorMotif && <div className="validation-error">{errors.colorMotif}</div>}
           </div>
         </div>
       </div>
-    </div>
-
-    {/* VIP Table Configuration - unchanged */}
-    <div className="form-row four">
-      {/* ... existing VIP table configuration ... */}
     </div>
 
     <div className="form-row three">
@@ -2180,12 +3407,14 @@ const renderPage1 = () => (
         <select 
           value={p1.vipUnderliner} 
           onChange={(e) => setP1({...p1, vipUnderliner: e.target.value})}
+          className={errors.vipUnderliner ? 'invalid-input' : ''}
         >
           <option value="">Select VIP Underliner</option>
           {dbOptions.underliners.map(item => (
             <option key={item.id} value={item.name}>{item.name}</option>
           ))}
         </select>
+        {errors.vipUnderliner && <div className="validation-error">{errors.vipUnderliner}</div>}
       </div>
       
       <div className="form-group">
@@ -2206,12 +3435,14 @@ const renderPage1 = () => (
         <select 
           value={p1.vipNapkin} 
           onChange={(e) => setP1({...p1, vipNapkin: e.target.value})}
+          className={errors.vipNapkin ? 'invalid-input' : ''}
         >
           <option value="">Select VIP Napkin Color</option>
           {dbOptions.napkins.map(item => (
             <option key={item.id} value={item.name}>{item.name}</option>
           ))}
         </select>
+        {errors.vipNapkin && <div className="validation-error">{errors.vipNapkin}</div>}
       </div>
     </div>
 
@@ -2221,12 +3452,14 @@ const renderPage1 = () => (
         <select 
           value={p1.guestUnderliner} 
           onChange={(e) => setP1({...p1, guestUnderliner: e.target.value})}
+          className={errors.guestUnderliner ? 'invalid-input' : ''}
         >
           <option value="">Select Guest Underliner</option>
           {dbOptions.underliners.map(item => (
             <option key={item.id} value={item.name}>{item.name}</option>
           ))}
         </select>
+        {errors.guestUnderliner && <div className="validation-error">{errors.guestUnderliner}</div>}
       </div>
       
       <div className="form-group">
@@ -2247,197 +3480,750 @@ const renderPage1 = () => (
         <select 
           value={p1.guestNapkin} 
           onChange={(e) => setP1({...p1, guestNapkin: e.target.value})}
+          className={errors.guestNapkin ? 'invalid-input' : ''}
         >
           <option value="">Select Guest Napkin Color</option>
           {dbOptions.napkins.map(item => (
             <option key={item.id} value={item.name}>{item.name}</option>
           ))}
         </select>
+        {errors.guestNapkin && <div className="validation-error">{errors.guestNapkin}</div>}
       </div>
     </div>
   </div>
 );
+// Add this temporary function to check your Google Sheets data
+const checkGoogleSheetsData = async () => {
+  try {
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/1W2mam3XSwOJpJH2FmAgvTWJf5nRVimD8xFmv5E86uKI/gviz/tq?tqx=out:json`;
+    const response = await fetch(sheetUrl);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const text = await response.text();
+    const json = JSON.parse(text.substring(47).slice(0, -2));
+    
+    console.log('RAW GOOGLE SHEETS DATA:', json.table.rows.slice(0, 50).map(row => ({
+      id: row.c[0]?.v,
+      name: row.c[1]?.v,
+      category: row.c[2]?.v,
+      department: row.c[5]?.v,
+      price: row.c[6]?.v
+    })));
+  } catch (error) {
+    console.error('Error checking Google Sheets:', error);
+  }
+};
+
+// Add this useEffect in your main ContractForm component, not inside renderPage2
+useEffect(() => {
+  // Auto-populate chair counts when page1 data changes
+  if (p1.vipChairs && p1.regularChairs && dbOptions.chairs && dbOptions.chairs.length > 0) {
+    const calculatedCounts = calculateChairCounts();
+    setP2(prev => ({
+      ...prev,
+      ...calculatedCounts
+    }));
+  }
+}, [p1.vipChairs, p1.regularChairs, p1.vipTableQuantity, p1.regularTableQuantity, dbOptions.chairs]);
+
+// Move calculateChairCounts function to main component
+const calculateChairCounts = () => {
+  const counts = {
+    chairsMonoblock: 0,
+    chairsRustic: 0,
+    chairsTiffany: 0,
+    chairsCrystal: 0,
+    chairsKiddie: 0,
+    totalChairs: 0
+  };
+
+  // Get seating capacity based on chair type
+  const getSeatingCapacity = (chairType) => {
+    if (!chairType || !dbOptions.chairs) return 8;
+    
+    const chair = dbOptions.chairs.find(c => c.name === chairType);
+    if (chair && chair.capacity) {
+      return parseInt(chair.capacity) || 8;
+    }
+    
+    const chairLower = chairType.toLowerCase();
+    if (chairLower.includes('monoblock')) return 1;
+    if (chairLower.includes('rustic')) return 1;
+    if (chairLower.includes('tiffany')) return 1;
+    if (chairLower.includes('crystal')) return 1;
+    if (chairLower.includes('kiddie')) return 1;
+    if (chairLower.includes('bench')) return 4;
+    
+    return 8;
+  };
+
+  // Calculate VIP chairs
+  if (p1.vipChairs && p1.vipTableQuantity) {
+    const vipQuantity = parseInt(p1.vipTableQuantity) || 0;
+    const vipSeatsPerTable = getSeatingCapacity(p1.vipChairs);
+    const vipTotalChairs = vipQuantity * vipSeatsPerTable;
+    
+    const vipChairType = p1.vipChairs.toLowerCase();
+    if (vipChairType.includes('monoblock')) counts.chairsMonoblock += vipTotalChairs;
+    if (vipChairType.includes('rustic')) counts.chairsRustic += vipTotalChairs;
+    if (vipChairType.includes('tiffany')) counts.chairsTiffany += vipTotalChairs;
+    if (vipChairType.includes('crystal')) counts.chairsCrystal += vipTotalChairs;
+    if (vipChairType.includes('kiddie')) counts.chairsKiddie += vipTotalChairs;
+  }
+
+  // Calculate Regular chairs
+  if (p1.regularChairs && p1.regularTableQuantity) {
+    const regularQuantity = parseInt(p1.regularTableQuantity) || 0;
+    const regularSeatsPerTable = getSeatingCapacity(p1.regularChairs);
+    const regularTotalChairs = regularQuantity * regularSeatsPerTable;
+    
+    const regularChairType = p1.regularChairs.toLowerCase();
+    if (regularChairType.includes('monoblock')) counts.chairsMonoblock += regularTotalChairs;
+    if (regularChairType.includes('rustic')) counts.chairsRustic += regularTotalChairs;
+    if (regularChairType.includes('tiffany')) counts.chairsTiffany += regularTotalChairs;
+    if (regularChairType.includes('crystal')) counts.chairsCrystal += regularTotalChairs;
+    if (regularChairType.includes('kiddie')) counts.chairsKiddie += regularTotalChairs;
+  }
+
+  counts.totalChairs = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  return counts;
+};
 
 // Updated renderPage2 function
-const renderPage2 = () => (
-  <div className="page">
-    <h4>Chairs</h4>
-    <div className="form-row two">
-      <div className="form-group">
-        <label>Total Chairs <span className="required-asterisk">*</span></label>
-        <input value={p2.totalChairs} readOnly className="readonly-input" />
-      </div>
-    </div>
+const renderPage2 = () => {
+  // Helper function to ensure we're always working with arrays
+   const getArrayFromField = (field) => {
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string' && field.trim() !== '') {
+      return field.split(',').map(item => item.trim()).filter(item => item);
+    }
+    return [];
+  };
 
-    {errors.chairsSum && <div className="validation-error">{errors.chairsSum}</div>}
-    <div className="form-row four">
-      <div className="form-group">
-        <label>Monoblock <span className="required-asterisk">*</span></label>
-        <input 
-          type="number" 
-          min="0"
-          value={p2.chairsMonoblock} 
-          onChange={(e) => setP2({...p2, chairsMonoblock: e.target.value})} 
-        />
-      </div>
+  const backdropArray = getArrayFromField(p2.backdrop);
+  const flowerArray = getArrayFromField(p2.flower);
+  const decorArray = getArrayFromField(p2.decor);
+  const entranceArray = getArrayFromField(p2.entrance);
+  const stagingArray = getArrayFromField(p2.staging);
+  const equipmentArray = getArrayFromField(p2.equipment);
+  const miscellaneousArray = getArrayFromField(p2.miscellaneous);
+
+  // Get seating capacity for display
+  const getSeatingCapacity = (chairType) => {
+    if (!chairType || !dbOptions.chairs) return 8;
+    
+    const chair = dbOptions.chairs.find(c => c.name === chairType);
+    if (chair && chair.capacity) {
+      return parseInt(chair.capacity) || 8;
+    }
+    
+    const chairLower = chairType.toLowerCase();
+    if (chairLower.includes('monoblock')) return 1;
+    if (chairLower.includes('rustic')) return 1;
+    if (chairLower.includes('tiffany')) return 1;
+    if (chairLower.includes('crystal')) return 1;
+    if (chairLower.includes('kiddie')) return 1;
+    if (chairLower.includes('bench')) return 4;
+    
+    return 8;
+  };
+
+  const chairCounts = calculateChairCounts();
+
+  return (
+    <div className="page">
+      <h4>Chairs</h4>
       
-      <div className="form-group">
-        <label>Rustic <span className="required-asterisk">*</span></label>
-        <input 
-          type="number" 
-          min="0"
-          value={p2.chairsRustic} 
-          onChange={(e) => setP2({...p2, chairsRustic: e.target.value})} 
-        />
+      {/* Show seating information */}
+      <div className="form-row two">
+        <div className="form-group">
+          <label>Total Chairs <span className="required-asterisk">*</span></label>
+          <input value={chairCounts.totalChairs} readOnly className="readonly-input" />
+        </div>
       </div>
-      
-      <div className="form-group">
-        <label>Tiffany <span className="required-asterisk">*</span></label>
-        <input 
-          type="number" 
-          min="0"
-          value={p2.chairsTiffany} 
-          onChange={(e) => setP2({...p2, chairsTiffany: e.target.value})} 
-        />
+
+      <div className="form-row four">
+        {chairCounts.chairsMonoblock > 0 && (
+          <div className="form-group">
+            <label>Monoblock <span className="required-asterisk">*</span></label>
+            <input 
+              value={chairCounts.chairsMonoblock} 
+              readOnly 
+              className="readonly-input"
+            />
+          </div>
+        )}
+        
+        {chairCounts.chairsRustic > 0 && (
+          <div className="form-group">
+            <label>Rustic <span className="required-asterisk">*</span></label>
+            <input 
+              value={chairCounts.chairsRustic} 
+              readOnly 
+              className="readonly-input"
+            />
+          </div>
+        )}
+        
+        {chairCounts.chairsTiffany > 0 && (
+          <div className="form-group">
+            <label>Tiffany <span className="required-asterisk">*</span></label>
+            <input 
+              value={chairCounts.chairsTiffany} 
+              readOnly 
+              className="readonly-input"
+            />
+          </div>
+        )}
+
+        {chairCounts.chairsCrystal > 0 && (
+          <div className="form-group">
+            <label>Crystal <span className="required-asterisk">*</span></label>
+            <input 
+              value={chairCounts.chairsCrystal} 
+              readOnly 
+              className="readonly-input"
+            />
+          </div>
+        )}
+
+        {chairCounts.chairsKiddie > 0 && (
+          <div className="form-group">
+            <label>Kiddie <span className="required-asterisk">*</span></label>
+            <input 
+              value={chairCounts.chairsKiddie} 
+              readOnly 
+              className="readonly-input"
+            />
+          </div>
+        )}
+      </div>
+      {/* Show message if no chairs selected */}
+      {chairCounts.totalChairs === 0 && (
+        <div className="info-message" style={{ padding: '10px', background: '#e3f2fd', border: '1px solid #2196f3', borderRadius: '4px', marginBottom: '15px' }}>
+          No chairs calculated. Please select chair types and table quantities in Page 1.
+        </div>
+      )}
+      <h4>Creatives</h4>
+      <div className="form-row two">
+        <div className="form-group">
+          <label>Backdrop</label>
+          <div className="color-motif-container">
+            <div style={{position: 'relative'}}>
+              <div 
+                className="color-input-text"
+                onClick={() => setIsBackdropDropdownOpen(!isBackdropDropdownOpen)}
+              >
+                {backdropArray.length > 0 
+                  ? backdropArray.join(', ')
+                  : 'Click to choose backdrops'
+                }
+              </div>
+              
+              {isBackdropDropdownOpen && (
+                <div className="color-dropdown-selected">
+                  <div className="selected-colors-section">
+                    <div className="selected-colors-label">SELECTED:</div>
+                    <div className="selected-colors-tags">
+                      {backdropArray.length > 0 ? (
+                        backdropArray.map((item, index) => (
+                          <span key={index} className="color-tag">
+                            {item}
+                            <button 
+                              type="button"
+                              className="color-tag-remove"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newItems = backdropArray.filter((_, i) => i !== index);
+                                setP2({...p2, backdrop: newItems});
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{color: '#999', fontSize: '12px'}}>No backdrops selected</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="color-options-section">
+                    {dbOptions.backdrop
+                      .filter(item => !backdropArray.includes(item.name))
+                      .map(item => (
+                        <div
+                          key={item.id}
+                          className="color-option"
+                          onClick={() => {
+                            const newItems = [...backdropArray, item.name];
+                            setP2({...p2, backdrop: newItems});
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="form-group">
+          <label>Flowers</label>
+          <div className="color-motif-container">
+            <div style={{position: 'relative'}}>
+              <div 
+                className="color-input-text"
+                onClick={() => setIsFlowersDropdownOpen(!isFlowersDropdownOpen)}
+              >
+                {flowerArray.length > 0 
+                  ? flowerArray.join(', ')
+                  : 'Click to choose flowers'
+                }
+              </div>
+              
+              {isFlowersDropdownOpen && (
+                <div className="color-dropdown-selected">
+                  <div className="selected-colors-section">
+                    <div className="selected-colors-label">SELECTED:</div>
+                    <div className="selected-colors-tags">
+                      {flowerArray.length > 0 ? (
+                        flowerArray.map((item, index) => (
+                          <span key={index} className="color-tag">
+                            {item}
+                            <button 
+                              type="button"
+                              className="color-tag-remove"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newItems = flowerArray.filter((_, i) => i !== index);
+                                setP2({...p2, flower: newItems});
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{color: '#999', fontSize: '12px'}}>No flowers selected</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="color-options-section">
+                    {dbOptions.flowers
+                      .filter(item => !flowerArray.includes(item.name))
+                      .map(item => (
+                        <div
+                          key={item.id}
+                          className="color-option"
+                          onClick={() => {
+                            const newItems = [...flowerArray, item.name];
+                            setP2({...p2, flower: newItems});
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="form-row two">
+        <div className="form-group">
+          <label>Decor</label>
+          <div className="color-motif-container">
+            <div style={{position: 'relative'}}>
+              <div 
+                className="color-input-text"
+                onClick={() => setIsDecorDropdownOpen(!isDecorDropdownOpen)}
+              >
+                {decorArray.length > 0 
+                  ? decorArray.join(', ')
+                  : 'Click to choose decor'
+                }
+              </div>
+              
+              {isDecorDropdownOpen && (
+                <div className="color-dropdown-selected">
+                  <div className="selected-colors-section">
+                    <div className="selected-colors-label">SELECTED:</div>
+                    <div className="selected-colors-tags">
+                      {decorArray.length > 0 ? (
+                        decorArray.map((item, index) => (
+                          <span key={index} className="color-tag">
+                            {item}
+                            <button 
+                              type="button"
+                              className="color-tag-remove"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newItems = decorArray.filter((_, i) => i !== index);
+                                setP2({...p2, decor: newItems});
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{color: '#999', fontSize: '12px'}}>No decor selected</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="color-options-section">
+                    {dbOptions.decor
+                      .filter(item => !decorArray.includes(item.name))
+                      .map(item => (
+                        <div
+                          key={item.id}
+                          className="color-option"
+                          onClick={() => {
+                            const newItems = [...decorArray, item.name];
+                            setP2({...p2, decor: newItems});
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="form-group">
-        <label>Premium <span className="required-asterisk">*</span></label>
-        <input 
-          type="number" 
-          min="0"
-          value={p2.premiumChairs} 
-          onChange={(e) => setP2({...p2, premiumChairs: e.target.value})} 
+        <label>Remarks</label>
+        <textarea 
+          value={p2.flowerRemarks} 
+          onChange={(e) => setP2({...p2, flowerRemarks: e.target.value})} 
         />
       </div>
-    </div>
 
-    <h4>Creatives</h4>
-    <div className="form-row two">
-      <div className="form-group">
-        <label>Backdrop</label>
-        <select 
-          value={p2.backdrop} 
-          onChange={(e) => setP2({...p2, backdrop: e.target.value})}
-        >
-          <option value="">Select Backdrop</option>
-          {dbOptions.backdrop.map(item => (
-            <option key={item.id} value={item.name}>{item.name}</option>
-          ))}
-        </select>
+      <h4>Special Requirements</h4>
+      <div className="form-row two">
+        <div className="form-group">
+          <label>Entrance</label>
+          <div className="color-motif-container">
+            <div style={{position: 'relative'}}>
+              <div 
+                className="color-input-text"
+                onClick={() => setIsEntranceDropdownOpen(!isEntranceDropdownOpen)}
+              >
+                {entranceArray.length > 0 
+                  ? entranceArray.join(', ')
+                  : 'Click to choose entrance'
+                }
+              </div>
+              
+              {isEntranceDropdownOpen && (
+                <div className="color-dropdown-selected">
+                  <div className="selected-colors-section">
+                    <div className="selected-colors-label">SELECTED:</div>
+                    <div className="selected-colors-tags">
+                      {entranceArray.length > 0 ? (
+                        entranceArray.map((item, index) => (
+                          <span key={index} className="color-tag">
+                            {item}
+                            <button 
+                              type="button"
+                              className="color-tag-remove"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newItems = entranceArray.filter((_, i) => i !== index);
+                                setP2({...p2, entrance: newItems});
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{color: '#999', fontSize: '12px'}}>No entrance selected</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="color-options-section">
+                    {dbOptions.entrance
+                      .filter(item => !entranceArray.includes(item.name))
+                      .map(item => (
+                        <div
+                          key={item.id}
+                          className="color-option"
+                          onClick={() => {
+                            const newItems = [...entranceArray, item.name];
+                            setP2({...p2, entrance: newItems});
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="form-group">
+          <label>Staging</label>
+          <div className="color-motif-container">
+            <div style={{position: 'relative'}}>
+              <div 
+                className="color-input-text"
+                onClick={() => setIsStagingDropdownOpen(!isStagingDropdownOpen)}
+              >
+                {stagingArray.length > 0 
+                  ? stagingArray.join(', ')
+                  : 'Click to choose staging'
+                }
+              </div>
+              
+              {isStagingDropdownOpen && (
+                <div className="color-dropdown-selected">
+                  <div className="selected-colors-section">
+                    <div className="selected-colors-label">SELECTED:</div>
+                    <div className="selected-colors-tags">
+                      {stagingArray.length > 0 ? (
+                        stagingArray.map((item, index) => (
+                          <span key={index} className="color-tag">
+                            {item}
+                            <button 
+                              type="button"
+                              className="color-tag-remove"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newItems = stagingArray.filter((_, i) => i !== index);
+                                setP2({...p2, staging: newItems});
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{color: '#999', fontSize: '12px'}}>No staging selected</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="color-options-section">
+                    {dbOptions.staging
+                      .filter(item => !stagingArray.includes(item.name))
+                      .map(item => (
+                        <div
+                          key={item.id}
+                          className="color-option"
+                          onClick={() => {
+                            const newItems = [...stagingArray, item.name];
+                            setP2({...p2, staging: newItems});
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-      
-      <div className="form-group">
-        <label>Flowers</label>
-        <select 
-          value={p2.flower} 
-          onChange={(e) => setP2({...p2, flower: e.target.value})}
-        >
-          <option value="">Select Flowers</option>
-          {dbOptions.flowers.map(item => (
-            <option key={item.id} value={item.name}>{item.name}</option>
-          ))}
-        </select>
-      </div>
-    </div>
-    
-    <div className="form-row two">
-      <div className="form-group">
-        <label>Decor</label>
-        <select 
-          value={p2.decor} 
-          onChange={(e) => setP2({...p2, decor: e.target.value})}
-        >
-          <option value="">Select Decor</option>
-          {dbOptions.decor.map(item => (
-            <option key={item.id} value={item.name}>{item.name}</option>
-          ))}
-        </select>
-      </div>
-      
-    </div>
-    
-    <div className="form-group">
-      <label>Remarks</label>
-      <textarea 
-        value={p2.flowerRemarks} 
-        onChange={(e) => setP2({...p2, flowerRemarks: e.target.value})} 
-      />
-    </div>
 
-    <h4>Special Requirements</h4>
-    <div className="form-row two">
-      <div className="form-group">
-        <label>Entrance</label>
-        <select 
-          value={p2.entrance} 
-          onChange={(e) => setP2({...p2, entrance: e.target.value})}
-        >
-          <option value="">Select Entrance</option>
-          {dbOptions.entrance.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))
-          }
-        </select>
+      <div className="form-row two">
+        <div className="form-group">
+          <label>Equipments</label>
+          <div className="color-motif-container">
+            <div style={{position: 'relative'}}>
+              <div 
+                className="color-input-text"
+                onClick={() => setIsEquipmentDropdownOpen(!isEquipmentDropdownOpen)}
+              >
+                {equipmentArray.length > 0 
+                  ? equipmentArray.join(', ')
+                  : 'Click to choose equipment'
+                }
+              </div>
+              
+              {isEquipmentDropdownOpen && (
+                <div className="color-dropdown-selected">
+                  <div className="selected-colors-section">
+                    <div className="selected-colors-label">SELECTED:</div>
+                    <div className="selected-colors-tags">
+                      {equipmentArray.length > 0 ? (
+                        equipmentArray.map((item, index) => (
+                          <span key={index} className="color-tag">
+                            {item}
+                            <button 
+                              type="button"
+                              className="color-tag-remove"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newItems = equipmentArray.filter((_, i) => i !== index);
+                                setP2({...p2, equipment: newItems});
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{color: '#999', fontSize: '12px'}}>No equipment selected</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="color-options-section">
+                    {dbOptions.equipments
+                      .filter(item => !equipmentArray.includes(item.name))
+                      .map(item => (
+                        <div
+                          key={item.id}
+                          className="color-option"
+                          onClick={() => {
+                            const newItems = [...equipmentArray, item.name];
+                            setP2({...p2, equipment: newItems});
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="form-group">
+          <label>Miscellaneous</label>
+          <div className="color-motif-container">
+            <div style={{position: 'relative'}}>
+              <div 
+                className="color-input-text"
+                onClick={() => setIsMiscellaneousDropdownOpen(!isMiscellaneousDropdownOpen)}
+              >
+                {miscellaneousArray.length > 0 
+                  ? miscellaneousArray.join(', ')
+                  : 'Click to choose miscellaneous'
+                }
+              </div>
+              
+              {isMiscellaneousDropdownOpen && (
+                <div className="color-dropdown-selected">
+                  <div className="selected-colors-section">
+                    <div className="selected-colors-label">SELECTED:</div>
+                    <div className="selected-colors-tags">
+                      {miscellaneousArray.length > 0 ? (
+                        miscellaneousArray.map((item, index) => (
+                          <span key={index} className="color-tag">
+                            {item}
+                            <button 
+                              type="button"
+                              className="color-tag-remove"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newItems = miscellaneousArray.filter((_, i) => i !== index);
+                                setP2({...p2, miscellaneous: newItems});
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{color: '#999', fontSize: '12px'}}>No miscellaneous selected</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="color-options-section">
+                    {dbOptions.miscellaneous
+                      .filter(item => !miscellaneousArray.includes(item.name))
+                      .map(item => (
+                        <div
+                          key={item.id}
+                          className="color-option"
+                          onClick={() => {
+                            const newItems = [...miscellaneousArray, item.name];
+                            setP2({...p2, miscellaneous: newItems});
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
       
-      <div className="form-group">
-        <label>Staging</label>
-        <select 
-          value={p2.staging} 
-          onChange={(e) => setP2({...p2, staging: e.target.value})}
-        >
-          <option value="">Staging</option>
-          {dbOptions.staging.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))
-          }
-        </select>
+      <div className="form-row two">
+        <div className="form-group">
+          <label>Emcee</label>
+          <input 
+            value={p2.emcee} 
+            onChange={(e) => setP2({...p2, emcee: e.target.value})} 
+            placeholder="Enter emcee name"
+          />
+        </div>
       </div>
+
+      <div className="cost-summary-section">
+  <h4>Cost Summary</h4>
+  <div className="cost-summary-grid">
+    <div className="cost-item">
+      <span className="cost-label">Backdrop:</span>
+      <span className="cost-value">₱{creativeCosts.backdrop}</span>
     </div>
-    
-    <div className="form-row two">
-      <div className="form-group">
-        <label>Equipments</label>
-        <select 
-          value={p2.equipment} 
-          onChange={(e) => setP2({...p2, equipment: e.target.value})}
-        >
-          <option value="">Select Equipments</option>
-          {dbOptions.equipments.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))
-          }
-        </select>
-      </div>
-      
-      <div className="form-group">
-        <label>Miscellaneous</label>
-        <select 
-          value={p2.miscellaneous} 
-          onChange={(e) => setP2({...p2, miscellaneous: e.target.value})}
-        >
-          <option value="">Select Miscellaneous</option>
-          {dbOptions.miscellaneous.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))
-          }
-        </select>
-      </div>
+    <div className="cost-item">
+      <span className="cost-label">Flowers:</span>
+      <span className="cost-value">₱{creativeCosts.flower}</span>
     </div>
-    
-    <div className="form-row two">
-      <div className="form-group">
-        <label>Emcee</label>
-        <input 
-          value={p2.emcee} 
-          onChange={(e) => setP2({...p2, emcee: e.target.value})} 
-          placeholder="Enter emcee name"
-        />
-      </div>
+    <div className="cost-item">
+      <span className="cost-label">Decor:</span>
+      <span className="cost-value">₱{creativeCosts.decor}</span>
+    </div>
+    <div className="cost-item">
+      <span className="cost-label">Entrance:</span>
+      <span className="cost-value">₱{creativeCosts.entrance}</span>
+    </div>
+    <div className="cost-item">
+      <span className="cost-label">Staging:</span>
+      <span className="cost-value">₱{creativeCosts.staging}</span>
+    </div>
+    <div className="cost-item">
+      <span className="cost-label">Equipment:</span>
+      <span className="cost-value">₱{creativeCosts.equipment}</span>
+    </div>
+    <div className="cost-item">
+      <span className="cost-label">Miscellaneous:</span>
+      <span className="cost-value">₱{creativeCosts.miscellaneous}</span>
+    </div>
+    <div className="cost-total">
+      <span className="cost-label">Total Creative Requirements:</span>
+      <span className="cost-value">₱{totalCreativeRequirementCost}</span>
     </div>
   </div>
-);
+</div>
+    </div>
+  );
+};
     
   const renderPage3 = () => {
   if (p1.serviceStyle !== "Buffet") return null;
@@ -5043,29 +6829,172 @@ const handleRiceUpgrade110Change = (option) => {
     );
   };
 
-  const renderPage5 = () => {
-    // This calculates the final price per plate for display purposes.
-    // It takes the base price and adds the cost of all selected upgrades.
-    const basePricePerPlate = parseFloat(String(p3.pricePerPlate).replace(/,/g, '')) || 0;
-    const finalPricePerPlate = basePricePerPlate + totalUpgradeCostPerPax;
+  const calculateMobilizationCharge = async () => {
+  const baseCharge = 4000;
+  const distanceRate = 50; // ₱50 per km
+  
+  // Calculate distance
+  const distance = await calculateDistance(p1.venue === "OTHERS" ? p1.address : p1.venue);
+  
+  // Get number of guests
+  const numberOfGuests = parseInt(p1.totalGuests) || 0;
+  
+  // Distance cost
+  const distanceCost = distance * distanceRate;
+  
+  // People cost - additional charges for larger groups requiring bigger cargo
+  const peopleCost = calculatePeopleCost(numberOfGuests);
+  
+  const totalCharge = baseCharge + distanceCost + peopleCost;
+  
+  // Update the state
+  setP3(prev => ({ 
+    ...prev, 
+    mobilizationCharge: totalCharge.toString(),
+    calculatedDistance: distance
+  }));
+};
+
+// Helper function to calculate people cost
+
+// Add these constants at the top with other constants
+const JUAN_CARLO_ADDRESS = "Lot 12 & 13, Greystone Commercial, 19 Congressional Ave Ext 1128 Quezon City National Capital Region";
+
+// Add these functions inside your ContractForm component (main body)
+const calculateDistance = async (destination) => {
+  if (!destination || destination === "Select Venue" || !p1.venue) {
+    return 0;
+  }
+
+  try {
+    // For demo purposes - in real implementation, you'd use Google Maps API or similar
+    const venueDistances = {
+      "OLD GROVE": 85,
+      "FERNWOOD GARDENS": 60,
+      "WORLD TRADE CENTER": 15,
+      "SMX Manila Convention Center": 12,
+      "THE BLUE LEAF EVENTS PAVILION": 10,
+      "THE BLUE LEAF COSMOPOLITAN (QUEZON CITY)": 5,
+      "GALLERY MIRANILA (QUEZON CITY)": 8,
+      "CLEO BY THE BLUE LEAF (CARMONA, CAVITE)": 35
+    };
+
+    if (venueDistances[p1.venue]) {
+      return venueDistances[p1.venue];
+    } else if (p1.venue === "OTHERS" && p1.address) {
+      const address = p1.address.toLowerCase();
+      if (address.includes('manila') || address.includes('pasay') || address.includes('makati')) {
+        return 10;
+      } else if (address.includes('quezon') || address.includes('mandaluyong') || address.includes('san juan')) {
+        return 8;
+      } else if (address.includes('cavite') || address.includes('laguna') || address.includes('bulacan')) {
+        return 50;
+      } else if (address.includes('batangas') || address.includes('pampanga')) {
+        return 80;
+      } else {
+        return 25;
+      }
+    }
     
-    return (
+    return 25;
+  } catch (error) {
+    console.error('Error calculating distance:', error);
+    return 25;
+  }
+};
+
+const calculatePeopleCost = (numberOfGuests) => {
+  if (numberOfGuests > 300) return 3000;
+  if (numberOfGuests > 200) return 2000;
+  if (numberOfGuests > 100) return 1000;
+  return 0;
+};
+
+// Add this useEffect to the main component body
+useEffect(() => {
+  const calculateMobilizationCharge = async () => {
+    const baseCharge = 4000;
+    const distanceRate = 50;
+    
+    const distance = await calculateDistance(p1.venue === "OTHERS" ? p1.address : p1.venue);
+    const numberOfGuests = parseInt(p1.totalGuests) || 0;
+    
+    const distanceCost = distance * distanceRate;
+    const peopleCost = calculatePeopleCost(numberOfGuests);
+    const totalCharge = baseCharge + distanceCost + peopleCost;
+    
+    setP3(prev => ({ 
+      ...prev, 
+      mobilizationCharge: totalCharge.toString(),
+      calculatedDistance: distance
+    }));
+  };
+
+  if (p1.venue && p1.totalGuests) {
+    calculateMobilizationCharge();
+  }
+}, [p1.venue, p1.totalGuests, p1.address]);
+
+// Also add this for hall changes
+useEffect(() => {
+  const calculateMobilizationCharge = async () => {
+    const baseCharge = 4000;
+    const distanceRate = 50;
+    
+    const distance = await calculateDistance(p1.venue === "OTHERS" ? p1.address : p1.venue);
+    const numberOfGuests = parseInt(p1.totalGuests) || 0;
+    
+    const distanceCost = distance * distanceRate;
+    const peopleCost = calculatePeopleCost(numberOfGuests);
+    const totalCharge = baseCharge + distanceCost + peopleCost;
+    
+    setP3(prev => ({ 
+      ...prev, 
+      mobilizationCharge: totalCharge.toString(),
+      calculatedDistance: distance
+    }));
+  };
+
+  if (p1.venue && p1.totalGuests && p1.hall) {
+    calculateMobilizationCharge();
+  }
+}, [p1.hall]);
+
+const renderPage5 = () => {
+  const basePricePerPlate = parseFloat(String(p3.pricePerPlate).replace(/,/g, '')) || 0;
+  const finalPricePerPlate = basePricePerPlate + totalUpgradeCostPerPax;
+  
+  // Calculate total costs
+  const totalCreativeRequirementCost = Object.values(creativeCosts).reduce((sum, cost) => sum + cost, 0);
+  const totalSpecialRequirementCost = Object.values(specialReqCosts).reduce((sum, cost) => sum + cost, 0);
+  
+  // Calculate total menu cost including creative and special requirements
+  const totalMenuCostWithExtras = parseFloat(String(p3.totalMenuCost).replace(/,/g, '')) + totalCreativeRequirementCost + totalSpecialRequirementCost;
+
+  // Helper functions for calculations
+  const calculateTax = (amount) => (parseFloat(amount) || 0) * 0.12;
+  const calculateServiceCharge = (amount) => (parseFloat(amount) || 0) * 0.10;
+  const calculateGrandTotal = (amount) => {
+    const baseAmount = parseFloat(amount) || 0;
+    return baseAmount + calculateTax(baseAmount) + calculateServiceCharge(baseAmount);
+  };
+
+  return (
     <div className="page">
-      {/* --- MODIFIED PRICE PER PLATE SECTION --- */}
+      {/* Price Per Plate Section */}
       <div className="form-group">
         <label>Price Per Plate (Calculated) <span className="required-asterisk">*</span></label>
         <input 
-            value={formatNumber(finalPricePerPlate.toFixed(2))} 
-            readOnly 
-            className="calculated-field"
+          value={formatNumber(finalPricePerPlate.toFixed(2))} 
+          readOnly 
+          className="calculated-field"
         />
         <small style={{ color: '#6c757d', marginTop: '5px', display: 'block' }}>
-            (Base: {formatNumber(p3.pricePerPlate)} + Upgrades: {formatNumber(totalUpgradeCostPerPax.toFixed(2))})
+          (Base: {formatNumber(p3.pricePerPlate)} + Upgrades: {formatNumber(totalUpgradeCostPerPax.toFixed(2))})
         </small>
       </div>
 
       <h4>Menu Details</h4>
-      {/* These textareas are now readOnly because their values are set automatically */}
       <div className="form-group">
         <label>Cocktail Hour</label>
         <textarea
@@ -5121,7 +7050,7 @@ const handleRiceUpgrade110Change = (option) => {
           placeholder="Menu selections will appear here..."
         />
       </div>
-       <div className="form-group">
+      <div className="form-group">
         <label>Rice</label>
         <textarea 
           value={p3.rice} 
@@ -5139,7 +7068,7 @@ const handleRiceUpgrade110Change = (option) => {
           placeholder="Menu selections will appear here..."
         />
       </div>
-       <div className="form-group">
+      <div className="form-group">
         <label>Drinks</label>
         <textarea 
           value={p3.drinks} 
@@ -5172,80 +7101,194 @@ const handleRiceUpgrade110Change = (option) => {
       </div>
 
       <h4>Total Cash Layout</h4>
-      <div className="form-group">
-        <label>Total Menu Cost <span className="required-asterisk">*</span></label>
-        <input value={formatNumber(p3.totalMenuCost)} readOnly />
-      </div>
-      <div className="form-group">
-        <label>Total Special Requirements Cost <span className="required-asterisk">*</span></label>
-        <input value={p3.totalSpecialReqCost} onChange={(e)=>setP3({...p3, totalSpecialReqCost:e.target.value})} />
-      </div>
-      <div className="form-group">
-        <label>Mobilization Charge <span className="required-asterisk">*</span></label>
-        <input value={p3.mobilizationCharge} onChange={(e)=>setP3({...p3, mobilizationCharge:e.target.value})} />
-      </div>
-      <div className="form-group">
-        <label>TAX (12% VAT) <span className="required-asterisk">*</span></label>
-        <input value={formatNumber(p3.taxes)} readOnly />
-      </div>
-      <div className="form-group">
-        <label>Service Charge (10%) <span className="required-asterisk">*</span></label>
-        <input value={formatNumber(p3.serviceCharge)} readOnly />
-      </div>
-      <div className="form-group">
-        <label>Grand Total <span className="required-asterisk">*</span></label>
-        <input value={formatNumber(p3.grandTotal)} readOnly />
-      </div>
-
-      <h4>Payment Details</h4>
       
-      <h5>Downpayment (40%)</h5>
-      <div className="form-row two">
-        <div className="form-group"><label>Downpayment Due On</label><input type="date" value={p3.fortyPercentDueOn} onChange={(e)=>setP3({...p3, fortyPercentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>Downpayment Amount <span className="required-asterisk">*</span></label><input value={formatNumber(p3.fortyPercentAmount)} readOnly /></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>Downpayment Received by</label><input value={p3.fortyPercentReceivedBy} onChange={(e)=>setP3({...p3, fortyPercentReceivedBy:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Downpayment Date Received</label><input type="date" value={p3.fortyPercentDateReceived} onChange={(e)=>setP3({...p3, fortyPercentDateReceived:e.target.value})} /></div>
+      {/* Creative Requirements Cost Breakdown */}
+      <div className="cost-breakdown-section">
+        <h5>Creative Requirements Cost</h5>
+        <div className="form-row two">
+          <div className="form-group">
+            <label>Backdrop</label>
+            <input value={formatNumber(creativeCosts.backdrop)} readOnly />
+          </div>
+          <div className="form-group">
+            <label>Flowers</label>
+            <input value={formatNumber(creativeCosts.flower)} readOnly />
+          </div>
+        </div>
+        <div className="form-row two">
+          <div className="form-group">
+            <label>Decor</label>
+            <input value={formatNumber(creativeCosts.decor)} readOnly />
+          </div>
+          <div className="form-group">
+            <label>Entrance</label>
+            <input value={formatNumber(creativeCosts.entrance)} readOnly />
+          </div>
+        </div>
+        <div className="form-row two">
+          <div className="form-group">
+            <label>Staging</label>
+            <input value={formatNumber(creativeCosts.staging)} readOnly />
+          </div>
+          <div className="form-group">
+            <label>Equipment</label>
+            <input value={formatNumber(creativeCosts.equipment)} readOnly />
+          </div>
+        </div>
+        <div className="form-group">
+          <label>Miscellaneous</label>
+          <input value={formatNumber(creativeCosts.miscellaneous)} readOnly />
+        </div>
+        <div className="form-group total-cost">
+          <label>Total Creative Requirements Cost <span className="required-asterisk">*</span></label>
+          <input value={formatNumber(totalCreativeRequirementCost)} readOnly className="total-field" />
+        </div>
       </div>
 
-      <h5>Full Payment</h5>
-      <div className="form-row two">
-        <div className="form-group"><label>Remaining Balance Due On <span className="required-asterisk">*</span></label><input type="date" value={p3.fullPaymentDueOn} onChange={(e)=>setP3({...p3, fullPaymentDueOn:e.target.value})} /></div>
-        <div className="form-group"><label>Remaining Balance Amount <span className="required-asterisk">*</span></label><input value={formatNumber(p3.fullPaymentAmount)} readOnly /></div>
-      </div>
-      <div className="form-row two">
-        <div className="form-group"><label>Remaining Balance Received By</label><input value={p3.fullPaymentReceivedBy} onChange={(e)=>setP3({...p3, fullPaymentReceivedBy:convertToUppercase(e.target.value)})} /></div>
-        <div className="form-group"><label>Remaining Balance Date Received <span className="required-asterisk">*</span></label><input type="date" value={p3.fullPaymentDateReceived} onChange={(e)=>setP3({...p3, fullPaymentDateReceived:e.target.value})} /></div>
+      {/* Special Requirements Cost */}
+      <div className="cost-breakdown-section">
+        <h5>Special Requirements Cost</h5>
+        <div className="form-group">
+          <label>Emcee</label>
+          <input value={formatNumber(specialReqCosts.emcee)} readOnly />
+        </div>
       </div>
 
-      <div className="form-group"><label>Remarks</label><textarea value={p3.remarks} onChange={(e)=>setP3({...p3, remarks:e.target.value})} /></div>
+      {/* Main Cost Summary */}
+      <div className="cost-summary-section">
+        <div className="form-group">
+          <label>Base Menu Cost <span className="required-asterisk">*</span></label>
+          <input value={formatNumber(p3.totalMenuCost)} readOnly />
+        </div>
+        
+        <div className="form-group">
+          <label>Total Creative Requirements Cost <span className="required-asterisk">*</span></label>
+          <input value={formatNumber(totalCreativeRequirementCost)} readOnly />
+        </div>
+        
+        <div className="form-group total-cost">
+          <label>Total Menu Cost (with Creatives & Special Reqs) <span className="required-asterisk">*</span></label>
+          <input value={formatNumber(totalMenuCostWithExtras)} readOnly className="total-field" />
+        </div>
+        
+        <div className="form-group">
+        <label>Mobilization Charge <span className="required-asterisk">*</span></label>
+        
+        {/* Auto-calculated distance display */}
+        <div className="form-row two">
+          <div className="form-group">
+            <label>Calculated Distance</label>
+            <input 
+              value={p3.calculatedDistance ? `${p3.calculatedDistance} km` : "Calculating..."}
+              readOnly
+              className="readonly-input"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Number of Guests</label>
+            <input 
+              value={p1.totalGuests || "0"}
+              readOnly
+              className="readonly-input"
+            />
+          </div>
+        </div>
+        
+        {/* Calculated Mobilization Charge */}
+        <input 
+          value={formatNumber(p3.mobilizationCharge)} 
+          onChange={(e) => setP3({...p3, mobilizationCharge: e.target.value.replace(/,/g, '')})}
+          placeholder="Auto-calculated mobilization charge"
+          className="calculated-field"
+        />
+        
+        {/* Calculation Details */}
+        {p3.calculatedDistance && (
+          <div className="calculation-details">
+            <small>
+              <strong>Breakdown:</strong><br />
+              • Base: ₱4,000<br />
+              • Distance: {p3.calculatedDistance} km × ₱50 = ₱{(p3.calculatedDistance * 50).toLocaleString()}<br />
+              • Event Capacity: For {p1.totalGuests || 0} pax = {calculatePeopleCost(parseInt(p1.totalGuests) || 0) > 0 ? `+₱${calculatePeopleCost(parseInt(p1.totalGuests) || 0).toLocaleString()} (larger cargo)` : 'No additional charge'}<br />
+              <strong>Total: ₱{p3.mobilizationCharge ? formatNumber(p3.mobilizationCharge) : '0'}</strong>
+            </small>
+          </div>
+        )}
+      </div>
+        
+        <div className="form-group">
+          <label>TAX (12% VAT) <span className="required-asterisk">*</span></label>
+          <input value={formatNumber(calculateTax(totalMenuCostWithExtras))} readOnly />
+        </div>
+        
+        <div className="form-group">
+          <label>Service Charge (10%) <span className="required-asterisk">*</span></label>
+          <input value={formatNumber(calculateServiceCharge(totalMenuCostWithExtras))} readOnly />
+        </div>
+        
+        <div className="form-group grand-total">
+          <label>Grand Total <span className="required-asterisk">*</span></label>
+          <input 
+            value={formatNumber(calculateGrandTotal(totalMenuCostWithExtras))} 
+            readOnly 
+            className="grand-total-field" 
+          />
+        </div>
+      </div>
+
+      {/* Remarks Section */}
+      <div className="form-group">
+        <label>Remarks</label>
+        <textarea 
+          value={p3.remarks} 
+          onChange={(e)=>setP3({...p3, remarks:e.target.value})} 
+          rows={3}
+          placeholder="Enter any additional remarks or notes..."
+        />
+      </div>
+
+      {/* Validation Message */}
+      {!isFormValid() && (
+        <div className="validation-error" style={{ marginTop: '20px', padding: '15px', background: '#fff3f3', border: '1px solid #ffcdd2' }}>
+          <strong>Cannot Submit: Missing Required Fields</strong>
+          <br />
+          <div style={{ marginTop: '10px' }}>
+            <strong>Missing fields:</strong>
+            <ul style={{ margin: '10px 0', paddingLeft: '20px', columns: 2, columnGap: '20px' }}>
+              {getValidationErrors().map((error, index) => (
+                <li key={index} style={{ fontSize: '14px', marginBottom: '5px' }}>
+                  {error}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <small style={{ color: '#666', fontStyle: 'italic' }}>
+            Please fill in all fields marked with <span className="required-asterisk">*</span>
+          </small>
+        </div>
+      )}
     </div>
-  )};
+  );
+};
 
-  return (
-    <div className="contract-form">
-      <div className="form-header">
-        <h3>Contract {existing ? "(Edit)" : "(New)"}</h3>
-        {nextNumber && <div className="number">Contract No.: {nextNumber}</div>}
-      </div>
+return (
+  <div className="contract-form">
 
-      <form onKeyDown={(e) => { 
-        // Allow Enter key in textarea fields, prevent it in other form elements
-        if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") { 
-          e.preventDefault(); 
-        } 
-      }}>
-        {activePage === 1 && renderPage1()}
-        {activePage === 2 && renderPage2()}
-        {activePage === 3 && (totalPages === 3 ? renderPage5() : renderPage3())}
-        {activePage === 4 && (totalPages === 5 ? renderPage4() : renderPage5())}
-        {activePage === 5 && renderPage5()}
+    <form onKeyDown={(e) => { 
+      if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") { 
+        e.preventDefault(); 
+      } 
+    }}>
+      {activePage === 1 && renderPage1()}
+      {activePage === 2 && renderPage2()}
+      {activePage === 3 && (totalPages === 3 ? renderPage5() : renderPage3())}
+      {activePage === 4 && (totalPages === 5 ? renderPage4() : renderPage5())}
+      {activePage === 5 && renderPage5()}
 
       <div className="form-actions">
         <button type="button" className="btn-danger" onClick={onCancel}>Cancel</button>
         <button type="button" className="btn-secondary" onClick={async () => {
-          // Save form as draft before going back
           const success = await handleSave(new Event('submit', { cancelable: true }));
           if (success) onCancel();
         }}>Back to Dashboard</button>
@@ -5254,25 +7297,67 @@ const handleRiceUpgrade110Change = (option) => {
           <button type="button" className="pager-btn" onClick={back} disabled={activePage === 1}>← Back</button>
           <span>Page {activePage} of {totalPages}</span>
           {activePage < totalPages ? (
-            <button type="button" className="pager-btn" onClick={next}>Next →</button>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleSubmit}
-                disabled={!isFormValid()}
-              >
-                Send for Approval
-              </button>
-              {!isFormValid() && <div className="validation-error">Please fill all required fields marked with *.</div>}
-            </>
-          )}
+  <button type="button" className="pager-btn" onClick={next}>Next →</button>
+) : (
+  <>
+    {!showSignatureProcess && !signatureComplete ? (
+      <button
+        type="button"
+        className="btn-primary"
+        onClick={() => setShowSignatureProcess(true)}
+        disabled={!isFormValid()}
+      >
+        Review & Sign Contract
+      </button>
+    ) : signatureComplete ? (
+      <div className="signature-complete">
+        <span style={{color: 'green', fontWeight: 'bold'}}>Contract Signed Successfully!</span>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={handleSubmit}
+        >
+          Finalize Contract
+        </button>
+      </div>
+    ) : null}
+  </>
+)}
         </div>
       </div>
-      </form>
+    </form>
+
+    {showSignatureProcess && (
+  <div className="signature-modal-overlay">
+    <div className="signature-modal-content">
+      <ContractSignature 
+        contractData={getContractDataForPreview()}
+        onComplete={(result) => {
+          console.log('Signature process completed:', result);
+          setSignatureComplete(true);
+          setShowSignatureProcess(false);
+          
+          // You can also automatically submit the contract here if desired
+          // handleSubmit();
+        }}
+      />
+      <button 
+        type="button" 
+        className="btn-secondary"
+        onClick={() => setShowSignatureProcess(false)}
+        style={{marginTop: '20px'}}
+      >
+        Back to Contract
+      </button>
     </div>
-  );
+  </div>
+  
+)}
+
+  </div>
+  
+);
+
 }
 
 export default ContractForm;
