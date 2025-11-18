@@ -149,9 +149,21 @@ const ContractSchema = new mongoose.Schema(
       fullPaymentReceivedBy: { type: String, default: "" },
       fullPaymentDateReceived: { type: String, default: "" },
       remarks: { type: String, default: "" }
+    },
+
+    paymentSchedule:{
+      paymentOption: { type: String, enum: ['full', 'downpayment'], default: 'full'},
+      grandTotal: Number,
+      downpaymentAmount: Number,
+      downpaymentDueDate: Date,
+        finalPaymentAmount: Number,
+        finalPaymentDueDate: Date,
+        fullPaymentAmount: Number,
+        fullPaymentDueDate: Date
     }
+    
   },
   { timestamps: true }
 )
 
-module.exports = mongoose.model("Contract5", ContractSchema)
+module.exports = mongoose.model("Contract6", ContractSchema)

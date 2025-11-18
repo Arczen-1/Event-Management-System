@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
 import "./DepartmentDashboard.css";
+import logo from './logo.png'; 
 
-function FinanceDashboard({ onLogout, user }) {
+function AccountingDashboard({ onLogout, user }) {
   const [contracts, setContracts] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPaymentDetailsModal, setShowPaymentDetailsModal] = useState(false);
   const [newInvoice, setNewInvoice] = useState(null);
   const [paymentOption, setPaymentOption] = useState("");
   const [paymentDetails, setPaymentDetails] = useState({
@@ -16,6 +18,14 @@ function FinanceDashboard({ onLogout, user }) {
     fullPaymentDueDate: "",
     downpaymentReceivedBy: "",
     fullPaymentReceivedBy: ""
+  });
+  const [paymentVerification, setPaymentVerification] = useState({
+    paymentMode: "",
+    referenceNumber: "",
+    paymentDate: new Date().toISOString().split('T')[0],
+    amount: "",
+    notes: "",
+    proofOfPayment: null
   });
   const [message, setMessage] = useState("");
   const [activeView, setActiveView] = useState("dashboard");
@@ -107,7 +117,16 @@ const calculateFinalPaymentAmount = () => {
 
 const calculateDownpaymentDueDate = () => {
   if (!selectedContract?.page1?.eventDate) return '';
+  
+  // Parse the date more carefully
   const eventDate = new Date(selectedContract.page1.eventDate);
+  
+  // Check if date is valid
+  if (isNaN(eventDate.getTime())) {
+    console.error('Invalid event date:', selectedContract.page1.eventDate);
+    return '';
+  }
+  
   const dueDate = new Date(eventDate);
   dueDate.setMonth(dueDate.getMonth() - 1);
   return dueDate.toISOString().split('T')[0];
@@ -126,10 +145,10 @@ const approveWithPayment = async () => {
 
   try {
     const grandTotal = parseFloat(selectedContract.page3?.grandTotal) || 0;
-    
+
     const paymentSchedule = {
-      paymentOption: paymentOption,
-      grandTotal: grandTotal
+      paymentOption,
+      grandTotal,
     };
 
     // Set payment schedule based on selected option
@@ -143,43 +162,57 @@ const approveWithPayment = async () => {
       paymentSchedule.fullPaymentDueDate = calculateFinalPaymentDueDate();
     }
 
-    const updateData = {
-      paymentSchedule: paymentSchedule,
-      status: "Active"
-    };
+    // If contract is already Active, just update payment terms
+    // If contract is For Accounting Review, approve it and set payment terms
+    const updateData = selectedContract.status === "Active" 
+      ? { paymentSchedule } // Just update payment terms for active contracts
+      : { 
+          paymentSchedule, 
+          status: "Active" // Approve and set payment terms for review contracts
+        };
 
-    console.log("Sending update data:", updateData);
+    const res = await fetch(
+      `http://localhost:5000/contracts/${selectedContract._id}/accounting-approve`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      }
+    );
 
-    const res = await fetch(`http://localhost:5000/contracts/${selectedContract._id}/accounting-approve`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updateData)
-    });
-
-    if (res.ok) {
-      const updatedContract = await res.json();
-      
-      // AUTO-GENERATE INVOICE AFTER APPROVAL
-      await generateInvoiceAfterApproval(updatedContract);
-      
-      setMessage("Contract approved with payment details and invoice generated");
-      setTimeout(() => setMessage(""), 3000);
-      
-      // Refresh contracts to get the updated data
-      await fetchContracts();
-      
-      setSelectedContract(null);
-      setShowPaymentModal(false);
-      setPaymentOption("");
-    } else {
+    if (!res.ok) {
       const data = await res.json();
-      alert(data.message || "Failed to approve contract");
+      alert(data.message || "Failed to save payment terms");
+      return;
     }
+
+    const updatedContract = await res.json();
+
+    // Update local state
+    setSelectedContract(updatedContract);
+
+    // If contract was just approved (not already active), generate invoice
+    if (selectedContract.status === "For Accounting Review") {
+      await generateInvoice(updatedContract);
+      setMessage("Contract approved with payment terms and invoice generated");
+    } else {
+      setMessage("Payment terms updated successfully");
+    }
+
+    setTimeout(() => setMessage(""), 3000);
+
+    // Refresh contracts list
+    await fetchContracts();
+    
+    // Close the payment modal
+    setShowPaymentModal(false);
+    setPaymentOption("");
   } catch (err) {
     console.error("Approve contract error:", err);
-    alert("Failed to approve contract");
+    alert("Failed to process payment terms");
   }
 };
+
 
 // NEW FUNCTION: Auto-generate invoice after approval
 const generateInvoiceAfterApproval = async (contract) => {
@@ -276,17 +309,6 @@ const generateInvoiceAfterApproval = async (contract) => {
 const generateInvoice = async (contract) => {
   console.log("Generating invoice for contract:", contract);
   
-  // Check if contract has payment terms set
-  if (!contract.paymentSchedule || !contract.paymentSchedule.paymentOption) {
-    alert("This contract doesn't have payment terms set. Please set payment terms first.");
-    console.error("No payment schedule found:", contract.paymentSchedule);
-    
-    // If no payment terms, open the payment modal to set them
-    setSelectedContract(contract);
-    setShowPaymentModal(true);
-    return;
-  }
-
   try {
     const res = await fetch("http://localhost:5000/finance/invoices/generate-number");
     if (res.ok) {
@@ -438,40 +460,175 @@ const generateInvoice = async (contract) => {
   };
 
   const createInvoice = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/finance/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newInvoice)
-      });
+  try {
+    const res = await fetch("http://localhost:5000/finance/invoices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newInvoice),
+    });
 
-      if (res.ok) {
-        setShowInvoiceModal(false);
-        fetchInvoices();
-        fetchContracts();
-        setMessage("Invoice created successfully");
-        setTimeout(() => setMessage(""), 3000);
+    if (res.ok) {
+      const savedInvoice = await res.json();
+
+      // If this contract was still under Accounting Review,
+      // NOW mark it Active AFTER the invoice is successfully created
+      if (
+        selectedContract &&
+        selectedContract.status === "For Accounting Review"
+      ) {
+        await approveContract(selectedContract._id);
       }
-    } catch (err) {
-      console.error("Create invoice error:", err);
+
+      setShowInvoiceModal(false);
+      await fetchInvoices();
+      await fetchContracts();
+
+      setMessage("Invoice created successfully");
+      setTimeout(() => setMessage(""), 3000);
+    } else {
+      const data = await res.json();
+      alert(data.message || "Failed to create invoice");
     }
+  } catch (err) {
+    console.error("Create invoice error:", err);
+    alert("Failed to create invoice");
+  }
+};
+
+
+  // Payment Verification Functions
+  const openPaymentVerification = (invoice) => {
+    setSelectedInvoice(invoice);
+    setPaymentVerification({
+      paymentMode: "",
+      referenceNumber: "",
+      paymentDate: new Date().toISOString().split('T')[0],
+      amount: invoice.totalAmount || "",
+      notes: "",
+      proofOfPayment: null
+    });
+    setShowPaymentDetailsModal(true);
   };
 
-  const markAsPaid = async (invoiceId) => {
-    try {
-      const res = await fetch(`http://localhost:5000/finance/invoices/${invoiceId}/mark-paid`, {
-        method: "PUT"
-      });
-
-      if (res.ok) {
-        fetchInvoices();
-        setMessage("Invoice marked as paid");
-        setTimeout(() => setMessage(""), 3000);
-      }
-    } catch (err) {
-      console.error("Mark as paid error:", err);
-    }
+  const handlePaymentModeChange = (e) => {
+    setPaymentVerification({
+      ...paymentVerification,
+      paymentMode: e.target.value
+    });
   };
+
+  const handleReferenceNumberChange = (e) => {
+    setPaymentVerification({
+      ...paymentVerification,
+      referenceNumber: e.target.value
+    });
+  };
+
+  const handlePaymentDateChange = (e) => {
+    setPaymentVerification({
+      ...paymentVerification,
+      paymentDate: e.target.value
+    });
+  };
+
+  const handleAmountChange = (e) => {
+    setPaymentVerification({
+      ...paymentVerification,
+      amount: e.target.value
+    });
+  };
+
+  const handleNotesChange = (e) => {
+    setPaymentVerification({
+      ...paymentVerification,
+      notes: e.target.value
+    });
+  };
+
+ const handleFileUpload = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      alert("Please upload a valid file (JPEG, PNG, JPG, or PDF)");
+      return;
+    }
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB");
+      return;
+    }
+
+    setPaymentVerification({
+      ...paymentVerification,
+      proofOfPayment: file
+    });
+  }
+};
+
+const markAsPaid = async () => {
+  if (!paymentVerification.paymentMode) {
+    alert("Please select payment mode");
+    return;
+  }
+
+  if (!paymentVerification.referenceNumber) {
+    alert("Please enter reference number");
+    return;
+  }
+
+  if (!paymentVerification.proofOfPayment) {
+    alert("Please upload proof of payment");
+    return;
+  }
+
+  try {
+    // Create FormData to handle file upload
+    const formData = new FormData();
+    formData.append('paymentMode', paymentVerification.paymentMode);
+    formData.append('referenceNumber', paymentVerification.referenceNumber);
+    formData.append('paymentDate', paymentVerification.paymentDate);
+    formData.append('amount', paymentVerification.amount);
+    formData.append('notes', paymentVerification.notes);
+    formData.append('verifiedBy', user?.name || 'Finance User');
+    
+    // Append the file - this is the key part that was missing proper handling
+    formData.append('proofOfPayment', paymentVerification.proofOfPayment);
+
+    const res = await fetch(`http://localhost:5000/finance/invoices/${selectedInvoice._id}/mark-paid`, {
+      method: "PUT",
+      body: formData
+      // Note: Don't set Content-Type header when using FormData
+      // The browser will set it automatically with the correct boundary
+    });
+
+    if (res.ok) {
+      setMessage("Invoice marked as paid successfully");
+      setTimeout(() => setMessage(""), 3000);
+      fetchInvoices();
+      setShowPaymentDetailsModal(false);
+      setSelectedInvoice(null);
+      
+      // Reset payment verification state
+      setPaymentVerification({
+        paymentMode: "",
+        referenceNumber: "",
+        paymentDate: new Date().toISOString().split('T')[0],
+        amount: "",
+        notes: "",
+        proofOfPayment: null
+      });
+    } else {
+      const data = await res.json();
+      alert(data.message || "Failed to mark invoice as paid");
+    }
+  } catch (err) {
+    console.error("Mark as paid error:", err);
+    alert("Failed to mark invoice as paid");
+  }
+};
 
   const downloadInvoice = async (invoice) => {
     try {
@@ -577,7 +734,8 @@ const generateInvoice = async (contract) => {
       </head>
       <body>
         <div class="header">
-          <h1>EVENT MANAGEMENT COMPANY</h1>
+        <img src=./logo.png alt="Logo" className="logo" />
+          <h1>JUAN CARLOS THE CATERER</h1>
           <h2>INVOICE</h2>
           <h3>#${invoice.invoiceNumber}</h3>
         </div>
@@ -1193,7 +1351,7 @@ const generateInvoiceBreakdown = (contract) => {
                             View
                           </button>
                           <button 
-                            className="btn-success small"
+                            className="btn-primary small"
                             onClick={() => generateInvoice(contract)}
                           >
                             Create Invoice
@@ -1326,7 +1484,15 @@ const generateInvoiceBreakdown = (contract) => {
                 activeContracts.map(contract => {
                   // Find existing invoice for this contract
                   const contractInvoice = invoices.find(inv => inv.contractId === contract._id);
-                  
+                  const hasDownpaymentInvoice = invoices.some(
+                    (inv) => inv.contractId === contract._id && inv.invoiceType === "downpayment"
+                  );
+                  const hasFinalInvoice = invoices.some(
+                    (inv) =>
+                      inv.contractId === contract._id &&
+                      (inv.invoiceType === "final" || inv.invoiceType === "full")
+                  );
+
                   return (
                     <tr key={contract._id}>
                       <td className="clickable-cell" onClick={() => setSelectedContract(contract)}>
@@ -1378,7 +1544,7 @@ const generateInvoiceBreakdown = (contract) => {
                           {/* SHOW PRINT BUTTON IF INVOICE EXISTS */}
                           {contractInvoice && (
                             <button
-                              className="btn-info small"
+                              className="btn-primary small"
                               onClick={() => downloadInvoice(contractInvoice)}
                             >
                               Print Invoice
@@ -1398,14 +1564,30 @@ const generateInvoiceBreakdown = (contract) => {
                             </button>
                           )}
                           
-                          {/* SHOW CREATE INVOICE ONLY IF PAYMENT TERMS SET BUT NO INVOICE */}
-                          {contract.paymentSchedule && !contractInvoice && (
-                            <button
-                              className="btn-success small"
-                              onClick={() => generateInvoice(contract)}
-                            >
-                              Create Invoice
-                            </button>
+                          {/* SHOW CREATE / NEXT INVOICE BASED ON PAYMENT TERMS */}
+                          {contract.paymentSchedule && (
+                            <>
+                              {/* Full payment: only if no invoice yet */}
+                              {contract.paymentSchedule.paymentOption === "full" && !contractInvoice && (
+                                <button
+                                  className="btn-primary small"
+                                  onClick={() => generateInvoice(contract)}
+                                >
+                                  Create Invoice
+                                </button>
+                              )}
+
+                              {/* Downpayment: allow DP first, then Final */}
+                              {contract.paymentSchedule.paymentOption === "downpayment" &&
+                                (!hasDownpaymentInvoice || (hasDownpaymentInvoice && !hasFinalInvoice)) && (
+                                  <button
+                                    className="btn-primary small"
+                                    onClick={() => generateInvoice(contract)}
+                                  >
+                                    {hasDownpaymentInvoice ? "Create Final Invoice" : "Create DP Invoice"}
+                                  </button>
+                                )}
+                            </>
                           )}
                         </div>
                       </td>
@@ -1422,7 +1604,7 @@ const generateInvoiceBreakdown = (contract) => {
 };
 
   // Enhanced Invoices View
-  const renderInvoicesView = () => {
+ const renderInvoicesView = () => {
     return (
       <div className="department-view">
         <div className="view-header">
@@ -1479,38 +1661,32 @@ const generateInvoiceBreakdown = (contract) => {
                       </td>
                       <td>
                         <div className="action-buttons">
-                          <td>
-                            <div className="action-buttons">
-                              <button 
-                                className="btn-primary small"
-                                onClick={() => setSelectedInvoice(invoice)}
-                              >
-                                View Details
-                              </button>
-                              {invoice.status === 'pending' && (
-                                <button 
-                                  className="btn-success small"
-                                  onClick={() => markAsPaid(invoice._id)}
-                                >
-                                  Mark Paid
-                                </button>
-                              )}
-                              <button 
-                                className="btn-secondary small"
-                                onClick={() => downloadInvoice(invoice)}
-                              >
-                                Download
-                              </button>
-                              {/* Add delete button */}
-                              <button 
-                                className="btn-danger small"
-                                onClick={() => deleteInvoice(invoice._id)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-
+                          <button 
+                            className="btn-primary small"
+                            onClick={() => setSelectedInvoice(invoice)}
+                          >
+                            View Details
+                          </button>
+                          {invoice.status === 'pending' && (
+                            <button 
+                              className="btn-primary small"
+                              onClick={() => openPaymentVerification(invoice)}
+                            >
+                              Mark Paid
+                            </button>
+                          )}
+                          <button 
+                            className="btn-primary small"
+                            onClick={() => downloadInvoice(invoice)}
+                          >
+                            Download
+                          </button>
+                          <button 
+                            className="btn-primary small"
+                            onClick={() => deleteInvoice(invoice._id)}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1523,7 +1699,6 @@ const generateInvoiceBreakdown = (contract) => {
       </div>
     );
   };
-
   // Enhanced Invoice Details Modal with full breakdown
 const renderInvoiceModal = () => (
   selectedInvoice && (
@@ -1764,7 +1939,7 @@ const renderInvoiceModal = () => (
           </button>
           {selectedInvoice.status === 'pending' && (
             <button 
-              className="btn-success"
+              className="btn-primary"
               onClick={() => {
                 markAsPaid(selectedInvoice._id);
                 setSelectedInvoice(null);
@@ -1774,7 +1949,7 @@ const renderInvoiceModal = () => (
             </button>
           )}
           <button 
-            className="btn-danger"
+            className="btn-primary"
             onClick={() => {
               if (window.confirm("Are you sure you want to delete this invoice?")) {
                 deleteInvoice(selectedInvoice._id);
@@ -1784,7 +1959,7 @@ const renderInvoiceModal = () => (
           >
             Delete Invoice
           </button>
-          <button className="btn-secondary" onClick={() => setSelectedInvoice(null)}>
+          <button className="btn-primary" onClick={() => setSelectedInvoice(null)}>
             Close
           </button>
         </div>
@@ -1881,6 +2056,16 @@ const renderContractModal = () => (
               <h4>Invoice Information</h4>
               {(() => {
                 const contractInvoice = invoices.find(inv => inv.contractId === selectedContract._id);
+                // Check if this contract already has downpayment / final invoices
+                const hasDownpaymentInvoice = invoices.some(
+                  inv => inv.contractId === selectedContract._id && inv.invoiceType === "downpayment"
+                );
+                const hasFinalInvoice = invoices.some(
+                  inv =>
+                    inv.contractId === selectedContract._id &&
+                    (inv.invoiceType === "final" || inv.invoiceType === "full")
+                );
+
                 return contractInvoice ? (
                   <div className="invoice-info">
                     <div className="detail-row">
@@ -1949,7 +2134,7 @@ const renderContractModal = () => (
                       View Invoice Details
                     </button>
                     <button 
-                      className="btn-info"
+                      className="btn-primary"
                       onClick={() => downloadInvoice(contractInvoice)}
                     >
                       Print Invoice
@@ -1957,12 +2142,9 @@ const renderContractModal = () => (
                   </>
                 ) : (
                   <div className="no-invoice-actions">
-                    <span className="no-invoice-message">
-                      No invoice found. Invoice should be auto-generated after approval.
-                    </span>
                     {selectedContract.paymentSchedule && (
                       <button 
-                        className="btn-success"
+                        className="btn-primary"
                         onClick={() => generateInvoice(selectedContract)}
                       >
                         Generate Invoice Now
@@ -1984,7 +2166,7 @@ const renderContractModal = () => (
             </button>
           )}
           
-          <button className="btn-secondary" onClick={() => setSelectedContract(null)}>
+          <button className="btn-primary" onClick={() => setSelectedContract(null)}>
             Close
           </button>
         </div>
@@ -2122,7 +2304,7 @@ const renderPaymentModal = () => (
           )}
           
           <button 
-            className="btn-secondary"
+            className="btn-primary"
             onClick={() => setShowPaymentModal(false)}
           >
             Cancel
@@ -2211,7 +2393,7 @@ const renderPaymentModal = () => (
           <button className="btn-primary" onClick={createInvoice}>
             Create Invoice
           </button>
-          <button className="btn-secondary" onClick={() => setShowInvoiceModal(false)}>
+          <button className="btn-primary" onClick={() => setShowInvoiceModal(false)}>
             Cancel
           </button>
         </div>
@@ -2221,6 +2403,204 @@ const renderPaymentModal = () => (
 );
   // ... (other modal render functions remain the same) ...
 
+ const renderPaymentDetailsModal = () => (
+  showPaymentDetailsModal && selectedInvoice && (
+    <div className="modal-overlay">
+      <div className="modal medium-modal">
+        <div className="modal-header">
+          <h3>Verify Payment - {selectedInvoice.invoiceNumber}</h3>
+          <button className="close-btn" onClick={() => setShowPaymentDetailsModal(false)}>×</button>
+        </div>
+        
+        <div className="modal-body">
+          <div className="payment-verification-form">
+            <div className="invoice-summary">
+              <h4>Invoice Summary</h4>
+              <div className="summary-details">
+                <p><strong>Client:</strong> {selectedInvoice.client}</p>
+                <p><strong>Amount Due:</strong> ₱{selectedInvoice.totalAmount?.toLocaleString()}</p>
+                <p><strong>Due Date:</strong> {new Date(selectedInvoice.dueDate).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <h4>Payment Details</h4>
+              
+              <div className="form-group">
+                <label>Payment Mode *</label>
+                <select 
+                  value={paymentVerification.paymentMode}
+                  onChange={handlePaymentModeChange}
+                  className="form-select"
+                >
+                  <option value="">Select Payment Mode</option>
+                  <option value="gcash">GCash</option>
+                  <option value="maya">Maya</option>
+                  <option value="bank-transfer">Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                  <option value="check">Check</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Reference Number *</label>
+                <input
+                  type="text"
+                  value={paymentVerification.referenceNumber}
+                  onChange={handleReferenceNumberChange}
+                  placeholder="Enter reference number"
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Payment Date *</label>
+                  <input
+                    type="date"
+                    value={paymentVerification.paymentDate}
+                    onChange={handlePaymentDateChange}
+                    className="form-input"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Amount Paid *</label>
+                  <input
+                    type="number"
+                    value={paymentVerification.amount}
+                    onChange={handleAmountChange}
+                    placeholder="0.00"
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Notes</label>
+                <textarea
+                  value={paymentVerification.notes}
+                  onChange={handleNotesChange}
+                  placeholder="Additional payment notes..."
+                  className="form-textarea"
+                  rows="3"
+                />
+              </div>
+
+              {/* ADD THIS FILE UPLOAD SECTION */}
+              <div className="form-group">
+                <label>Proof of Payment *</label>
+                <div className="file-upload-area">
+                  <input
+                    type="file"
+                    id="proofOfPayment"
+                    onChange={handleFileUpload}
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    className="file-input"
+                    style={{ display: 'none' }} // Hide the default input
+                  />
+                  <label 
+                    htmlFor="proofOfPayment" 
+                    className="file-upload-label"
+                  >
+                    <div className="file-upload-content">
+                      <span className="upload-icon">📁</span>
+                      <span className="upload-text">
+                        {paymentVerification.proofOfPayment 
+                          ? `File selected: ${paymentVerification.proofOfPayment.name}`
+                          : 'Click to upload proof of payment'
+                        }
+                      </span>
+                      <span className="upload-subtext">
+                        Supported formats: JPG, PNG, PDF (Max 5MB)
+                      </span>
+                    </div>
+                  </label>
+                  
+                  {paymentVerification.proofOfPayment && (
+                    <div className="file-preview">
+                      <span className="file-info">
+                        📎 {paymentVerification.proofOfPayment.name} 
+                        ({(paymentVerification.proofOfPayment.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                      <button 
+                        type="button"
+                        className="remove-file-btn"
+                        onClick={() => {
+                          setPaymentVerification({
+                            ...paymentVerification,
+                            proofOfPayment: null
+                          });
+                          // Reset the file input
+                          document.getElementById('proofOfPayment').value = '';
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="verification-summary">
+              <h4>Verification Summary</h4>
+              <div className="summary-grid">
+                <div className="summary-item">
+                  <span className="summary-label">Payment Mode:</span>
+                  <span className="summary-value">
+                    {paymentVerification.paymentMode ? 
+                      paymentVerification.paymentMode.charAt(0).toUpperCase() + 
+                      paymentVerification.paymentMode.slice(1).replace('-', ' ') 
+                      : 'Not selected'}
+                  </span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label">Reference No:</span>
+                  <span className="summary-value">
+                    {paymentVerification.referenceNumber || 'Not provided'}
+                  </span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label">Amount:</span>
+                  <span className="summary-value">
+                    ₱{paymentVerification.amount?.toLocaleString() || '0.00'}
+                  </span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label">Proof Uploaded:</span>
+                  <span className="summary-value">
+                    {paymentVerification.proofOfPayment ? '✅ Yes' : '❌ No'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-actions">
+          <button 
+            className="btn-primary"
+            onClick={markAsPaid}
+            disabled={!paymentVerification.paymentMode || 
+                     !paymentVerification.referenceNumber || 
+                     !paymentVerification.proofOfPayment}
+          >
+            Confirm Payment
+          </button>
+          <button 
+            className="btn-primary"
+            onClick={() => setShowPaymentDetailsModal(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+);
+
+  // Update the return statement to include the new modal
   return (
     <div className="department-dashboard">
       {/* Left Sidebar */}
@@ -2276,9 +2656,11 @@ const renderPaymentModal = () => (
         {renderPaymentModal()}
         {renderInvoiceModal()}
         {renderCreateInvoiceModal()}
+        {renderPaymentDetailsModal()} {/* Add the new modal */}
       </div>
     </div>
   );
 }
 
-export default FinanceDashboard;
+
+export default AccountingDashboard;

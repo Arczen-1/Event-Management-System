@@ -1,3 +1,4 @@
+
 .department-dashboard {
   min-height: 100vh;
   background-color: #410d1d;
@@ -523,7 +524,6 @@ body {
   background-color: white;
   border-radius: 12px;
   padding: 30px;
-  max-width: 500px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
@@ -1232,3 +1232,4 @@ html, body, #root {
   font-size: 0.8rem;
   color: #666;
 }
+
