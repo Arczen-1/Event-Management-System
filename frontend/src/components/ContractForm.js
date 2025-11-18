@@ -3231,12 +3231,12 @@ const renderPage1 = () => (
       </div>
       
       <div className="form-group">
-        <label>VIP Table Quantity <span className="required-asterisk">*</span></label>
+        <label>VIP Chair Quantity <span className="required-asterisk">*</span></label>
         <input 
           type="number" 
           min="0"
           placeholder="0"
-          value={p1.vipTableQuantity = Math.ceil((parseInt(p1.totalVIP) || 0) / 8)} 
+          value={p1.vipTableQuantity} 
           onChange={(e) => setP1({...p1, vipTableQuantity: e.target.value})}
           readOnly
           className="readonly-input"
@@ -3277,12 +3277,12 @@ const renderPage1 = () => (
       </div>
       
       <div className="form-group">
-        <label>Regular Table Quantity <span className="required-asterisk">*</span></label>
+        <label>Regular Chair Quantity <span className="required-asterisk">*</span></label>
         <input 
           type="number" 
           min="0"
           placeholder="0"
-          value={p1.regularTableQuantity=Math.ceil((parseInt(p1.totalRegular) || 0) / 8 + 5)} 
+          value={p1.regularTableQuantity} 
           onChange={(e) => setP1({...p1, regularTableQuantity: e.target.value})}
           readOnly
           className="readonly-input"
@@ -3562,9 +3562,9 @@ const calculateChairCounts = () => {
 
   // Calculate VIP chairs
   if (p1.vipChairs && p1.vipTableQuantity) {
-    const vipQuantity = parseInt(p1.totalVIP) || 0;
+    const vipQuantity = parseInt(p1.vipTableQuantity) || 0;
     const vipSeatsPerTable = getSeatingCapacity(p1.vipChairs);
-    const vipTotalChairs = vipQuantity * vipSeatsPerTable + 10;
+    const vipTotalChairs = vipQuantity * vipSeatsPerTable;
     
     const vipChairType = p1.vipChairs.toLowerCase();
     if (vipChairType.includes('monoblock')) counts.chairsMonoblock += vipTotalChairs;
@@ -3576,9 +3576,9 @@ const calculateChairCounts = () => {
 
   // Calculate Regular chairs
   if (p1.regularChairs && p1.regularTableQuantity) {
-    const regularQuantity = parseInt(p1.totalRegular) || 0;
+    const regularQuantity = parseInt(p1.regularTableQuantity) || 0;
     const regularSeatsPerTable = getSeatingCapacity(p1.regularChairs);
-    const regularTotalChairs = regularQuantity * regularSeatsPerTable + 10;
+    const regularTotalChairs = regularQuantity * regularSeatsPerTable;
     
     const regularChairType = p1.regularChairs.toLowerCase();
     if (regularChairType.includes('monoblock')) counts.chairsMonoblock += regularTotalChairs;
