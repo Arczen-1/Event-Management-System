@@ -73,37 +73,50 @@ function WarehouseDashboard({ onLogout }) {
   };
 
   const fetchContracts = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/contracts");
-      const data = await res.json();
-      if (res.ok) {
-        const checklistsRes = await fetch("http://localhost:5000/post-event-checklists");
-        const checklistsData = await checklistsRes.ok ? await checklistsRes.json() : [];
-        
-        setContracts(
-          (data.contracts || [])
-            .filter(c => c.status === "Active" || c.status === "Completed")
-            .map(c => {
-              const existingChecklist = checklistsData.find(cl => cl.contractId === c._id && cl.department === 'warehouse');
-              return {
-                id: c._id,
-                name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
-                client: (c.page1 && c.page1.celebratorName) || "",
-                value: (c.page3 && c.page3.grandTotal) || "",
-                eventDate: c.page1?.eventDate || "",
-                contractNumber: c.contractNumber,
-                status: c.status,
-                hasChecklist: !!existingChecklist,
-                existingChecklistId: existingChecklist?._id,
-                raw: c,
+  try {
+    const res = await fetch("http://localhost:5000/contracts");
+    const data = await res.json();
+    if (res.ok) {
+      const checklistsRes = await fetch("http://localhost:5000/post-event-checklists");
+      const checklistsData = await checklistsRes.ok ? await checklistsRes.json() : [];
+      
+      setContracts(
+        (data.contracts || [])
+          .filter(c => c.status === "Active" || c.status === "Completed")
+          .map(c => {
+            const existingChecklist = checklistsData.find(cl => cl.contractId === c._id && cl.department === 'warehouse');
+            return {
+              id: c._id,
+              name: (c.page1 && (c.page1.contractName || c.page1.occasion)) || "Contract",
+              client: (c.page1 && c.page1.celebratorName) || "",
+              value: (c.page3 && c.page3.grandTotal) || "",
+              eventDate: c.page1?.eventDate || "",
+              contractNumber: c.contractNumber,
+              status: c.status,
+              hasChecklist: !!existingChecklist,
+              existingChecklistId: existingChecklist?._id,
+              raw: c,
+              // Include table configuration for easy access
+              tableConfig: {
+                vip: {
+                  type: c.page1?.vipTableType,
+                  quantity: c.page1?.vipTableQuantity,
+                  chairs: c.page1?.vipChairs
+                },
+                regular: {
+                  type: c.page1?.regularTableType,
+                  quantity: c.page1?.regularTableQuantity,
+                  chairs: c.page1?.regularChairs
+                }
               }
-            })
-        );
-      }
-    } catch (e) {
-      console.error("Error fetching contracts:", e);
+            }
+          })
+      );
     }
-  };
+  } catch (e) {
+    console.error("Error fetching contracts:", e);
+  }
+};
 
   const fetchInventory = async (department = "warehouse") => {
     try {
@@ -171,32 +184,105 @@ function WarehouseDashboard({ onLogout }) {
   };
 
   const generateChecklistItems = (contract) => {
-    const p2 = contract.page2 || {};
-    const items = [];
+  const p1 = contract.page1 || {};
+  const p2 = contract.page2 || {};
+  const items = [];
 
-    // Warehouse department items - furniture, equipment, etc.
-    const warehouseFields = ['furniture', 'equipment', 'lighting', 'sound'];
-    
-    warehouseFields.forEach(field => {
-      if (p2[field] && p2[field].length > 0) {
-        const fieldItems = Array.isArray(p2[field]) ? p2[field] : [p2[field]];
-        fieldItems.forEach(item => {
-          if (item.trim() !== '') {
-            items.push({
-              id: `${field}-${item}`,
-              name: `${field.charAt(0).toUpperCase() + field.slice(1)}: ${item}`,
-              category: field,
-              checked: false,
-              missing: false,
-              department: 'warehouse'
-            });
-          }
-        });
+  // Warehouse department items - furniture, equipment, lighting, sound
+  const warehouseFields = ['furniture', 'equipment', 'lighting', 'sound'];
+  
+  warehouseFields.forEach(field => {
+    if (p2[field] && p2[field].length > 0) {
+      const fieldItems = Array.isArray(p2[field]) ? p2[field] : [p2[field]];
+      fieldItems.forEach(item => {
+        if (item.trim() !== '') {
+          items.push({
+            id: `${field}-${item}`,
+            name: `${field.charAt(0).toUpperCase() + field.slice(1)}: ${item}`,
+            category: field,
+            checked: false,
+            missing: false,
+            department: 'warehouse'
+          });
+        }
+      });
+    }
+  });
+
+  // Add VIP Table Configuration
+  if (p1.vipTableType && p1.vipTableQuantity) {
+    items.push({
+      id: `vip-table-${p1.vipTableType}`,
+      name: `VIP Table: ${p1.vipTableType} (Quantity: ${p1.vipTableQuantity})`,
+      category: 'tables',
+      checked: false,
+      missing: false,
+      department: 'warehouse',
+      details: {
+        type: p1.vipTableType,
+        quantity: p1.vipTableQuantity,
+        chairs: p1.vipChairs || 'Not specified',
+        seatCapacity: 8 // Assuming 8 seats per table as per your requirement
       }
     });
+  }
 
-    return items;
-  };
+  // Add VIP Chairs
+  if (p1.vipChairs && p1.vipTableQuantity) {
+    const totalVipChairs = parseInt(p1.vipTableQuantity) * 8; // 8 chairs per table
+    items.push({
+      id: `vip-chairs-${p1.vipChairs}`,
+      name: `VIP Chairs: ${p1.vipChairs} (Quantity: ${totalVipChairs})`,
+      category: 'chairs',
+      checked: false,
+      missing: false,
+      department: 'warehouse',
+      details: {
+        type: p1.vipChairs,
+        quantity: totalVipChairs.toString(),
+        tableType: p1.vipTableType || 'Not specified'
+      }
+    });
+  }
+
+  // Add Regular Table Configuration
+  if (p1.regularTableType && p1.regularTableQuantity) {
+    items.push({
+      id: `regular-table-${p1.regularTableType}`,
+      name: `Regular Table: ${p1.regularTableType} (Quantity: ${p1.regularTableQuantity})`,
+      category: 'tables',
+      checked: false,
+      missing: false,
+      department: 'warehouse',
+      details: {
+        type: p1.regularTableType,
+        quantity: p1.regularTableQuantity,
+        chairs: p1.regularChairs || 'Not specified',
+        seatCapacity: 8 // Assuming 8 seats per table
+      }
+    });
+  }
+
+  // Add Regular Chairs
+  if (p1.regularChairs && p1.regularTableQuantity) {
+    const totalRegularChairs = parseInt(p1.regularTableQuantity) * 8; // 8 chairs per table
+    items.push({
+      id: `regular-chairs-${p1.regularChairs}`,
+      name: `Regular Chairs: ${p1.regularChairs} (Quantity: ${totalRegularChairs})`,
+      category: 'chairs',
+      checked: false,
+      missing: false,
+      department: 'warehouse',
+      details: {
+        type: p1.regularChairs,
+        quantity: totalRegularChairs.toString(),
+        tableType: p1.regularTableType || 'Not specified'
+      }
+    });
+  }
+
+  return items;
+};
 
   const handleChecklistChange = (itemId, field, value) => {
     setChecklistItems(prev => 
@@ -607,7 +693,7 @@ function WarehouseDashboard({ onLogout }) {
                     </td>
                     <td>
                       <div className="action-buttons">
-                        <button className="btn-review" onClick={() => setSelectedContract(c.raw)}>View</button>
+                        <button className="btn-review" onClick={() => renderDetailsModal(c.raw)}>View</button>
                         {isEventPassed(c.eventDate) && c.status === "Active" && (
                           <button 
                             className="btn-checklist"
@@ -1409,185 +1495,149 @@ function WarehouseDashboard({ onLogout }) {
     )
   );
 
-  const renderDetailsModal = () => (
-    selectedContract && (
-      <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
-        <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h3>Contract Details - {selectedContract?.contractNumber}</h3>
-            <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
-          </div>
-          <div className="modal-body">
-            {selectedContract && (
-              <div className="contract-details">
-                <div className="detail-section">
-                  <h4>Contract Information</h4>
-                  <div className="detail-row">
-                    <strong>Contract Number:</strong> {selectedContract.contractNumber}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Venue:</strong> {selectedContract.page1?.venue || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
-                  </div>
-                </div>
 
-                <div className="detail-section">
-                  <h4>Event Timeline</h4>
-                  <div className="detail-row">
-                    <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Ingress Time:</strong> {selectedContract.page1?.ingressTime || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Cocktail Time:</strong> {selectedContract.page1?.cocktailTime || "N/A"}
-                  </div>
-                </div>
-
-                <div className="detail-section">
-                  <h4>Guest Breakdown</h4>
-                  <div className="detail-row">
-                    <strong>VIP Guests:</strong> {selectedContract.page1?.vipTableType || "N/A"}
-                  </div>
-                  <div className="detail-row">
-                    <strong>Regular Guests:</strong> {selectedContract.page1?.regularTableType || "N/A"}
-                  </div>
-                </div>
-
-                {selectedContract.page3 && (
-                  <div className="detail-section">
-                    <h4>Menu Details</h4>
-                    {selectedContract.page3.cocktailHour && (
-                      <div className="detail-row">
-                        <strong>Cocktail Hour:</strong> {selectedContract.page3.cocktailHour}
-                      </div>
-                    )}
-                    {selectedContract.page3.mainEntree && (
-                      <div className="detail-row">
-                        <strong>Main Entrée:</strong> {selectedContract.page3.mainEntree}
-                      </div>
-                    )}
-                    {selectedContract.page3.dessert && (
-                      <div className="detail-row">
-                        <strong>Dessert:</strong> {selectedContract.page3.dessert}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="modal-actions">
-            {isEventPassed(selectedContract.page1?.eventDate) && selectedContract.status === "Active" && (
-              <button 
-                className="btn-checklist"
-                onClick={() => openChecklistModal(selectedContract)}
-              >
-                Post-Event Checklist
-              </button>
-            )}
-            <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
-          </div>
+   const renderDetailsModal = () => (
+  selectedContract && (
+    <div className="modal-overlay" onClick={() => setSelectedContract(null)}>
+      <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Contract Details - {selectedContract?.contractNumber}</h3>
+          <button className="close-btn" onClick={() => setSelectedContract(null)}>×</button>
         </div>
-      </div>
-    )
-  );
-
-  const renderInventoryModal = () => (
-    inventoryModalOpen && (
-      <div className="modal-overlay" onClick={closeInventoryModal}>
-        <div className="modal-content" onClick={e => e.stopPropagation()}>
-          <h3>
-            {inventoryModalMode === "add" ? "Add Inventory Item" : "Edit Inventory Item"} - {currentInventoryDepartment}
-          </h3>
-          <form onSubmit={(e) => { e.preventDefault(); saveInventoryItem(); }}>
-            {["Item Id", "Item Name", "Category", "Unit", "Quantity"].map(field => (
-              <div key={field} className="modal-input-group">
-                <label>{field}</label>
-                <input
-                  value={inventoryModalData[field] || ""}
-                  onChange={(e) => setInventoryModalData(prev => ({ ...prev, [field]: e.target.value }))}
-                  type={field === "Quantity" ? "number" : "text"}
-                />
+       
+        <div className="modal-body">
+          {selectedContract && (
+            <div className="contract-details">
+              {/* Contract Information Section */}
+              <div className="detail-section">
+                <h4>Contract Information</h4>
+                <div className="detail-row">
+                  <strong>Contract Number:</strong> {selectedContract.contractNumber}
+                </div>
+                <div className="detail-row">
+                  <strong>Celebrator/Corporate Name:</strong> {selectedContract.page1?.celebratorName || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Date of Event:</strong> {selectedContract.page1?.eventDate || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Venue:</strong> {selectedContract.page1?.venue || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Total No. of Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
+                </div>
               </div>
-            ))}
-            <div className="modal-actions">
-              <button type="submit" className="btn-save">Save</button>
-              <button type="button" className="btn-cancel" onClick={closeInventoryModal}>Cancel</button>
+
+              {/* Table Configuration Section */}
+              <div className="detail-section">
+                <h4>Table Configuration</h4>
+                
+                {/* VIP Table Configuration */}
+                <div className="table-config-section">
+                  <h5>VIP Setup</h5>
+                  <div className="detail-row">
+                    <strong>VIP Table Type:</strong> {selectedContract.page1?.vipTableType || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>VIP Table Quantity:</strong> {selectedContract.page1?.vipTableQuantity || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>VIP Chair Type:</strong> {selectedContract.page1?.vipChairs || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Total VIP Seats:</strong> 
+                    {selectedContract.page1?.vipTableQuantity ? 
+                      ` ${parseInt(selectedContract.page1.vipTableQuantity) * 8} seats` : "N/A"}
+                  </div>
+                </div>
+
+                {/* Regular Table Configuration */}
+                <div className="table-config-section">
+                  <h5>Regular Setup</h5>
+                  <div className="detail-row">
+                    <strong>Regular Table Type:</strong> {selectedContract.page1?.regularTableType || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Regular Table Quantity:</strong> {selectedContract.page1?.regularTableQuantity || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Regular Chair Type:</strong> {selectedContract.page1?.regularChairs || "N/A"}
+                  </div>
+                  <div className="detail-row">
+                    <strong>Total Regular Seats:</strong> 
+                    {selectedContract.page1?.regularTableQuantity ? 
+                      ` ${parseInt(selectedContract.page1.regularTableQuantity) * 8} seats` : "N/A"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Timeline Section */}
+              <div className="detail-section">
+                <h4>Event Timeline</h4>
+                <div className="detail-row">
+                  <strong>Arrival of Guests:</strong> {selectedContract.page1?.arrivalOfGuests || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Ingress Time:</strong> {selectedContract.page1?.ingressTime || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Cocktail Time:</strong> {selectedContract.page1?.cocktailTime || "N/A"}
+                </div>
+              </div>
+
+              {/* Guest Breakdown Section */}
+              <div className="detail-section">
+                <h4>Guest Breakdown</h4>
+                <div className="detail-row">
+                  <strong>VIP Guests:</strong> {selectedContract.page1?.totalVIP || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Regular Guests:</strong> {selectedContract.page1?.totalRegular || "N/A"}
+                </div>
+                <div className="detail-row">
+                  <strong>Total Guests:</strong> {selectedContract.page1?.totalGuests || "N/A"}
+                </div>
+              </div>
+
+              {/* Menu Details Section */}
+              {selectedContract.page3 && (
+                <div className="detail-section">
+                  <h4>Menu Details</h4>
+                  {selectedContract.page3.cocktailHour && (
+                    <div className="detail-row">
+                      <strong>Cocktail Hour:</strong> {selectedContract.page3.cocktailHour}
+                    </div>
+                  )}
+                  {selectedContract.page3.mainEntree && (
+                    <div className="detail-row">
+                      <strong>Main Entrée:</strong> {selectedContract.page3.mainEntree}
+                    </div>
+                  )}
+                  {selectedContract.page3.dessert && (
+                    <div className="detail-row">
+                      <strong>Dessert:</strong> {selectedContract.page3.dessert}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </form>
+          )}
+        </div>
+
+        <div className="modal-actions">
+          {isEventPassed(selectedContract.page1?.eventDate) && selectedContract.status === "Active" && (
+            <button 
+              className="btn-checklist"
+              onClick={() => openChecklistModal(selectedContract)}
+            >
+              Post-Event Checklist
+            </button>
+          )}
+          <button className="btn-secondary" onClick={() => setSelectedContract(null)}>Close</button>
         </div>
       </div>
-    )
-  );
-
-  return (
-    <div className="department-dashboard">
-      {/* Left Sidebar */}
-      <div className="dashboard-sidebar">
-        <div className="accreditation-header">
-          <h1>WAREHOUSE</h1>
-          <h2>Dashboard</h2>
-        </div>
-        
-        <div className="header-nav">
-          <div className="nav-section">
-            <div className="section-title">Navigation</div>
-            <button className={`nav-btn ${activeView === "dashboard" ? "active" : ""}`} onClick={() => setActiveView("dashboard")}>
-              Dashboard
-            </button>
-          </div>
-          
-          <div className="nav-section">
-            <div className="section-title">Event Management</div>
-            <button className={`nav-btn ${activeView === "checklists" ? "active" : ""}`} 
-              onClick={() => setActiveView("checklists")}>
-              Post-Event Checklists ({submittedChecklists.length})
-            </button>
-          </div>
-          
-          <div className="nav-section">
-            <div className="section-title">Fabrication Management</div>
-            <button className={`nav-btn ${activeView === "inventory" ? "active" : ""}`} onClick={() => setActiveView("inventory")}>
-              Warehouse Inventory
-            </button>
-            <button className={`nav-btn ${activeView === "fabrication-report" ? "active" : ""}`} onClick={() => setActiveView("fabrication-report")}>
-              Request Item Report
-            </button>
-            <button className={`nav-btn ${activeView === "fabrication-requests" ? "active" : ""}`} onClick={() => setActiveView("fabrication-requests")}>
-              Fabrication Requests ({fabricationRequests.filter(req => req.status === 'pending').length})
-            </button>
-          </div>
-        </div>
-        
-        <div className="sidebar-footer">
-          <button onClick={onLogout} className="logout-btn">Logout</button>
-        </div>
-      </div>
-
-      <div className="dashboard-content">
-        {activeView === "dashboard" && renderDashboardView()}
-        {activeView === "inventory" && renderInventoryTable()}
-        {activeView === "fabrication-report" && renderFabricationReportView()}
-        {activeView === "fabrication-requests" && renderFabricationRequestsView()}
-        {activeView === "checklists" && renderChecklistsView()}
-      </div>
-
-      {selectedContract && renderDetailsModal()}
-      {renderInventoryModal()}
-      {renderFabricationRequestModal()}
-      {renderChecklistModal()}
-      {renderChecklistDetailModal()}
     </div>
-  );
+  )
+);
 }
-
 export default WarehouseDashboard;

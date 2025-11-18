@@ -1465,8 +1465,6 @@ const isEventPassed = (eventDate) => {
   )
 );
 
-
-
   const renderFabricationRequestModal = () => (
     fabricationRequestModalOpen && selectedItemForRequest && (
       <div className="modal-overlay" onClick={closeFabricationRequestModal}>
